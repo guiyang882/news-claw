@@ -7,6 +7,7 @@
 ```text
 config/
   tasks/                 JSON 任务定义：采集、Codex 整理、网站发布
+  templates/             三类任务的复制模板，默认关闭
   topics/                主题定义：关注范围、关键词、关注问题
 data/
   db/news.sqlite3        本地索引与任务运行状态（由 scripts/init_db.py 创建）
@@ -40,6 +41,8 @@ python3 scripts/init_db.py
 ```
 
 任务和主题定义是 JSON 文件。初始化脚本会将配置同步到 SQLite 的任务和主题表；JSON 文件是定义的来源。移除配置文件会在数据库中停用对应定义，同时保留历史运行记录。时间表达式采用 cron 格式，时区单独声明。新增关注事项时，分别添加任务和主题 JSON，再运行初始化脚本。
+
+采集、Codex 整理和发布模板见 [config/templates/README.md](config/templates/README.md)。复制到 config/tasks/ 并配置后即可同步；模板目录本身不参与调度。
 
 ## 文件归档约定
 

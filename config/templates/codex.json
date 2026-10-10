@@ -1,0 +1,33 @@
+{
+  "id": "example-codex",
+  "name": "Codex 整理任务模板",
+  "description": "以网站现有的审核资料包到文章草稿任务为例；独立任务需要替换执行命令。",
+  "task_type": "codex",
+  "scheduler_engine": "news-claw",
+  "enabled": false,
+  "schedule_format": "cron",
+  "schedule": "15 19 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": ["market-brief-drafts"],
+  "execution": {
+    "command": [".venv/bin/python", "-m", "collectors.legacy_service", "--unit", "quant-blog-compose.service"],
+    "working_dir": ".",
+    "timeout_seconds": 2760,
+    "stop_grace_seconds": 115,
+    "lock_group": "",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-blog-compose.service",
+    "recovery_command": ["systemctl", "stop", "quant-blog-compose.service"],
+    "recovery_timeout_seconds": 110
+  },
+  "options": {
+    "start_jitter_seconds": 0
+  },
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "stage": "draft",
+    "inputs": ["/mnt/quant-state/quant-web/blog/source-packets/YYYY-MM-DD.json"],
+    "outputs": ["/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"],
+    "input_requirement": "existing web.blog_compose.validate_packet must pass; empty input skips"
+  }
+}

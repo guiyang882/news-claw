@@ -1,0 +1,50 @@
+{
+  "id": "example-crawl",
+  "name": "采集任务模板",
+  "description": "复制后设置稳定的任务 ID、主题、来源和错开的运行时间。",
+  "task_type": "crawl",
+  "scheduler_engine": "news-claw",
+  "enabled": false,
+  "schedule_format": "cron",
+  "schedule": "50 6 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": ["space-race"],
+  "execution": {
+    "command": [".venv/bin/python", "-m", "collectors.news"],
+    "working_dir": ".",
+    "timeout_seconds": 1800,
+    "lock_group": "web-fetch"
+  },
+  "collector": {
+    "type": "multi_source_news",
+    "sources": [
+      {
+        "name": "space-news",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=SpaceX+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      }
+    ],
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "google_search_min_interval_seconds": 60,
+      "max_requests_per_run": 12,
+      "stop_on_403_429_or_access_denial": true,
+      "automatic_retry_after_denial": false,
+      "shared_circuit_paths": ["/mnt/quant-state/quant-web/news_circuit.json"]
+    }
+  },
+  "options": {
+    "start_jitter_seconds": 300,
+    "lookback_hours": 30,
+    "max_items_per_run": 150
+  },
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "stage": "news_discovery",
+    "outputs": ["data/raw", "data/normalized", "documents"],
+    "publication_status": "requires_topic_analysis_and_website_adapter"
+  }
+}

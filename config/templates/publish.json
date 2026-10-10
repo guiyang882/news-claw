@@ -1,0 +1,33 @@
+{
+  "id": "example-publish",
+  "name": "网站发布任务模板",
+  "description": "以网站现有的本地草稿检查与批准后发布任务为例；独立栏目需要替换执行命令和校验器。",
+  "task_type": "publish",
+  "scheduler_engine": "news-claw",
+  "enabled": false,
+  "schedule_format": "cron",
+  "schedule": "30 20 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": ["market-brief-drafts"],
+  "execution": {
+    "command": [".venv/bin/python", "-m", "collectors.legacy_service", "--unit", "quant-blog-daily.service"],
+    "working_dir": ".",
+    "timeout_seconds": 600,
+    "stop_grace_seconds": 115,
+    "lock_group": "",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-blog-daily.service",
+    "recovery_command": ["systemctl", "stop", "quant-blog-daily.service"],
+    "recovery_timeout_seconds": 110
+  },
+  "options": {
+    "start_jitter_seconds": 0
+  },
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "stage": "publish",
+    "inputs": ["/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"],
+    "outputs": ["/mnt/quant-state/quant-web/blog/articles", "/mnt/quant-state/quant-web/blog/manifest.json"],
+    "input_requirement": "existing draft validation and hash-bound editor approval must pass"
+  }
+}

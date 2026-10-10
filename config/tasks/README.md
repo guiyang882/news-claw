@@ -2,6 +2,8 @@
 
 每个 JSON 文件定义一个可独立管理的任务。`id` 应保持稳定，修改频率或查询条件不应更换任务 ID。`topic_ids` 中的值必须对应 `config/topics/*.json` 的 `id`。
 
+新增任务可从 [config/templates/](../templates/README.md) 复制 crawl、codex 或 publish 模板；模板默认关闭，留在模板目录中不会导入数据库。
+
 `task_type` 标记 `crawl`、`codex` 或 `publish`，同步到 SQLite 的同名列；没有显式类型时兼容旧 collector.type。Go 对所有类型使用相同的命令执行协议。
 
 `schedule` 使用五段 cron，`timezone` 使用 IANA 时区名，例如 `Asia/Shanghai`。结束后冷却任务使用 `schedule_format: completion_interval` 和 `schedule: "24h"`。迁移的原日历表达式保存在 `legacy_schedule`。
