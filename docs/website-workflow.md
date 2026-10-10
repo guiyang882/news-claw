@@ -10,7 +10,8 @@ flowchart LR
     B --> C[Codex 分析与校验]
     C --> D[news_analysis.json]
     D --> E[网站读取更新]
-    F[本地缓存与研究材料] --> G[agy Gemini 双语草稿]
+    F[本地缓存与研究材料] --> T[Codex 候选题与约20分钟大纲]
+    T --> G[agy Gemini 按大纲写双语草稿]
     G --> H[Codex 事实复核]
     H --> I[humanizer 修订与最终复核]
     I --> J[运行目录文章与清单]
@@ -21,7 +22,7 @@ flowchart LR
 | --- | --- | --- |
 | 采集网站市场新闻 | stocks-quant-market-news-refresh | `web.news_collector` → `/mnt/quant-state/quant-web/news_timeline.json` |
 | Codex 分析并更新网站数据 | stocks-quant-market-news-analysis | `web.news_analysis` → `news_analysis.json`、历史快照和审计 |
-| Gemini 写稿、Codex 复核、humanizer 修订与发布 | daily-blog-agy-codex | 本地证据 → `workflows.daily_blog` → `blog/articles/`、`blog/manifest.json` |
+| 候选题与长文大纲、Gemini 写稿、Codex 复核、humanizer 与发布 | daily-blog-agy-codex | 本地证据 → `workflows.daily_blog` → `blog/articles/`、`blog/manifest.json` |
 | 原 Codex 市场草稿（停用并保留） | stocks-quant-blog-compose | `blog/source-packets/YYYY-MM-DD.json` → `blog/inbox/YYYY-MM-DD.json` |
 | 原人工批准发布（停用并保留） | stocks-quant-blog-daily-publish | `web.blog_daily` → `blog/articles/`、`blog/manifest.json` |
 

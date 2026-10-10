@@ -1,0 +1,212 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "insufficient_evidence"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "packet_sha256": {
+      "type": "string"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "reader_value": {
+            "type": "string"
+          },
+          "why_now": {
+            "type": "string"
+          },
+          "source_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 0,
+            "maxItems": 12
+          },
+          "evidence_gaps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 0,
+            "maxItems": 8
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "question",
+          "reader_value",
+          "why_now",
+          "source_ids",
+          "evidence_gaps"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 5
+    },
+    "selected_candidate_id": {
+      "type": "string"
+    },
+    "selection_reason": {
+      "type": "string"
+    },
+    "outline": {
+      "type": "object",
+      "properties": {
+        "title_zh": {
+          "type": "string"
+        },
+        "title_en": {
+          "type": "string"
+        },
+        "central_question": {
+          "type": "string"
+        },
+        "working_thesis": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "reader_takeaway": {
+          "type": "string"
+        },
+        "target_reading_minutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "heading_zh": {
+                "type": "string"
+              },
+              "heading_en": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "argument": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "opening",
+                  "evidence",
+                  "mechanism",
+                  "counterargument",
+                  "implications",
+                  "conclusion"
+                ]
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "source_id": {
+                      "type": "string"
+                    },
+                    "locator": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "source_id",
+                    "locator"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 8
+              },
+              "boundaries": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 0,
+                "maxItems": 8
+              },
+              "zh_units_budget": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "en_words_budget": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "id",
+              "heading_zh",
+              "heading_en",
+              "purpose",
+              "argument",
+              "kind",
+              "evidence_refs",
+              "boundaries",
+              "zh_units_budget",
+              "en_words_budget"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "title_zh",
+        "title_en",
+        "central_question",
+        "working_thesis",
+        "scope",
+        "reader_takeaway",
+        "target_reading_minutes",
+        "sections"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "status",
+    "reason",
+    "packet_sha256",
+    "candidates",
+    "selected_candidate_id",
+    "selection_reason",
+    "outline"
+  ],
+  "additionalProperties": false
+}

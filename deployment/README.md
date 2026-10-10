@@ -42,6 +42,6 @@ systemctl show news-claw.service --property=ProtectHome --property=ProtectSystem
 
 脚本的 --require-isolation 用于选择旧路径映射方案的环境，不在本机当前 full 模式下使用。
 
-每日博客使用 stocks-quant/web/.venv 的既有网站依赖。make test-blog 在临时目录验证阶段顺序、一次纠错与再复核、拒绝时停止、事实与引用校验、哈希、防重复、knowledge 索引和网站双语页面、Feed、Sitemap。供应方状态及实际模型响应由受控试跑另行验证。
+每日博客使用 stocks-quant/web/.venv 的既有网站依赖。make test-blog 在临时目录验证选题与大纲先于写稿、大纲来源与预算、正文约二十分钟的阅读量、一次纠错与再复核、拒绝时停止、事实与引用校验、哈希、防重复、knowledge 索引和网站双语页面、Feed、Sitemap。供应方状态及实际模型响应由受控试跑另行验证。
 
 频率、模型与输入配置见 [每日博客](../docs/daily-blog.md)。原始材料、各模型响应与诊断日志保存在忽略目录 data/runs/；Git 保存配置、代码、SQLite 索引和精选 knowledge。

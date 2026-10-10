@@ -6,7 +6,7 @@
 | [codex.json](codex.json) | codex | 网站现有 Codex 草稿 service 的命令适配器 | 执行命令、输入输出、超时 |
 | [agy.json](agy.json) | agy | 本机 agy CLI，使用已配置的模型 | 非交互提示词、模型选择、工作目录、超时 |
 | [publish.json](publish.json) | publish | 网站现有审批后发布 service 的命令适配器 | 草稿输入、网站输出、校验要求 |
-| [daily-blog.json](daily-blog.json) | workflow | workflows.daily_blog，多阶段博客工作流 | Gemini 写稿、Codex 复核、humanizer、最终复核、网站发布 |
+| [daily-blog.json](daily-blog.json) | workflow | workflows.daily_blog，多阶段博客工作流 | 候选选题、约20分钟大纲、Gemini写稿、Codex复核、humanizer、发布 |
 
 模板均为完整 JSON，默认 enabled=false。初始化只读取 config/tasks/*.json，模板留在本目录时不会进入 SQLite 或被调度。文件是复制用的配置示例，没有变量替换、继承或自动渲染机制。
 

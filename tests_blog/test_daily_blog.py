@@ -57,20 +57,50 @@ class DailyBlogTests(unittest.TestCase):
                 "summary": "Synthetic fixture, not a real research claim.", "home_note": "An offline fixture.",
                 "category": "Research", "keywords": ["fixture"], "reading_time": "5 min read",
                 "body_markdown": "# Offline fixture\n\n" + "".join(f"\n## Section {i}\n" +
-                    "This is synthetic test evidence, with a source and a stated boundary. " * 12 for i in range(3)) +
+                    ("这段内容仅用于离线流程测试，所列信息不是现实研究证据，不能据此得出任何公司或产品的结论。" * 27 if language == "zh" else
+                     "This synthetic example describes an offline fixture and preserves its stated evidence limits without making any real world research claim. " * 32) for i in range(6)) +
                     "\n[First source](https://example.org/a) [Second source](https://example.org/b)\n"}
         return {"status": "ready", "reason": "Local fixture only.", "article": article}
 
+    def plan(self, payload):
+        candidates = [{"id": f"candidate-{i}", "title": f"Synthetic candidate {i}",
+            "question": f"Which synthetic evidence boundary matters for offline question {i}?",
+            "reader_value": "Learn how the offline fixture records evidence boundaries.",
+            "why_now": "This is a controlled test fixture, not a current news event.",
+            "source_ids": ["source-a", "source-b"], "evidence_gaps": ["Synthetic inputs cannot establish real-world facts."]}
+            for i in range(3)]
+        kinds = ("opening", "evidence", "mechanism", "counterargument", "implications", "conclusion")
+        sections = [{"id": f"section-{i}", "kind": kind, "heading_zh": f"测试章节 {i}", "heading_en": f"Section {i}",
+            "purpose": "Exercise the offline editorial workflow.", "argument": "A fixture must not be mistaken for real evidence.",
+            "evidence_refs": [{"source_id": "source-a", "locator": "company_pulses.json/companies/test/metrics/0"}],
+            "boundaries": ["Only synthetic evidence; no public factual conclusion."],
+            "zh_units_budget": 1000, "en_words_budget": 667} for i, kind in enumerate(kinds)]
+        return {"status": "ready", "reason": "Offline fixture only.", "packet_sha256": payload["packet_sha256"],
+            "candidates": candidates, "selected_candidate_id": "candidate-0", "selection_reason": "The fixture has two controlled sources.",
+            "outline": {"title_zh": "离线选题与大纲", "title_en": "An offline topic and outline",
+                "central_question": candidates[0]["question"], "working_thesis": "Only test workflow behavior.",
+                "scope": "Synthetic evidence only.", "reader_takeaway": "Recognize evidence boundaries in the fixture.",
+                "target_reading_minutes": 20, "sections": sections}}
+
     def model(self, stage, prompt, schema, directory):
         self.calls.append(stage)
-        if stage in ("draft", "revise"):
+        if stage == "plan":
+            self.assertIn("EDITORIAL_SKILL", prompt)
+            value = self.plan(json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1]))
+        elif stage in ("draft", "revise"):
+            self.assertTrue((self.directory / "blog-outline.md").is_file())
+            self.assertTrue((self.directory / "topic-candidates.json").is_file())
+            payload = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
+            self.assertEqual(payload["editorial_plan"]["selected_candidate_id"], "candidate-0")
             value = self.draft()
         elif stage == "humanize":
             self.assertIn("HUMANIZER_SKILL", prompt)
             self.assertIn("name: humanizer", prompt)
             value = self.draft()
             for language in ("zh", "en"):
-                value["article"][language]["body_markdown"] = value["article"][language]["body_markdown"].replace("with a source and a stated boundary", "with explicit sources and limits")
+                value["article"][language]["body_markdown"] = value["article"][language]["body_markdown"].replace(
+                    "preserves its stated evidence limits", "keeps its stated evidence limits").replace(
+                    "这段内容仅用于离线流程测试", "这段文字只用于离线流程测试")
         else:
             payload = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
             value = {"approved": True, "facts_supported": True, "languages_consistent": True, "citations_valid": True,
@@ -91,15 +121,71 @@ class DailyBlogTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.assertFalse((self.site / "manifest.json").exists())
 
-    def test_all_four_stages_publish_both_languages_once_and_render(self):
+    def test_invalid_outline_evidence_stops_before_gemini(self):
+        self.responses["plan"] = lambda value: value["outline"]["sections"][0]["evidence_refs"][0].update(locator="invented/path")
+        with self.assertRaisesRegex(ValueError, "locator"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan"])
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_outline_budget_must_support_twenty_minutes(self):
+        self.responses["plan"] = lambda value: value["outline"]["sections"][0].update(zh_units_budget=0)
+        with self.assertRaisesRegex(ValueError, "length budget"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan"])
+
+    def test_plan_hash_mismatch_stops_before_gemini(self):
+        self.responses["plan"] = lambda value: value.update(packet_sha256="0" * 64)
+        with self.assertRaisesRegex(ValueError, "source packet"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan"])
+
+    def test_insufficient_planning_never_calls_writer(self):
+        self.responses["plan"] = lambda value: value.update(status="insufficient_evidence", candidates=[], selected_candidate_id="")
         result = self.run_blog()
-        self.assertEqual(self.calls, ["draft", "review", "humanize", "final_review"])
+        self.assertEqual(result["business_status"], "insufficient_evidence")
+        self.assertEqual(result["stage"], "planning")
+        self.assertTrue((self.directory / "topic-candidates.json").is_file())
+        self.assertEqual(self.calls, ["plan"])
+
+    def test_short_article_with_twenty_minute_label_is_rejected(self):
+        def shorten(value):
+            for language in ("zh", "en"):
+                value["article"][language]["reading_time"] = "20 min read"
+                value["article"][language]["body_markdown"] = "".join(f"## Section {i}\nVery short text.\n" for i in range(6))
+        self.responses["draft"] = shorten
+        with self.assertRaisesRegex(ValueError, "reading time"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan", "draft"])
+
+    def test_humanizer_cannot_shorten_below_long_form_target(self):
+        self.responses["humanize"] = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        with self.assertRaisesRegex(ValueError, "reading time"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan", "draft", "review", "humanize"])
+
+    def test_reading_estimate_excludes_url_and_code(self):
+        policy = self.config["workflow"]["reading"]
+        body = "A short example with a [source](https://example.org/a)."
+        inflated = body.replace("https://example.org/a", "https://example.org/" + "unreadable" * 2000) + "\n```\n" + "code " * 3000 + "\n```"
+        self.assertEqual(blog.editorial.reading_metrics(body, "en", policy), blog.editorial.reading_metrics(inflated, "en", policy))
+
+    def test_plan_precedes_writer_and_publishes_both_languages_once_and_render(self):
+        result = self.run_blog()
+        self.assertEqual(self.calls, ["plan", "draft", "review", "humanize", "final_review"])
         self.assertEqual(result["business_status"], "published")
         self.assertNotIn("knowledge_index_error", result)
         articles = load_runtime_articles(self.site)
         self.assertEqual(len(articles), 1)
         self.assertEqual(articles[0]["automation"]["approval_kind"], "model_review")
         self.assertFalse((self.site / "approvals").exists())
+        self.assertEqual(result["editorial_plan"]["candidate_count"], 3)
+        self.assertEqual(result["editorial_plan"]["target_reading_minutes"], 20)
+        for language in ("zh", "en"):
+            self.assertGreaterEqual(result["reading_estimates"][language]["minutes"], 17)
+            self.assertLessEqual(result["reading_estimates"][language]["minutes"], 23)
+        self.assertNotEqual(articles[0]["reading_time"], "5 min read")
         proof = json.loads((self.site / "automation-reviews/daily-research-2026-10-10.json").read_text())
         self.assertEqual(proof["final_review"]["article_sha256"], blog.digest(proof["draft"]))
         with closing(sqlite3.connect(self.db)) as connection:
@@ -124,17 +210,17 @@ class DailyBlogTests(unittest.TestCase):
         self.responses["review"] = lambda value: value.update(approved=False, issues=["Unsupported claim"])
         with self.assertRaisesRegex(ValueError, "rejected"):
             self.run_blog()
-        self.assertEqual(self.calls, ["draft", "review"])
+        self.assertEqual(self.calls, ["plan", "draft", "review"])
         self.assertFalse((self.site / "manifest.json").exists())
         self.assertEqual(self.run_blog()["business_status"], "previous_attempt_failed")
-        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(len(self.calls), 3)
 
     def test_one_factual_correction_must_pass_a_new_review_before_humanizer(self):
         self.responses["review"] = lambda value: value.update(approved=False, issues=["Correct the claim"])
         self.responses["revise"] = lambda value: value["article"].update(tags=["invented-editor-tag"])
         result = self.run_blog()
         self.assertEqual(result["business_status"], "published")
-        self.assertEqual(self.calls, ["draft", "review", "revise", "review_revised", "humanize", "final_review"])
+        self.assertEqual(self.calls, ["plan", "draft", "review", "revise", "review_revised", "humanize", "final_review"])
         proof = json.loads((self.site / "automation-reviews/daily-research-2026-10-10.json").read_text())
         self.assertTrue(proof["initial_review"]["approved"])
         self.assertEqual(proof["initial_review"]["article_sha256"], blog.digest(proof["original_draft"]))
@@ -145,7 +231,7 @@ class DailyBlogTests(unittest.TestCase):
         self.responses.update(review=reject, review_revised=reject)
         with self.assertRaisesRegex(ValueError, "rejected"):
             self.run_blog()
-        self.assertEqual(self.calls, ["draft", "review", "revise", "review_revised"])
+        self.assertEqual(self.calls, ["plan", "draft", "review", "revise", "review_revised"])
         self.assertFalse((self.site / "manifest.json").exists())
 
     def test_insufficient_evidence_response_can_have_empty_facts(self):
@@ -159,7 +245,7 @@ class DailyBlogTests(unittest.TestCase):
         self.responses["draft"] = insufficient
         result = self.run_blog()
         self.assertEqual(result["business_status"], "insufficient_evidence")
-        self.assertEqual(self.calls, ["draft"])
+        self.assertEqual(self.calls, ["plan", "draft"])
         self.assertFalse((self.site / "manifest.json").exists())
 
     def test_final_review_must_confirm_humanizer_work(self):
@@ -173,7 +259,7 @@ class DailyBlogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Humanizer changed"):
             self.run_blog()
         self.assertFalse((self.site / "manifest.json").exists())
-        self.assertEqual(self.calls, ["draft", "review", "humanize"])
+        self.assertEqual(self.calls, ["plan", "draft", "review", "humanize"])
 
     def test_final_hash_mismatch_and_rejection_prevent_publication(self):
         self.responses["final_review"] = lambda value: value.update(article_sha256="0" * 64)
@@ -187,7 +273,7 @@ class DailyBlogTests(unittest.TestCase):
         self.responses["draft"] = invented
         with self.assertRaisesRegex(ValueError, "invented a citation"):
             self.run_blog()
-        self.assertEqual(self.calls, ["draft"])
+        self.assertEqual(self.calls, ["plan", "draft"])
 
     def test_stale_snapshot_or_single_source_never_calls_models(self):
         self.pulses["as_of"] = "2026-01-01"

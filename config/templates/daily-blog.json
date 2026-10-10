@@ -1,11 +1,11 @@
 {
   "id": "example-daily-blog-workflow",
   "name": "每日研究博客：Gemini写稿、Codex复核与发布",
-  "description": "从本地缓存选题，agy/Gemini 3.8 Flash 写中英双语稿，GPT-6.1 Sol 复核、humanizer修订及最终复核后发布到网站；每日最多一篇。",
+  "description": "Codex 从本地缓存生成候选选题和约20分钟阅读大纲，agy/Gemini 3.8 Flash 按大纲写中英双语长文，GPT-6.1 Sol 复核、humanizer修订及最终复核后发布；每日最多一篇。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": false,
-  "schedule": "10 23 * * *",
+  "schedule": "30 22 * * *",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
   "topic_ids": [
@@ -27,7 +27,7 @@
       "workflows.daily_blog"
     ],
     "working_dir": ".",
-    "timeout_seconds": 2400,
+    "timeout_seconds": 4500,
     "stop_grace_seconds": 15,
     "lock_group": "model-cli",
     "env": {
@@ -43,7 +43,7 @@
     "writer": {
       "executable": "/root/.local/bin/agy",
       "model": "gemini-3.8-flash-high",
-      "timeout_seconds": 600,
+      "timeout_seconds": 1200,
       "permissions": "full"
     },
     "reviewer": {
@@ -64,6 +64,7 @@
       "news_timeline": "/mnt/quant-state/quant-web/news_timeline.json"
     },
     "stages": [
+      "codex_topics_and_outline",
       "agy_draft",
       "codex_fact_review",
       "codex_correction_if_rejected",
@@ -75,16 +76,42 @@
     "publication_policy": "User-authorized model-reviewed publication; never generates human approvals. Reject unsupported claims; preserve evidence dates; one attempt and one article per day.",
     "network_policy": {
       "source_web_requests": 0,
-      "max_cli_invocations_per_day": 6,
+      "max_cli_invocations_per_day": 7,
       "automatic_retries": 0,
       "provider_denial": "persistent_circuit_requires_explicit_reset"
     },
     "outputs": [
       "data/runs/<run_id>/source-packet.json",
+      "data/runs/<run_id>/topic-candidates.json",
+      "data/runs/<run_id>/blog-outline.json",
+      "data/runs/<run_id>/blog-outline.md",
       "data/runs/<run_id>/final-draft.json",
       "/mnt/quant-state/quant-web/blog/automation-reviews/<slug>.json",
       "/mnt/quant-state/quant-web/blog/manifest.json"
     ],
-    "max_draft_revisions": 1
+    "max_draft_revisions": 1,
+    "planner": {
+      "executable": "/usr/local/bin/codex",
+      "model": "gpt-6.1-sol",
+      "timeout_seconds": 300,
+      "permissions": "full"
+    },
+    "planning": {
+      "max_candidates": 3,
+      "min_sections": 6,
+      "max_sections": 9,
+      "selection_policy": "Evidence depth, concrete reader value, distinct angle, and no repetition of recent articles; no padding to meet length."
+    },
+    "reading": {
+      "target_minutes": 20,
+      "tolerance_minutes": 3,
+      "zh_units_per_minute": 300,
+      "en_words_per_minute": 200
+    },
+    "stage_timeout_seconds": {
+      "revise": 900,
+      "humanize": 900
+    },
+    "editorial_skill": "/root/.codex/skills/research-blog-editor/SKILL.md"
   }
 }
