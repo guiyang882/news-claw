@@ -16,6 +16,9 @@ data/
   runs/                  每次任务运行的日志和清单
 sql/migrations/          按序号执行的 SQLite schema 迁移
 scripts/                 本地维护脚本
+cmd/news-claw/           Go 调度器命令入口
+internal/engine/         持久化计划、队列与子进程执行
+collectors/              Scrapy RSS/Atom/网页采集器
 docs/                    监控任务计划与口径
 ```
 
@@ -25,7 +28,7 @@ docs/                    监控任务计划与口径
 - **调度引擎** 记录在 `tasks.scheduler_engine`，区分由 `news-claw` 管理的新任务与由 `systemd` 继续运行的旧任务。
 - **SQLite 结构保持精简**：任务主题关联放在任务配置的 `topic_ids`；来源信息和文档主题关联随文档存为 JSON，减少单独的关联表。
 - **Topic（主题）** 描述“长期追踪什么问题”。抓取结果先进入原始归档，再经过去重、正文抽取和主题归属，最后汇总成主题材料。
-- **SQLite** 保存任务、主题、任务运行、来源、文档索引、主题关联和产物版本等可查询元数据；网页正文和长文本产物保存在文件中，数据库记录其相对路径与内容哈希。
+- **SQLite** 保存任务、主题、任务运行、文档索引和产物版本等可查询元数据；来源和主题关联使用 JSON，网页正文和长文本产物保存在文件中，数据库记录其相对路径与内容哈希。
 - **原文不可变**。重新抽取或修订分析时保留原始响应；新产物通过版本和输入指纹追踪其来源。
 
 ## 初始化
@@ -36,7 +39,7 @@ docs/                    监控任务计划与口径
 python3 scripts/init_db.py
 ```
 
-任务和主题定义是 JSON 文件。初始化脚本会将配置同步到 SQLite 的任务、主题和关联表；JSON 文件是定义的来源。移除配置文件会在数据库中停用对应定义，同时保留历史运行记录。时间表达式采用 cron 格式，时区单独声明。新增关注事项时，分别添加任务和主题 JSON，再运行初始化脚本。
+任务和主题定义是 JSON 文件。初始化脚本会将配置同步到 SQLite 的任务和主题表；JSON 文件是定义的来源。移除配置文件会在数据库中停用对应定义，同时保留历史运行记录。时间表达式采用 cron 格式，时区单独声明。新增关注事项时，分别添加任务和主题 JSON，再运行初始化脚本。
 
 ## 文件归档约定
 
@@ -69,7 +72,7 @@ data/knowledge/topics/<topic_slug>/summaries/v001.md
 4. 主题整理步骤按时间线、逻辑脉络、推理记录、关系和摘要生成有版本的产物，并登记在 `artifacts`。
 5. 每次运行保存输入文档集合、产物版本、统计数据和错误信息，便于增量重跑与回溯。
 
-当前仓库初始化了目录、配置样例、数据库 schema 和建库脚本；采集器、调度器及自动总结流程可以在此基础上逐步接入。
+当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。运行方式、恢复规则、测试和旧任务迁移说明见 [docs/engine.md](docs/engine.md)。文章全文、官方与社区来源、主题自动总结流程后续逐步接入。
 
 当前任务清单和默认监控口径见 [docs/monitoring-plan.md](docs/monitoring-plan.md)；从 stocks-quant 盘点并登记的旧 systemd 任务见 [docs/stocks-quant-task-inventory.md](docs/stocks-quant-task-inventory.md)。
 

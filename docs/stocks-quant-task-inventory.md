@@ -19,9 +19,9 @@
 
 上述 8 个任务定义和 3 个补充主题已放入 `config/` 并同步至 `data/db/news.sqlite3`。SQLite `tasks.scheduler_engine` 对这 8 项标为 `systemd`，新建的 3 项监控任务标为 `news-claw`。从旧仓库镜像的任务在本数据库中设置为 `enabled = false`，并在 `config_json` 记录原 unit、原始 systemd 日历表达式、来源/输出路径、当时观察到的 timer 状态和请求上限。false 表示 news-claw 不会启动它们；旧 systemd timer 仍由 stocks-quant 管理，未停用。
 
-`news-claw` 是新任务的目标调度引擎标签；当前仓库还没有执行器，因此这 3 项虽在 SQLite 中启用，仍只是已配置任务，尚未实际调度运行。
+`news-claw` 是新任务的目标调度引擎标签；当前已提供 Go 执行器和 Scrapy 采集入口，但尚未启动线上常驻调度；使用方式见 [engine.md](engine.md)。
 
-目前 `news-claw` 只有任务清单与 SQLite 注册，还没有读取这些定义并实际调度的执行器。特别是旧的小时 Google News RSS timer 仍给 stocks-quant 网站供稿；新建的机器人/物理 AI/太空新闻任务与其有主题重叠。真正切换前应先确定共用来源、缓存和输出的交接方案，再停用旧 timer 或明确保留唯一采集所有者，不能直接同时启用两个采集入口。
+Go 调度器已实现，旧任务仍保持外部 systemd 归属，尚未切换。特别是旧的小时 Google News RSS timer 仍给 stocks-quant 网站供稿；新建的机器人/物理 AI/太空新闻任务与其有主题重叠。真正切换前应先确定共用来源、缓存和输出的交接方案，再停用旧 timer 或明确保留唯一采集所有者，不能直接同时启用两个采集入口。
 
 stocks-quant 的采集规则一并保留在任务配置：单进程串行、最多 6 请求/分钟、请求至少间隔 10 秒、优先缓存、同源进程锁；遇到 429、验证码、拒绝或黑名单时停止该来源，不自动重试，不使用代理或切换 IP。BaoStock 因黑名单状态保持暂停，没有将其列为可恢复采集来源。
 

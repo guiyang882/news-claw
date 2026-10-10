@@ -29,6 +29,33 @@
   },
   "options": {
     "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true
+    "do_not_start_from_news_claw": true,
+    "migration_target_schedule": "10 */3 * * *"
+  },
+  "execution": {
+    "command": [
+      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      "-m",
+      "web.news_analysis",
+      "--execute",
+      "--timeout-seconds",
+      "900",
+      "--input",
+      "/mnt/quant-state/quant-web/news_timeline.json",
+      "--output",
+      "/mnt/quant-state/quant-web/news_analysis.json",
+      "--audit",
+      "/mnt/quant-state/quant-web/news_analysis_batches.jsonl",
+      "--lock",
+      "/mnt/quant-state/quant-web/news_analysis.lock",
+      "--history-dir",
+      "/mnt/quant-state/quant-web/news_analysis_history"
+    ],
+    "working_dir": "/mnt/quant/strategies/stocks-quant",
+    "timeout_seconds": 960,
+    "user": "quant-web",
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
   }
 }

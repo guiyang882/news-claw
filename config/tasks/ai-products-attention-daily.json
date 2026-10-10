@@ -23,7 +23,10 @@
         60,
         300,
         900
-      ]
+      ],
+      "max_requests_per_run": 12,
+      "stop_on_403_429_or_access_denial": true,
+      "automatic_retry_after_denial": false
     },
     "source_classes": [
       "official_product_announcements",
@@ -37,7 +40,30 @@
       "GPT",
       "ChatGPT"
     ],
-    "disambiguation": "Muse is ambiguous; include a result only when context supports that it refers to an AI product, model, or agent, and record the identified product/vendor when possible."
+    "disambiguation": "Muse is ambiguous; include a result only when context supports that it refers to an AI product, model, or agent, and record the identified product/vendor when possible.",
+    "sources": [
+      {
+        "name": "muse-ai",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%22Muse%22+AI+%28product+OR+agent%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      },
+      {
+        "name": "gemini-agent",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%22Gemini%22+agent+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      },
+      {
+        "name": "gpt-feedback",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%28ChatGPT+OR+GPT%29+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      }
+    ]
   },
   "options": {
     "start_jitter_seconds": 300,
@@ -58,6 +84,18 @@
       "inferences",
       "relations",
       "summaries"
-    ]
+    ],
+    "collection_stage": "news_discovery_only"
+  },
+  "schedule_format": "cron",
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.news"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 1800,
+    "lock_group": "web-fetch"
   }
 }

@@ -24,7 +24,10 @@
         60,
         300,
         900
-      ]
+      ],
+      "max_requests_per_run": 12,
+      "stop_on_403_429_or_access_denial": true,
+      "automatic_retry_after_denial": false
     },
     "source_classes": [
       "us_government_primary_sources",
@@ -38,6 +41,15 @@
       "USTR",
       "US Treasury",
       "US Congress"
+    ],
+    "sources": [
+      {
+        "name": "us-china-trade-controls",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=China+%28%22export+controls%22+OR+%22import+restrictions%22+OR+%22BIS%22%29+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      }
     ]
   },
   "options": {
@@ -57,6 +69,18 @@
       "inferences",
       "relations",
       "summaries"
-    ]
+    ],
+    "collection_stage": "news_discovery_only"
+  },
+  "schedule_format": "cron",
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.news"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 1800,
+    "lock_group": "web-fetch"
   }
 }

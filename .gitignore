@@ -6,6 +6,9 @@
 /data/raw/
 /data/normalized/
 /data/runs/
+/data/db/*.lock
+/bin/
+/coverage.out
 
 # Python tooling
 __pycache__/

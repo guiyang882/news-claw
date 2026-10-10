@@ -26,7 +26,10 @@
         60,
         300,
         900
-      ]
+      ],
+      "max_requests_per_run": 12,
+      "stop_on_403_429_or_access_denial": true,
+      "automatic_retry_after_denial": false
     },
     "source_classes": [
       "company_announcements_and_filings",
@@ -47,7 +50,30 @@
       "NASA",
       "ULA"
     ],
-    "discover_related_entities": true
+    "discover_related_entities": true,
+    "sources": [
+      {
+        "name": "space-race",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%28SpaceX+OR+%22Rocket+Lab%22+OR+%22Blue+Origin%22%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      },
+      {
+        "name": "robotics",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%28Tesla+Optimus+OR+%22Figure+AI%22+OR+humanoid+robotics%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      },
+      {
+        "name": "physical-ai",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%22physical+AI%22+%28NVIDIA+OR+robotics+OR+research%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery"
+      }
+    ]
   },
   "options": {
     "start_jitter_seconds": 300,
@@ -66,6 +92,18 @@
       "inferences",
       "relations",
       "summaries"
-    ]
+    ],
+    "collection_stage": "news_discovery_only"
+  },
+  "schedule_format": "cron",
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.news"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 1800,
+    "lock_group": "web-fetch"
   }
 }
