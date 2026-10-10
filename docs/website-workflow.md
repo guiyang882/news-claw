@@ -32,7 +32,7 @@ flowchart LR
 
 每项任务由 `config/tasks/<task_id>.json` 定义；当前只支持 JSON，尚未实现 YAML 解析。
 
-- `task_type`：`crawl` / `codex` / `publish`，用于查询和展示。
+- `task_type`：`crawl` / `codex` / `agy` / `publish`，用于查询和展示；不同模型 CLI 继续使用同一执行协议。
 - `schedule`、`schedule_format`、`timezone`、`enabled`：管理何时运行。
 - `execution.command`、`working_dir`、`env`、`user`：运行任意前台程序。
 - `timeout_seconds`、`stop_grace_seconds`、`lock_group`：管理超时、收尾和互斥。
@@ -50,6 +50,8 @@ Go 注入 `NEWS_CLAW_ROOT`、`NEWS_CLAW_DB`、`NEWS_CLAW_TASK_ID`、`NEWS_CLAW_R
 ```
 
 上述结果表示检查程序正常完成，文章等待批准。`task_runs.status=succeeded` 表示程序执行成功；实际业务结果保存在 `metadata_json.result.business_status`。博客适配器从 service 的本轮日志提取该字段；模型供应方熔断或上次失败会将本轮标为 failed。只有 `published` 才表示本轮完成发布。
+
+agy / Gemini 可使用 [agy 模板](../config/templates/agy.json) 处理本地材料并辅助复核。直接 CLI 响应保存在运行日志中；进入正式 knowledge 或网站内容前，由包装脚本校验并登记产物，沿用后续发布规则。模型选择和登录由 CLI 环境提供。当前常驻 engine 隔离 /root，agy 模板启用前需落实可执行文件与登录资料的受控访问，见 [模板说明](../config/templates/README.md)。
 
 ## 平替范围与后续连接
 
