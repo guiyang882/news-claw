@@ -77,7 +77,7 @@ data/knowledge/topics/<topic_slug>/summaries/v001.md
 5. 每次运行保存输入文档集合、产物版本、统计数据和错误信息，便于增量重跑与回溯。
 6. Codex 任务生成网站数据或文章草稿，发布任务校验后写入网站读取的运行目录。每日博客先由 Codex 生成候选题与约 20 分钟阅读的大纲，再由 Gemini 按大纲写稿、Codex 事实复核、humanizer 修订和最终复核；原市场文章人工批准流程保留。
 
-当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。网站数据分析保留原有输入输出。[每日博客](docs/daily-blog.md) 每天北京时间 07:00 加随机延迟运行，先保存候选题和大纲，通过复核后发布中英双语长文并登记知识索引；材料不足或复核不通过时保留记录。运行方式见 [docs/engine.md](docs/engine.md)，网站链路见 [docs/website-workflow.md](docs/website-workflow.md)。
+当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。网站数据分析保留原有输入输出。[每日博客](docs/daily-blog.md) 每天北京时间 07:30 加随机延迟运行，先保存候选题和大纲，通过复核后发布中英双语长文并登记知识索引；材料不足或复核不通过时保留记录。运行方式见 [docs/engine.md](docs/engine.md)，网站链路见 [docs/website-workflow.md](docs/website-workflow.md)。
 
 当前任务清单和默认监控口径见 [docs/monitoring-plan.md](docs/monitoring-plan.md)；从 stocks-quant 盘点并登记的旧 systemd 任务见 [docs/stocks-quant-task-inventory.md](docs/stocks-quant-task-inventory.md)。
 
