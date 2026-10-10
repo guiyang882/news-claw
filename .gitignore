@@ -1,18 +1,11 @@
-# Local databases and collected content
+# Keep the task registry and curated knowledge in Git. Ignore generated fetch
+# payloads and per-run artifacts, which can grow quickly.
 /data/db/*.sqlite3
+!/data/db/news.sqlite3
 /data/db/*.sqlite3-*
-/data/raw/**
-/data/normalized/**
-/data/knowledge/**
-/data/runs/**
-!/data/raw/.gitkeep
-!/data/raw/README.md
-!/data/normalized/.gitkeep
-!/data/normalized/README.md
-!/data/knowledge/.gitkeep
-!/data/knowledge/README.md
-!/data/runs/.gitkeep
-!/data/runs/README.md
+/data/raw/
+/data/normalized/
+/data/runs/
 
 # Python tooling
 __pycache__/
