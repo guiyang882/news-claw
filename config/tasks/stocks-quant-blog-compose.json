@@ -1,9 +1,9 @@
 {
   "id": "stocks-quant-blog-compose",
   "name": "从本地审核资料包生成市场文章草稿",
-  "description": "每日读取已复核的本地资料包并生成草稿；缺少资料包时跳过，不访问机构网站。",
+  "description": "每日读取已复核的本地资料包并生成草稿；缺少资料包时跳过，不访问机构网站。 已由 daily-blog-agy-codex 接管每日流程；保留配置与历史。",
   "scheduler_engine": "news-claw",
-  "enabled": true,
+  "enabled": false,
   "schedule": "15 19 * * *",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
@@ -24,7 +24,9 @@
   },
   "options": {
     "migration_state": "go_scheduled_legacy_service",
-    "start_jitter_seconds": 0
+    "start_jitter_seconds": 0,
+    "superseded_by": "daily-blog-agy-codex",
+    "model_permissions": "full_no_interactive_approval"
   },
   "legacy_schedule": {
     "schedule": "*-*-* 19:15:00",

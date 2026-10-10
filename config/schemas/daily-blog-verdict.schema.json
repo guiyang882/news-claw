@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "approved": {
+      "type": "boolean"
+    },
+    "facts_supported": {
+      "type": "boolean"
+    },
+    "languages_consistent": {
+      "type": "boolean"
+    },
+    "citations_valid": {
+      "type": "boolean"
+    },
+    "humanizer_applied": {
+      "type": "boolean"
+    },
+    "article_sha256": {
+      "type": "string"
+    },
+    "packet_sha256": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "approved",
+    "facts_supported",
+    "languages_consistent",
+    "citations_valid",
+    "humanizer_applied",
+    "article_sha256",
+    "packet_sha256",
+    "reason",
+    "issues"
+  ]
+}

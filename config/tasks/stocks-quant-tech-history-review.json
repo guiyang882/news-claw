@@ -46,7 +46,8 @@
   "options": {
     "migration_state": "go_scheduled_legacy_service",
     "max_stories_per_run": 7,
-    "start_jitter_seconds": 600
+    "start_jitter_seconds": 600,
+    "model_permissions": "full_no_interactive_approval"
   },
   "legacy_schedule": {
     "schedule": "Mon *-*-* 04:20:00",

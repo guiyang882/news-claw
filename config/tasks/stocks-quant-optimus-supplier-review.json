@@ -37,7 +37,8 @@
   },
   "options": {
     "migration_state": "go_scheduled_legacy_service",
-    "start_jitter_seconds": 1200
+    "start_jitter_seconds": 1200,
+    "model_permissions": "full_no_interactive_approval"
   },
   "legacy_schedule": {
     "schedule": "Mon *-*-* 09:20:00",

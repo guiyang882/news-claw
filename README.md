@@ -7,7 +7,7 @@
 ```text
 config/
   tasks/                 JSON 任务定义：采集、Codex/agy 整理、网站发布
-  templates/             四类执行模板，默认关闭
+  templates/             采集、模型、发布和每日博客工作流模板，默认关闭
   topics/                主题定义：关注范围、关键词、关注问题
 data/
   db/news.sqlite3        本地索引与任务运行状态（由 scripts/init_db.py 创建）
@@ -20,13 +20,14 @@ scripts/                 本地维护脚本
 cmd/news-claw/           Go 调度器命令入口
 internal/engine/         持久化计划、队列与子进程执行
 collectors/              Scrapy RSS/Atom/网页采集器
+workflows/               每日博客等多阶段任务的执行程序
 docs/                    监控任务计划与口径
 ```
 
 ## 核心划分
 
 - **Task（任务）** 描述执行什么命令、何时执行、关联哪些主题；任务可以是采集、Codex/agy 分析或发布。稳定 ID 用于关联每轮运行。
-- **调度引擎** 记录在 `tasks.scheduler_engine`。11 项任务统一由 Go engine 调度；旧 service 作为执行适配器，保留账号、文件沙箱和网站发布规则。
+- **调度引擎** 记录在 `tasks.scheduler_engine`。12 项任务定义中有 10 项启用，由 Go engine 调度；旧 service 作为执行适配器。每日博客通过直接 CLI 工作流执行，原两项博客任务停用并保留历史。
 - **SQLite 结构保持精简**：任务主题关联放在任务配置的 `topic_ids`；来源信息和文档主题关联随文档存为 JSON，减少单独的关联表。
 - **Topic（主题）** 描述“长期追踪什么问题”。抓取结果先进入原始归档，再经过去重、正文抽取和主题归属，最后汇总成主题材料。
 - **SQLite** 保存任务、主题、任务运行、文档索引和产物版本等可查询元数据；来源和主题关联使用 JSON，网页正文和长文本产物保存在文件中，数据库记录其相对路径与内容哈希。
@@ -74,9 +75,9 @@ data/knowledge/topics/<topic_slug>/summaries/v001.md
 3. 清洗与去重步骤生成标准正文，并将候选文档关联到一个或多个主题。
 4. 主题整理步骤按时间线、逻辑脉络、推理记录、关系和摘要生成有版本的产物，并登记在 `artifacts`。
 5. 每次运行保存输入文档集合、产物版本、统计数据和错误信息，便于增量重跑与回溯。
-6. Codex 任务生成网站数据或文章草稿，发布任务校验后写入网站读取的运行目录。长文发布沿用现有人工批准要求。
+6. Codex 任务生成网站数据或文章草稿，发布任务校验后写入网站读取的运行目录。每日博客使用 Gemini 写稿、Codex 事实复核、humanizer 修订和最终复核；原市场文章人工批准流程保留。
 
-当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。原网站供稿、Codex 分析、草稿与发布任务保留原有输入输出。新主题从 RSS 到知识材料和网站的自动转换仍需补充；不能把采集成功当作网站已经发布。运行方式见 [docs/engine.md](docs/engine.md)，网站链路与扩展边界见 [docs/website-workflow.md](docs/website-workflow.md)。
+当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。网站数据分析保留原有输入输出。[每日博客](docs/daily-blog.md) 每天 23:10 加随机延迟运行，通过复核后发布中英双语文章并登记知识索引；材料不足或复核不通过时保留记录。运行方式见 [docs/engine.md](docs/engine.md)，网站链路见 [docs/website-workflow.md](docs/website-workflow.md)。
 
 当前任务清单和默认监控口径见 [docs/monitoring-plan.md](docs/monitoring-plan.md)；从 stocks-quant 盘点并登记的旧 systemd 任务见 [docs/stocks-quant-task-inventory.md](docs/stocks-quant-task-inventory.md)。
 

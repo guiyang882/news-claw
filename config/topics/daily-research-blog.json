@@ -1,0 +1,24 @@
+{
+  "id": "daily-research-blog",
+  "name": "每日研究博客与模型复核",
+  "description": "Gemini 3.8 Flash 基于本地材料写稿，GPT-6.1 Sol事实校验、humanizer修订与最终复核后自动发布；缺少证据或未通过复核不发文。",
+  "enabled": true,
+  "keywords": [
+    "blog",
+    "model review",
+    "humanizer",
+    "bilingual research"
+  ],
+  "questions": [
+    "哪些事实有来源，来源日期和证据层级是什么？",
+    "修改后是否保留事实、引用、反证条件与中英文一致性？"
+  ],
+  "analysis_rules": [
+    "仅使用已收集的本地材料；新闻标题不得升级为已验证事实。",
+    "模型复核与人工批准分别记录；不生成虚构的人工批准文件。",
+    "每日最多一次模型写稿尝试与一篇运行时文章。"
+  ],
+  "artifact_types": [
+    "summaries"
+  ]
+}

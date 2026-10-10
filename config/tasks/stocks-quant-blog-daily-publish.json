@@ -1,9 +1,9 @@
 {
   "id": "stocks-quant-blog-daily-publish",
   "name": "审核通过的本地市场文章发布",
-  "description": "每日检查本地收件箱和人工批准文件；校验通过后离线发布。",
+  "description": "每日检查本地收件箱和人工批准文件；校验通过后离线发布。 已由 daily-blog-agy-codex 接管每日流程；保留配置与历史。",
   "scheduler_engine": "news-claw",
-  "enabled": true,
+  "enabled": false,
   "schedule": "30 20 * * *",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
@@ -24,7 +24,8 @@
   },
   "options": {
     "migration_state": "go_scheduled_legacy_service",
-    "start_jitter_seconds": 0
+    "start_jitter_seconds": 0,
+    "superseded_by": "daily-blog-agy-codex"
   },
   "legacy_schedule": {
     "schedule": "*-*-* 20:30:00",

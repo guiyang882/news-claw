@@ -31,7 +31,8 @@
   "options": {
     "migration_state": "go_scheduled_legacy_service",
     "migration_target_schedule": "10 */3 * * *",
-    "start_jitter_seconds": 120
+    "start_jitter_seconds": 120,
+    "model_permissions": "full_no_interactive_approval"
   },
   "execution": {
     "command": [
@@ -44,7 +45,7 @@
     "working_dir": ".",
     "timeout_seconds": 2760,
     "stop_grace_seconds": 115,
-    "lock_group": "",
+    "lock_group": "model-cli",
     "adapter": "legacy_service",
     "systemd_unit": "quant-news-analysis.service",
     "recovery_command": [

@@ -6,6 +6,7 @@
 | [codex.json](codex.json) | codex | 网站现有 Codex 草稿 service 的命令适配器 | 执行命令、输入输出、超时 |
 | [agy.json](agy.json) | agy | 本机 agy CLI，使用已配置的模型 | 非交互提示词、模型选择、工作目录、超时 |
 | [publish.json](publish.json) | publish | 网站现有审批后发布 service 的命令适配器 | 草稿输入、网站输出、校验要求 |
+| [daily-blog.json](daily-blog.json) | workflow | workflows.daily_blog，多阶段博客工作流 | Gemini 写稿、Codex 复核、humanizer、最终复核、网站发布 |
 
 模板均为完整 JSON，默认 enabled=false。初始化只读取 config/tasks/*.json，模板留在本目录时不会进入 SQLite 或被调度。文件是复制用的配置示例，没有变量替换、继承或自动渲染机制。
 
@@ -35,15 +36,15 @@ workflow.inputs、outputs、input_requirement 是说明元数据，不会自动�
 
 ## agy / Gemini 模板
 
-agy.json 是第四种执行模板，沿用同一 Go 命令协议、SQLite task_runs、日志、超时和互斥，不需要增加数据库表或 Go 专用执行分支。
+agy.json 沿用同一 Go 命令协议、SQLite task_runs、日志、超时和互斥，不需要增加数据库表或 Go 专用执行分支。
 
-本机已安装 /root/.local/bin/agy；通过本机 --help 核对了模板使用的 --print、--mode plan、--sandbox、--disable-slash-commands、--output-format json 和 --print-timeout 参数。模板是处理本地知识材料的示例，提示词直接写在 execution.command 的 --print 参数中；新任务修改该参数及 topic_ids、工作目录、输入输出说明即可。
+本机已安装 /root/.local/bin/agy；通过本机 --help 核对了模板使用的 --print、--dangerously-skip-permissions、--disable-slash-commands、--output-format json 和 --print-timeout 参数。模板是处理本地知识材料的示例，提示词直接写在 execution.command 的 --print 参数中；新任务修改该参数及 topic_ids、工作目录、输入输出说明即可。
 
 模板不指定 --model，继承 CLI 当前配置。启用前确认选择的是所需 Gemini 模型；需要固定模型时，在 command 参数数组中添加 --model 和本机有效的模型 ID。登录或 API 凭据由 CLI 的受控运行环境提供，不能放入任务 JSON。示例 lock_group=agy 让同组 agy 任务串行；它与网页采集的限流组独立。需要联网检索的独立任务还需接入相应来源预算、限流和熔断管理。
 
-当前 deployment/news-claw.service 使用 ProtectHome=true，本机的 /root/.local/bin/agy 及 /root 下的登录资料不能被该常驻进程访问。因此本模板保持关闭；启用前需配置可执行程序和必要登录目录的受控可访问路径，或通过有正确运行环境的独立执行适配器调用。修改 task_type 或 execution.user 不会解除 service 的文件系统隔离。前台 engine 使用相同账号时仍需先核对 CLI 登录与模型配置。本次未发起模型请求，也未修改线上服务权限。
+本机最初通过 deployment/news-claw-agy.conf 映射原 CLI 路径。用户要求所有模型任务 full 权限后，已安装排在末尾的 zz-full-access.conf，移除 home 与文件系统限制；agy 和 Codex 使用原账号及 profile，不移动安装文件或复制凭据。模板继续默认关闭，新增任务按上文设置内容和频率后启用即可。其他机器按 [部署说明](../../deployment/README.md) 先配置运行环境。
 
-直接 CLI 的 JSON 输出被 engine 收入 data/runs/<run_id>/worker.log；task_runs.status 依据退出码记录执行成败。JSON 响应本身不会自动成为 NEWS_CLAW_RESULT_PATH 的 result.json、knowledge 产物或网站草稿。如果需要结构校验、业务状态和正式产物，使用包装脚本解析响应、校验内容，再写 result.json 和对应产物文件。提示词的输入限制与 CLI plan/sandbox 设置不能替代发布校验；网站发布继续由相应 publish 任务处理。
+直接 CLI 的 JSON 输出被 engine 收入 data/runs/<run_id>/worker.log；task_runs.status 依据退出码记录执行成败。JSON 响应本身不会自动成为 NEWS_CLAW_RESULT_PATH 的 result.json、knowledge 产物或网站草稿。如果需要结构校验、业务状态和正式产物，使用包装脚本解析响应、校验内容，再写 result.json 和对应产物文件。CLI 按用户要求使用 full 权限，发布仍须通过内容校验；网站发布继续由相应 publish 任务处理。
 
 ## 共同字段
 
@@ -52,3 +53,5 @@ agy.json 是第四种执行模板，沿用同一 Go 命令协议、SQLite task_r
 - 整理归属：topic_ids、workflow；采集器另读取 collector 和 options。
 
 默认使用五段 cron。需要结束后冷却时，改为 schedule_format=completion_interval、schedule="24h"，用 options.initial_delay_seconds 设置首次延迟。两个调度模式使用同一执行协议。
+
+每日博客模板对应 [完整工作流](../../docs/daily-blog.md)，由执行脚本解释 workflow 中的模型、素材与发布参数，Go 仍使用通用命令协议。本机启用的 daily-blog-agy-codex 已接管每日发文，模板保持关闭。复制启用另一份前应调整发布目标或停用原任务，避免重复。
