@@ -239,6 +239,7 @@ class ModelRunner:
         else:
             command = [settings["executable"], "exec", "--ephemeral", "--ignore-user-config",
                        "--dangerously-bypass-approvals-and-sandbox", "--model", settings["model"], "--skip-git-repo-check",
+                       "-c", "service_tier=" + json.dumps(settings["service_tier"]),
                        "--disable", "multi_agent", "--disable", "shell_tool", "-c", 'web_search="disabled"',
                        "-c", 'model_provider="daily-blog"', "-c", 'model_providers.daily-blog.name="OpenAI"',
                        "-c", 'model_providers.daily-blog.requires_openai_auth=true',
@@ -246,6 +247,8 @@ class ModelRunner:
                        "-c", 'model_providers.daily-blog.stream_max_retries=0',
                        "--json", "--cd", str(directory), "--output-schema", str(schema),
                        "--output-last-message", str(directory / "response.json"), "-"]
+            if settings.get("reasoning_effort") is not None:
+                command[2:2] = ["-c", "model_reasoning_effort=" + json.dumps(settings["reasoning_effort"])]
         stdout = directory / "stdout.log"
         stderr = directory / "stderr.log"
         # Retain the engine's inherited lock even if the engine itself crashes.

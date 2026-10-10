@@ -10,7 +10,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from workflows import daily_blog as blog
 
@@ -288,6 +288,26 @@ class DailyBlogTests(unittest.TestCase):
         with patch("subprocess.Popen", side_effect=AssertionError("Blocked provider cannot be called")):
             with self.assertRaisesRegex(PermissionError, "circuit is open"):
                 runner("draft", "test", blog.SCHEMAS / "daily-blog-draft.schema.json", self.directory)
+
+    def test_codex_uses_task_speed_and_reasoning_even_when_ignoring_user_config(self):
+        schema = self.root / "command-schema.json"
+        schema.write_text('{"type":"object","properties":{},"required":[]}')
+        runner = blog.ModelRunner(self.config, self.root)
+        for stage, key, effort in (("plan", "planner", "high"), ("review", "reviewer", None)):
+            self.config["workflow"][key]["reasoning_effort"] = effort
+            def start(command, **kwargs):
+                output = Path(command[command.index("--output-last-message") + 1])
+                output.write_text('{}')
+                return Mock(returncode=0, poll=lambda: 0)
+            with patch.object(blog.subprocess, "Popen", side_effect=start) as process:
+                runner(stage, "Offline command fixture", schema, self.root / stage)
+            command = process.call_args.args[0]
+            self.assertIn("--ignore-user-config", command)
+            self.assertIn("--dangerously-bypass-approvals-and-sandbox", command)
+            self.assertEqual(command[command.index("--model") + 1], "gpt-6.1-sol")
+            self.assertIn('service_tier="fast"', command)
+            reasoning = [value for value in command if value.startswith("model_reasoning_effort=")]
+            self.assertEqual(reasoning, ['model_reasoning_effort="high"'] if effort else [])
 
 
 if __name__ == "__main__":

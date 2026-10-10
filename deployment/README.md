@@ -23,6 +23,21 @@ make init
 
 重启前等 engine 中当前运行结束。CLI 仍使用原本机登录，不复制凭据。网站五处 Codex 调用及部署覆盖文件保存在 stocks-quant repo；那里同时记录相关专项测试。
 
+## 旧 Codex service 的配置快照
+
+四项活跃 Codex 任务和原博客草稿模板的模型设置已移到 JSON 的 workflow.codex。适配器将本轮队列快照写到 data/runs/service-inputs/&lt;unit&gt;.json（0600），service 通过 [news-claw-codex-input.conf](news-claw-codex-input.conf) 的 NEWS_CLAW_TASK_CONFIG_PATH 读取；不同 service 使用不同文件。缺少覆盖配置时适配器停止，避免静默使用默认参数。Go 调度器无需增加模型专用逻辑。
+
+```bash
+for unit in quant-news-analysis quant-tech-history-review quant-company-pulses-review quant-optimus-supply-review quant-blog-compose; do
+  mkdir -p "/etc/systemd/system/$unit.service.d"
+  cp deployment/news-claw-codex-input.conf "/etc/systemd/system/$unit.service.d/news-claw-input.conf"
+done
+systemctl daemon-reload
+make init
+```
+
+%n 由 systemd 展开为完整 service 名。其他机器需调整覆盖文件中的 repo 路径。无需启动旧 timer 或提前调用模型；下轮任务读取同步后的参数。模板与实际任务分别维护，修改模板不会覆盖已启用定义。参数入口见 [网站任务说明](../docs/website-workflow.md#codex-参数配置)。
+
 ## agy 安装位置与先前路径映射
 
 /root/.local/bin/agy 是正常安装位置。之前基础 unit 的 ProtectHome=true 会遮住 /root，因此无法直接执行；原因是服务隔离，不是安装路径。原 [news-claw-agy.conf](news-claw-agy.conf) 将二进制和全局配置只读映射，profile/cache 映射为读写；[news-claw-blog.conf](news-claw-blog.conf) 另映射 Codex profile 与博客运行目录。

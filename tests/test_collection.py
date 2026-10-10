@@ -155,7 +155,8 @@ class CollectionTest(unittest.TestCase):
         fake_bin = self.root / "fake-bin"
         fake_bin.mkdir()
         controller = fake_bin / "systemctl"
-        controller.write_text(f"#!{PYTHON}\nimport sys\nif sys.argv[1] == 'show':\n print('ActiveState=inactive\\nResult=success\\nExecMainStatus=0')\n")
+        service_input = self.root / 'data/runs/service-inputs/quant-blog-daily.service.json'
+        controller.write_text(f"#!{PYTHON}\nimport sys\nif '--property=Environment' in sys.argv:\n print('NEWS_CLAW_TASK_CONFIG_PATH={service_input}')\nelif sys.argv[1] == 'show':\n print('ActiveState=inactive\\nResult=success\\nExecMainStatus=0')\n")
         controller.chmod(0o755)
         journal = fake_bin / "journalctl"
         outcome = {'status': 'awaiting_editor_approval', 'day': '2026-10-10'}
@@ -165,9 +166,13 @@ class CollectionTest(unittest.TestCase):
             task = json.loads(db.execute("SELECT config_json FROM tasks WHERE id='test'").fetchone()[0])
             task['execution'].update(command=[PYTHON, '-m', 'collectors.legacy_service', '--unit', 'quant-blog-daily.service'],
                                      systemd_unit='quant-blog-daily.service', env={'PATH': str(fake_bin) + ':' + os.environ['PATH']})
+            task['workflow'] = {'codex': {'model': 'gpt-6.1-sol', 'reasoning_effort': 'medium',
+                                        'service_tier': 'default', 'permissions': 'full'}}
             db.execute("UPDATE tasks SET config_json=? WHERE id='test'", (json.dumps(task),))
         result = self.collect()
         self.assertEqual(result['status'], 'succeeded', result['log'])
+        self.assertEqual(json.loads(service_input.read_text()), task)
+        self.assertEqual(service_input.stat().st_mode & 0o777, 0o600)
         self.assertIn('mock legacy service journal', result['log'])
         self.assertEqual(json.loads(result['metadata_json'])['result']['business_status'], 'awaiting_editor_approval')
         outcome['status'] = 'model_provider_blocked'

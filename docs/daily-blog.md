@@ -10,6 +10,7 @@
 | 阅读目标 | 中英文各约 20 分钟；默认允许约 17–23 分钟的篇幅区间 |
 | 写稿 | agy，gemini-3.8-flash-high（Gemini 3.8 Flash High） |
 | 事实复核、修订、最终复核 | Codex，gpt-6.1-sol |
+| Codex 推理与速度 | planner/reviewer 的 reasoning_effort=null，沿用模型默认；service_tier=fast |
 | 修订规则 | /root/.codex/skills/humanizer/SKILL.md；每轮保存完整副本与 SHA256 |
 | 输入 | 近两天 SQLite 文档与 normalized 文件、已有公司研究快照、新闻标题线索 |
 | 发布位置 | /mnt/quant-state/quant-web/blog；网站代码在 /mnt/quant/strategies/stocks-quant |
@@ -108,4 +109,4 @@ bin/news-claw enqueue --task daily-blog-agy-codex
 
 频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。每日博客在北京时间 07:30 开始，保留最多七分钟随机延迟；整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
 
-CLI 参数已在本机 --help 核对；Codex 结构化响应方式参考 [非交互模式](https://learn.chatgpt.com/docs/non-interactive-mode)，模型标识参考 [GPT-6.1 Sol 文档](https://developers.openai.com/api/docs/models/gpt-6.1-sol)。
+CLI 参数已在本机 --help 核对；Codex 结构化响应方式参考 [非交互模式](https://learn.chatgpt.com/docs/non-interactive-mode)，模型标识参考 [GPT-6.1 Sol 文档](https://developers.openai.com/api/docs/models/gpt-6.1-sol)，推理与速度字段参考 [OpenAI 配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。

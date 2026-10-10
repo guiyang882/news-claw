@@ -26,7 +26,7 @@ cp config/templates/crawl.json config/tasks/my-topic-daily.json
 
 ## Codex 与发布任务的执行边界
 
-Codex 模板以现有审核资料包生成草稿为例，提示词、模型调用和内容校验仍由 stocks-quant 的 web.blog_compose 执行程序维护。JSON 中的 task_type 供管理展示使用，Go 对它使用通用命令协议。
+Codex 模板以现有审核资料包生成草稿为例。workflow.codex 显式配置 model、reasoning_effort、service_tier 和 permissions，默认 gpt-6.1-sol / medium / default / full。旧 service 适配器传递本轮 task.json，网站执行程序实际读取这些参数；提示词与内容校验仍由执行程序维护。JSON 中的 task_type 供管理展示使用，Go 对它使用通用命令协议。使用 service 入口时需安装 [Codex 输入覆盖配置](../../deployment/README.md)。
 
 Codex 和发布模板引用的 quant-blog-compose.service、quant-blog-daily.service 已由现有生产任务调度。复用同一 service 时应修改已有任务，或停用原配置后替换；同一执行入口只保留一份启用的计划。
 
@@ -54,4 +54,4 @@ agy.json 沿用同一 Go 命令协议、SQLite task_runs、日志、超时和互
 
 默认使用五段 cron。需要结束后冷却时，改为 schedule_format=completion_interval、schedule="24h"，用 options.initial_delay_seconds 设置首次延迟。两个调度模式使用同一执行协议。
 
-每日博客模板对应 [完整工作流](../../docs/daily-blog.md)，由执行脚本解释 workflow 中的模型、素材与发布参数，Go 仍使用通用命令协议。本机启用的 daily-blog-agy-codex 已接管每日发文，模板保持关闭。复制启用另一份前应调整发布目标或停用原任务，避免重复。
+每日博客模板对应 [完整工作流](../../docs/daily-blog.md)，由执行脚本解释 workflow 中的模型、素材与发布参数。planner/reviewer 均显式配置 gpt-6.1-sol、service_tier=fast 和 reasoning_effort=null；null 保留模型默认，也可改为 medium/high 等。Go 仍使用通用命令协议。本机启用的 daily-blog-agy-codex 已接管每日发文，模板保持关闭。复制启用另一份前应调整发布目标或停用原任务，避免重复。

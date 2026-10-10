@@ -4,6 +4,7 @@ import argparse
 import fcntl
 import json
 import os
+import shlex
 import signal
 import sqlite3
 import subprocess
@@ -34,6 +35,20 @@ def stop_unit(unit):
         if time.monotonic() > deadline:
             raise TimeoutError(f"service did not stop: {unit}")
         time.sleep(0.25)
+
+
+def prepare_codex_input(root, unit, task):
+    """Forward the queued configuration to a legacy service without global env changes."""
+    if not task.get("workflow", {}).get("codex"):
+        return
+    path = root / "data/runs/service-inputs" / (unit + ".json")
+    configured = subprocess.run(["systemctl", "show", unit, "--property=Environment", "--value"],
+                                capture_output=True, text=True, check=True, timeout=10)
+    environment = dict(value.split("=", 1) for value in shlex.split(configured.stdout) if "=" in value)
+    if environment.get("NEWS_CLAW_TASK_CONFIG_PATH") != str(path):
+        raise RuntimeError("Install the Codex task-input service override before running " + unit)
+    atomic_json(path, task)
+    os.chmod(path, 0o600)
 
 
 def reserve_google(root, policy, interrupted):
@@ -140,6 +155,7 @@ def main():
             reserved = True
         if cancelled:
             raise InterruptedError("engine stopped")
+        prepare_codex_input(root, args.unit, task)
         launched = True
         # systemctl start waits for a oneshot job to complete.
         process = subprocess.Popen(["systemctl", "start", args.unit])

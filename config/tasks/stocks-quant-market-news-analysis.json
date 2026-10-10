@@ -71,6 +71,12 @@
       "/mnt/quant-state/quant-web/news_analysis.json"
     ],
     "input_requirement": "existing news-analysis schema and source fingerprint validation must pass",
-    "after_task_id": "stocks-quant-market-news-refresh"
+    "after_task_id": "stocks-quant-market-news-refresh",
+    "codex": {
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "medium",
+      "service_tier": "default",
+      "permissions": "full"
+    }
   }
 }

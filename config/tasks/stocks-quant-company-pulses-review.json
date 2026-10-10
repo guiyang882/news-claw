@@ -72,5 +72,13 @@
     ],
     "recovery_timeout_seconds": 110
   },
-  "task_type": "codex"
+  "task_type": "codex",
+  "workflow": {
+    "codex": {
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "medium",
+      "service_tier": "default",
+      "permissions": "full"
+    }
+  }
 }

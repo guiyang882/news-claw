@@ -30,6 +30,30 @@ flowchart LR
 
 每日博客使用用户授权的模型复核发布方式，两个版本均在最终哈希绑定的复核通过后发布，记录为 model_review；详见 [每日博客](daily-blog.md)。原市场资料包和人工批准校验器保留，原批准文件仍需由人工提供，不能生成假批准。
 
+## Codex 参数配置
+
+模型参数直接保存在任务 JSON 中，模板提供同样的字段：
+
+| 任务 | 配置位置 | 模型 | 推理强度 | 速度 |
+| --- | --- | --- | --- | --- |
+| 每日博客 | workflow.planner、workflow.reviewer | gpt-6.1-sol | null，保留模型默认 | fast |
+| 市场新闻、科技史、公司脉冲、Optimus 复核 | workflow.codex | gpt-6.1-sol | medium | default，普通速度 |
+
+```json
+"codex": {
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "service_tier": "default",
+  "permissions": "full"
+}
+```
+
+修改 config/tasks/ 下对应 JSON 后执行 make init，同步 SQLite；只改 config/templates/ 不会改变已启用任务。模板用于创建新任务。每日博客分别读取 planner 和 reviewer 的配置，reasoning_effort=null 时不覆盖 Codex 模型默认；指定 medium/high 等值时显式传递。
+
+旧 service 适配器先将 Go 队列中的 task.json 原子保存到 data/runs/service-inputs/&lt;unit&gt;.json，再启动 service。service 使用 NEWS_CLAW_TASK_CONFIG_PATH 读取这份快照；网站执行脚本在调用模型时加载 workflow.codex，并显式传递模型、推理强度和速度，不继承全局 fast/high。缺少 service 输入覆盖配置或快照无效时停止，不用全局配置继续运行。安装见 [部署说明](../deployment/README.md)。
+
+模型登录仍沿用既有账号，权限保持 full。独立运行网站 CLI、未提供任务快照时使用 gpt-6.1-sol / medium / default 的默认值。旧 gpt-5.6-terra 分析快照保留可读性，已有证据与哈希校验继续执行。
+
 ## 统一任务协议
 
 每项任务由 `config/tasks/<task_id>.json` 定义；当前只支持 JSON，尚未实现 YAML 解析。

@@ -45,6 +45,12 @@
     "outputs": [
       "/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"
     ],
-    "input_requirement": "existing web.blog_compose.validate_packet must pass; empty input skips"
+    "input_requirement": "existing web.blog_compose.validate_packet must pass; empty input skips",
+    "codex": {
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "medium",
+      "service_tier": "default",
+      "permissions": "full"
+    }
   }
 }

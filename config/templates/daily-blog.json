@@ -50,7 +50,9 @@
       "executable": "/usr/local/bin/codex",
       "model": "gpt-6.1-sol",
       "timeout_seconds": 300,
-      "permissions": "full"
+      "permissions": "full",
+      "service_tier": "fast",
+      "reasoning_effort": null
     },
     "humanizer_skill": "/root/.codex/skills/humanizer/SKILL.md",
     "min_model_interval_seconds": 10,
@@ -94,7 +96,9 @@
       "executable": "/usr/local/bin/codex",
       "model": "gpt-6.1-sol",
       "timeout_seconds": 300,
-      "permissions": "full"
+      "permissions": "full",
+      "service_tier": "fast",
+      "reasoning_effort": null
     },
     "planning": {
       "max_candidates": 3,
