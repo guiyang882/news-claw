@@ -8,6 +8,8 @@ import tempfile
 import threading
 import time
 import unittest
+from contextlib import closing
+from unittest.mock import Mock
 from datetime import datetime, timezone
 from email.utils import format_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,7 +26,7 @@ class CollectionTest(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
         self.db = self.root / "test.sqlite3"
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             for migration in sorted((REPO / "sql/migrations").glob("*.sql")):
                 connection.executescript(migration.read_text())
             connection.execute("INSERT INTO schema_migrations VALUES (4,'test','2026-10-10T00:00:00Z')")
@@ -78,7 +80,7 @@ class CollectionTest(unittest.TestCase):
                   "collector": {"sources": [{"name": path.strip("/"), "type": "page" if path == "/page" else "rss", "url": self.base + path} for path in paths],
                                 "request_policy": {"min_interval_seconds_per_host": interval, "max_requests_per_run": budget}},
                   "options": {"max_items_per_run": 10, "lookback_hours": 30}}
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.execute("""INSERT INTO tasks(id,name,task_type,scheduler_engine,enabled,schedule,timezone,config_json,created_at,updated_at)
                                 VALUES (?,?,'test','news-claw',1,'15 7 * * *','Asia/Shanghai',?,'2026-10-10','2026-10-10')""",
                                (task, task, json.dumps(config)))
@@ -91,7 +93,7 @@ class CollectionTest(unittest.TestCase):
     def collect(self, task="test"):
         run = json.loads(self.command("enqueue", "--task", task))["run_id"]
         self.command("serve", "--once")
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.row_factory = sqlite3.Row
             row = dict(connection.execute("SELECT * FROM task_runs WHERE id=?", (run,)).fetchone())
         row["log"] = (self.root / row["log_path"]).read_text()
@@ -102,7 +104,7 @@ class CollectionTest(unittest.TestCase):
         first = self.collect()
         self.assertEqual(first["status"], "succeeded", first["log"])
         self.assertEqual((first["items_seen"], first["items_new"]), (3, 3))
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             documents = connection.execute("SELECT raw_path,metadata_path,normalized_path FROM documents").fetchall()
         for paths in documents:
             for path in paths:
@@ -113,7 +115,7 @@ class CollectionTest(unittest.TestCase):
         self.assertEqual(second["status"], "succeeded", second["log"])
         self.assertEqual(second["items_new"], 0)
         self.assertEqual(len(self.requests), requests_before, "cached run unexpectedly accessed network")
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             links = connection.execute("SELECT topic_links_json FROM documents").fetchall()
         for (value,) in links:
             self.assertEqual({link["topic_id"] for link in json.loads(value)}, {"space-race", "physical-ai"})
@@ -147,6 +149,50 @@ class CollectionTest(unittest.TestCase):
         self.seed(task="invalid", paths=("/broken",))
         result = self.collect("invalid")
         self.assertEqual(result["status"], "failed", result["log"])
+
+    def test_legacy_service_bridge_uses_unit_result(self):
+        self.seed()
+        fake_bin = self.root / "fake-bin"
+        fake_bin.mkdir()
+        controller = fake_bin / "systemctl"
+        controller.write_text(f"#!{PYTHON}\nimport sys\nif sys.argv[1] == 'show':\n print('ActiveState=inactive\\nResult=success\\nExecMainStatus=0')\n")
+        controller.chmod(0o755)
+        journal = fake_bin / "journalctl"
+        outcome = {'status': 'awaiting_editor_approval', 'day': '2026-10-10'}
+        journal.write_text(f"#!{PYTHON}\nprint('mock legacy service journal')\nprint({json.dumps(outcome)!r})\n")
+        journal.chmod(0o755)
+        with closing(sqlite3.connect(self.db)) as db, db:
+            task = json.loads(db.execute("SELECT config_json FROM tasks WHERE id='test'").fetchone()[0])
+            task['execution'].update(command=[PYTHON, '-m', 'collectors.legacy_service', '--unit', 'quant-blog-daily.service'],
+                                     systemd_unit='quant-blog-daily.service', env={'PATH': str(fake_bin) + ':' + os.environ['PATH']})
+            db.execute("UPDATE tasks SET config_json=? WHERE id='test'", (json.dumps(task),))
+        result = self.collect()
+        self.assertEqual(result['status'], 'succeeded', result['log'])
+        self.assertIn('mock legacy service journal', result['log'])
+        self.assertEqual(json.loads(result['metadata_json'])['result']['business_status'], 'awaiting_editor_approval')
+        outcome['status'] = 'model_provider_blocked'
+        journal.write_text(f"#!{PYTHON}\nprint({json.dumps(outcome)!r})\n")
+        blocked = self.collect()
+        self.assertEqual(blocked['status'], 'failed', blocked['log'])
+        self.assertEqual(json.loads(blocked['metadata_json'])['result']['business_status'], 'model_provider_blocked')
+
+
+class SharedCircuitTest(unittest.IsolatedAsyncioTestCase):
+    async def test_scrapy_obeys_legacy_google_circuit(self):
+        import scrapy
+        from scrapy.exceptions import IgnoreRequest
+        from collectors.news import RequestPolicy
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            circuit = root / 'old-circuit.json'
+            circuit.write_text('{"open": true, "reason": "rate_limited"}')
+            spider = Mock()
+            spider.root = root
+            spider.task = {'collector': {'request_policy': {'shared_circuit_paths': [str(circuit)]}}}
+            spider.requests_made, spider.request_budget = 0, 12
+            with self.assertRaises(IgnoreRequest):
+                await RequestPolicy(Mock()).process_request(scrapy.Request('https://news.google.com/rss'), spider)
+            self.assertEqual(spider.requests_made, 0)
 
 
 if __name__ == "__main__":

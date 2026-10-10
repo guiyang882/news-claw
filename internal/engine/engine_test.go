@@ -141,6 +141,69 @@ func TestCompletionIntervalStartsAfterFinish(t *testing.T) {
 	}
 }
 
+func TestImportedCompletionDeadlineIsPreserved(t *testing.T) {
+	s, _ := testStore(t)
+	addTask(t, s, "ofr", "24h", "completion_interval", "web-fetch")
+	now := time.Now().UTC()
+	deadline := now.Add(22 * time.Hour)
+	s.DB.Exec("UPDATE tasks SET config_json=json_set(config_json,'$.options.first_run_at',?) WHERE id='ofr'", stamp(deadline))
+	if err := s.Plan(now); err != nil {
+		t.Fatal(err)
+	}
+	if next := taskByID(t, s, "ofr").Next.String; next != stamp(deadline) {
+		t.Fatal("legacy completion deadline lost", next)
+	}
+}
+
+func TestGenericRecoveryUsesRunSnapshotAndKeepsLockOnFailure(t *testing.T) {
+	s, db := testStore(t)
+	root := t.TempDir()
+	addTask(t, s, "adapter", "* * * * *", "cron", "source")
+	if _, err := s.Enqueue("adapter", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	run, err := s.Claim(time.Now().Add(time.Second))
+	if err != nil || run == nil {
+		t.Fatal("claim", err)
+	}
+	run.Meta.Execution.RecoveryCommand = []string{"/bin/false"}
+	body, _ := json.Marshal(run.Meta)
+	if _, err = s.DB.Exec("UPDATE task_runs SET metadata_json=? WHERE id=?", string(body), run.ID); err != nil {
+		t.Fatal(err)
+	}
+	runner := Runner{Store: s, DBPath: db, Root: root}
+	if err = runner.recoverExecutions(context.Background()); err == nil {
+		t.Fatal("failed adapter recovery was ignored")
+	}
+	var status string
+	s.DB.QueryRow("SELECT status FROM task_runs WHERE id=?", run.ID).Scan(&status)
+	if status != "running" {
+		t.Fatal("failed recovery released the run", status)
+	}
+	// A relative command gets its original environment and working directory.
+	script := "#!/bin/sh\n[ \"$NEWS_CLAW_TASK_ID\" = adapter ] && [ \"$RECOVERY_TEST\" = snapshot ] && touch recovered\n"
+	if err = os.WriteFile(filepath.Join(root, "recover"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	run.Meta.Execution.RecoveryCommand = []string{"./recover"}
+	run.Meta.Execution.Env = map[string]string{"RECOVERY_TEST": "snapshot"}
+	body, _ = json.Marshal(run.Meta)
+	s.DB.Exec("UPDATE task_runs SET metadata_json=? WHERE id=?", string(body), run.ID)
+	if err = runner.recoverExecutions(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Stat(filepath.Join(root, "recovered")); err != nil {
+		t.Fatal("recovery hook not executed", err)
+	}
+	if err = s.Recover(time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	s.DB.QueryRow("SELECT status FROM task_runs WHERE id=?", run.ID).Scan(&status)
+	if status != "failed" {
+		t.Fatal("interrupted execution was not marked unknown", status)
+	}
+}
+
 func TestConcurrentClaimUsesSharedSourceGroup(t *testing.T) {
 	s, path := testStore(t)
 	now := time.Now()
@@ -250,6 +313,32 @@ func TestSingletonAndExecutionTimeout(t *testing.T) {
 	s.DB.QueryRow("SELECT status,error,log_path FROM task_runs WHERE id=?", run.ID).Scan(&status, &message, &logPath)
 	if status != "failed" || !strings.Contains(message, "deadline") || logPath == "" {
 		t.Fatal(status, message, logPath)
+	}
+}
+
+func TestFailedAdapterCleanupRetainsSourceLock(t *testing.T) {
+	s, db := testStore(t)
+	addTask(t, s, "adapter", "* * * * *", "cron", "source")
+	addTask(t, s, "next", "* * * * *", "cron", "source")
+	s.Enqueue("adapter", time.Now())
+	run, err := s.Claim(time.Now().Add(time.Second))
+	if err != nil || run == nil {
+		t.Fatal("claim", err)
+	}
+	run.Meta.Execution.Command = []string{"/bin/false"}
+	run.Meta.Execution.RecoveryCommand = []string{"/bin/false"}
+	runner := Runner{Store: s, DBPath: db, Root: t.TempDir()}
+	if err = runner.Execute(context.Background(), run); err == nil {
+		t.Fatal("failed cleanup was ignored")
+	}
+	var status string
+	s.DB.QueryRow("SELECT status FROM task_runs WHERE id=?", run.ID).Scan(&status)
+	if status != "running" {
+		t.Fatal("uncleaned external work released", status)
+	}
+	s.Enqueue("next", time.Now())
+	if next, err := s.Claim(time.Now().Add(time.Second)); err != nil || next != nil {
+		t.Fatal("source lock lost after adapter failure", next, err)
 	}
 }
 

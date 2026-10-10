@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-ofr-market-temperature",
-  "name": "历史任务：OFR 市场压力指标刷新",
+  "name": "OFR 市场压力指标刷新",
   "description": "从 OFR 官方公开 CSV 更新美国金融压力指数背景；属于结构化文件刷新，不是网页抓取。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "OnBootSec=15min;OnUnitInactiveSec=24h",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "24h",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_timer_directives",
+  "schedule_format": "completion_interval",
   "topic_ids": [
     "us-market-stress-context"
   ],
@@ -14,18 +14,47 @@
     "type": "public_csv_refresh",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-market-temperature.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "source": "OFR official public CSV",
     "max_requests_per_run": 1,
     "minimum_cooldown_hours": 24,
     "cache_first": true,
     "stop_on_403_or_429": true,
-    "persistent_circuit_breaker": true
+    "persistent_circuit_breaker": true,
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true
-  }
+    "migration_state": "go_scheduled_legacy_service",
+    "start_jitter_seconds": 0,
+    "first_run_at": "2026-10-11T06:11:17.000000000Z"
+  },
+  "legacy_schedule": {
+    "schedule": "OnBootSec=15min;OnUnitInactiveSec=24h",
+    "format": "systemd_timer_directives",
+    "timer": "quant-market-temperature.timer"
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.legacy_service",
+      "--unit",
+      "quant-market-temperature.service"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 120,
+    "stop_grace_seconds": 115,
+    "lock_group": "web-fetch",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-market-temperature.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-market-temperature.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "task_type": "crawl"
 }

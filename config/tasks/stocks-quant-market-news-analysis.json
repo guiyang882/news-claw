@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-market-news-analysis",
-  "name": "历史任务：市场新闻本地分析",
+  "name": "市场新闻本地分析",
   "description": "每三小时处理已有新闻时间线并生成校验后的双语市场脉冲；此阶段不访问来源网页。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "*-*-* 00/3:10:00",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "10 */3 * * *",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_oncalendar",
+  "schedule_format": "cron",
   "topic_ids": [
     "robotics-and-humanoids",
     "physical-ai",
@@ -16,8 +16,8 @@
     "type": "local_analysis",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-news-analysis.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "input": "/mnt/quant-state/quant-web/news_timeline.json",
     "outputs": [
@@ -25,37 +25,51 @@
       "/mnt/quant-state/quant-web/news_analysis_batches.jsonl"
     ],
     "network_source_access": false,
-    "randomized_delay": "up to 2 minutes"
+    "randomized_delay": "up to 2 minutes",
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true,
-    "migration_target_schedule": "10 */3 * * *"
+    "migration_state": "go_scheduled_legacy_service",
+    "migration_target_schedule": "10 */3 * * *",
+    "start_jitter_seconds": 120
   },
   "execution": {
     "command": [
-      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      ".venv/bin/python",
       "-m",
-      "web.news_analysis",
-      "--execute",
-      "--timeout-seconds",
-      "900",
-      "--input",
-      "/mnt/quant-state/quant-web/news_timeline.json",
-      "--output",
-      "/mnt/quant-state/quant-web/news_analysis.json",
-      "--audit",
-      "/mnt/quant-state/quant-web/news_analysis_batches.jsonl",
-      "--lock",
-      "/mnt/quant-state/quant-web/news_analysis.lock",
-      "--history-dir",
-      "/mnt/quant-state/quant-web/news_analysis_history"
+      "collectors.legacy_service",
+      "--unit",
+      "quant-news-analysis.service"
     ],
-    "working_dir": "/mnt/quant/strategies/stocks-quant",
-    "timeout_seconds": 960,
-    "user": "quant-web",
-    "env": {
-      "PYTHONDONTWRITEBYTECODE": "1"
-    }
+    "working_dir": ".",
+    "timeout_seconds": 2760,
+    "stop_grace_seconds": 115,
+    "lock_group": "",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-news-analysis.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-news-analysis.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "legacy_schedule": {
+    "schedule": "*-*-* 00/3:10:00",
+    "format": "systemd_oncalendar",
+    "timer": "quant-news-analysis.timer"
+  },
+  "task_type": "codex",
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "stage": "analyze_and_update_dataset",
+    "inputs": [
+      "/mnt/quant-state/quant-web/news_timeline.json"
+    ],
+    "outputs": [
+      "/mnt/quant-state/quant-web/news_analysis.json"
+    ],
+    "input_requirement": "existing news-analysis schema and source fingerprint validation must pass",
+    "after_task_id": "stocks-quant-market-news-refresh"
   }
 }

@@ -27,7 +27,10 @@
       ],
       "max_requests_per_run": 12,
       "stop_on_403_429_or_access_denial": true,
-      "automatic_retry_after_denial": false
+      "automatic_retry_after_denial": false,
+      "shared_circuit_paths": [
+        "/mnt/quant-state/quant-web/news_circuit.json"
+      ]
     },
     "source_classes": [
       "us_government_primary_sources",
@@ -82,5 +85,16 @@
     "working_dir": ".",
     "timeout_seconds": 1800,
     "lock_group": "web-fetch"
+  },
+  "task_type": "crawl",
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "stage": "news_discovery",
+    "outputs": [
+      "data/raw",
+      "data/normalized",
+      "documents"
+    ],
+    "publication_status": "requires_topic_analysis_and_website_adapter"
   }
 }

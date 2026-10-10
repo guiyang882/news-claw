@@ -32,12 +32,15 @@ bin/news-claw serve --once
 
 所有命令支持 `--root /mnt/quant/news-claw` 和 `--db data/db/news.sqlite3`。已有常驻进程时使用 enqueue 即可。plan 与 serve 共用单实例锁。
 
-JSON 是定义来源，修改后运行 `make init` 同步，engine 每 5 秒重新读取数据库。直接修改 DB 配置会在下次初始化时被覆盖；新增调度状态不会被覆盖。暂停/恢复通过 JSON 的 enabled 字段同步：排队任务取消，正在运行的任务完成后停止再次调度。
+JSON 是定义来源，修改后运行 `make init` 同步，engine 每 5 秒重新读取数据库。直接修改 DB 配置会在下次初始化时被覆盖；新增调度状态不会被覆盖。暂停/恢复通过 JSON 的 enabled 字段同步：排队任务取消，正在运行的任务完成后停止再次调度。当前不支持 YAML。
 
 ## 任务执行配置
 
 ```json
 {
+  "id": "us-china-export-controls-daily",
+  "name": "中美进出口管制政策追踪",
+  "task_type": "crawl",
   "scheduler_engine": "news-claw",
   "enabled": true,
   "schedule_format": "cron",
@@ -55,7 +58,9 @@ JSON 是定义来源，修改后运行 `make init` 同步，engine 每 5 秒重�
 
 命令使用参数数组，直接启动程序。以 `.` 开头的 executable 路径相对于 repo 根目录；其他相对程序名从 PATH 查找。working_dir 相对于根目录，亦可使用绝对路径。可通过 env 传入环境变量，engine 的 NEWS_CLAW_* 参数优先。可选 execution.user 保留旧 Linux 执行账号，切换用户需要权限及对应目录的访问权限；新采集任务建议与 engine 使用同一账号。
 
-支持五段 cron。`schedule_format: completion_interval` 配合 `schedule: "24h"` 表示上轮结束后至少 24 小时再次执行，首次使用 options.initial_delay_seconds（默认 0）。这个模式可以保留旧 OFR timer 的结束后冷却语义。
+`task_type` 仅用于管理展示，Go 使用统一执行协议，既可运行采集器，也可运行 Codex 包装脚本或网站发布脚本；采集、来源和发布校验留在执行程序。`workflow` 是输入输出说明元数据，不执行 DAG 调度，见 [网站工作流](website-workflow.md)。
+
+支持五段 cron。`schedule_format: completion_interval` 配合 `schedule: "24h"` 表示上轮结束后至少 24 小时再次执行，首次使用 options.initial_delay_seconds（默认 0），迁移时可用 options.first_run_at 设置原任务的 UTC 冷却截止时间。这个模式保留旧 OFR timer 的结束后冷却语义。
 
 ## 状态与恢复
 
@@ -74,7 +79,9 @@ JSON 是定义来源，修改后运行 `make init` 同步，engine 每 5 秒重�
 
 engine 使用 DB 旁的 flock 锁，子进程继承锁描述符：engine 意外退出后，新进程会等旧 worker 退出，避免重复执行。正常超时或停止会结束整个子进程组。执行程序必须以前台方式运行，不能自行 daemonize；继承锁的孤立 worker 未退出时会阻止新 engine 启动。
 
-恢复时旧 running 记录标为 failed，注明结果未知，检查输出后再决定手动重试；未来周期继续执行。第一版不自动重试整轮，避免外部写入/发布被重复执行。
+恢复时先执行旧运行快照中的 `execution.recovery_command`（如果配置了），以清理进程组外的工作；超时使用 recovery_timeout_seconds，默认 120 秒。清理失败会停止启动，保留 running 记录与互斥。清理成功后旧 running 记录标为 failed，注明结果未知，检查输出后再决定手动重试；未来周期继续执行。第一版不自动重试整轮，避免外部写入/发布被重复执行。
+
+超时或正常停止使用 stop_grace_seconds（默认 5 秒）等待程序收尾，再强制结束进程组。超时、执行器异常退出且没有结果，或 result.json 声明 recovery_required 时，也先运行恢复命令；清理失败保持 running 与来源互斥，engine 停止并在重启时重新清理。旧 service 适配器配置 115 秒以等待原服务停止；中断恢复配置通用 systemctl stop 命令，Go 不识别 service 类型。
 
 ## Scrapy 采集范围
 
@@ -94,13 +101,26 @@ RSS 保存标题、链接、发布时间和 feed 描述，作为新闻发现线�
 
 其他来源使用 hostname 作为来源键。手动恢复后仍遵守 Retry-After 的剩余等待时间。HTTP 错误、无效 feed、解析/存储错误和额度耗尽会使本轮失败，已完成文档保留。
 
-## 旧任务与上线边界
+## 旧任务与线上服务
 
-8 个镜像任务仍为 systemd/disabled，engine 不会启动。stocks-quant-market-news-analysis 已增加旧脚本执行适配与目标 cron `10 */3 * * *`，保留原 schedule 和调度归属。
+2026-10-10 将 8 个旧 timer 的调度交给 Go，连同 3 个新任务共 11 项。所有任务均为 news-claw/enabled，旧 timer disabled/inactive，news-claw.service 常驻且开机启动。原日历保存在 legacy_schedule，迁移前最后一次 service 的结果导入 task_runs，标记 engine=systemd；这是最后一次结果快照，不是全部历史日志。
 
-逐项切换时，等旧运行完成、停用对应 timer，再将 JSON 的 schedule 转为目标表达式、schedule_format 改为 cron、scheduler_engine 改为 news-claw、enabled 改为 true，移除 do_not_start_from_news_claw，初始化同步。保留原输入输出、脚本锁、执行账号。旧 systemd 文件系统沙箱不会由 Go 自动复现，部署时另行配置。
+旧任务由 collectors.legacy_service 执行原 oneshot service。service 保留实际安装的账号、Codex HOME/环境、文件沙箱、原数据路径、缓存、审计和锁；离线发布仍使用 PrivateNetwork 及哈希绑定人工批准。systemd 用于进程托管与旧任务执行隔离，11 项时间计划由 Go 管理。Go 调度层没有 systemd 专用代码。
 
-旧小时 RSS timer 没有使用本项目的限流文件。线上启动新 RSS 任务前，需要完成来源/输出交接或让旧脚本接入共享限流，避免两个系统同时采集。本次只进行了临时 DB 和 localhost 验证，没有启动后台服务、执行旧任务或停用旧 timer。
+小时 RSS 改为每小时第 5 分钟加最多 4 分钟随机延迟，旧脚本通过 drop-in 限制为每分钟 1 请求。RSS 适配器与新 Scrapy 任务共用 web-fetch 互斥、Google 来源边界间隔与熔断检查；新任务也读取旧脚本的 Google 熔断文件。旧脚本内部保持自己的缓存、锁和熔断；任务结束后保守预留至少 60 秒再允许新请求。两个熔断文件恢复时需分别核对，清理一个不会解除另一个。
+
+迁移脚本默认仅预览，`--apply` 检查旧任务未运行，备份配置和 SQLite，停用旧 timer，安装 engine service/RSS drop-in，同步 JSON 和计划，再启动服务。失败会恢复原配置、数据库、unit 和 timer 状态。备份保存在忽略提交的 data/runs/handoff-*。已经迁移时不要重复 apply。
+
+```bash
+python3 scripts/migrate_systemd.py           # 初次迁移前预览
+python3 scripts/migrate_systemd.py --apply   # 初次接管
+systemctl status news-claw.service
+journalctl -u news-claw.service --since today
+bin/news-claw tasks
+bin/news-claw runs --limit 20
+```
+
+迁移不修复原业务脚本的既有失败。最近的 news-analysis、Optimus 供应链和科技史任务已有失败结果，已如实导入；不能据此宣称每项业务都能成功生成内容。博客 business_status 可区分缺输入、等待批准与实际发布。
 
 ## 测试
 

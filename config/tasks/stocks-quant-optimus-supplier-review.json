@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-optimus-supplier-review",
-  "name": "历史任务：Tesla Optimus 供应链周度复核",
+  "name": "Tesla Optimus 供应链周度复核",
   "description": "每周检查 Tesla Optimus 供应链快照的重大变化；近期快照存在时跳过联网复核。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "Mon *-*-* 09:20:00",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "20 9 * * 1",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_oncalendar",
+  "schedule_format": "cron",
   "topic_ids": [
     "robotics-and-humanoids",
     "physical-ai"
@@ -15,8 +15,8 @@
     "type": "authorized_source_review",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-optimus-supply-review.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "source_classes": [
       "Tesla investor relations",
@@ -32,10 +32,38 @@
     "stop_on_403_429_captcha_or_access_denial": true,
     "automatic_retry_after_denial": false,
     "output": "/mnt/quant-state/quant-web/optimus_supply_chain.json",
-    "audit": "/mnt/quant-state/quant-web/optimus_supply_chain_batches.jsonl"
+    "audit": "/mnt/quant-state/quant-web/optimus_supply_chain_batches.jsonl",
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true
-  }
+    "migration_state": "go_scheduled_legacy_service",
+    "start_jitter_seconds": 1200
+  },
+  "legacy_schedule": {
+    "schedule": "Mon *-*-* 09:20:00",
+    "format": "systemd_oncalendar",
+    "timer": "quant-optimus-supply-review.timer"
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.legacy_service",
+      "--unit",
+      "quant-optimus-supply-review.service"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 2160,
+    "stop_grace_seconds": 115,
+    "lock_group": "web-fetch",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-optimus-supply-review.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-optimus-supply-review.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "task_type": "codex"
 }

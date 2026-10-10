@@ -1,6 +1,6 @@
 # stocks-quant 旧定时任务盘点
 
-盘点时间：2026-10-10（北京时间）。检查了 `/mnt/quant/strategies/stocks-quant/AGENTS.md`、`deployment/*.timer`、配套 service 和运行说明，并查看了主机 `systemctl list-timers --all`。表中的旧 timer 当时均显示已调度；这里没有运行任何抓取脚本、发起外部请求、停用服务或移动旧运行数据。
+盘点与迁移日期：2026-10-10（北京时间）。检查了 `/mnt/quant/strategies/stocks-quant/AGENTS.md`、主机实际安装的 service/timer、运行说明与最近结果。随后将 8 个旧 timer 的调度交给 Go。旧运行数据保持原路径，没有手动发起线上抓取、Codex 或发布。
 
 | 旧任务 | systemd 频率 | 性质 | 数据库登记 |
 | --- | --- | --- | --- |
@@ -15,13 +15,28 @@
 
 另检查到旧财报候选审阅 timer 已在项目文档标记退役，当天也没有出现在活动 timer 列表；它没有作为活动任务导入。分钟行情通知、策略数据更新等非网页新闻监控任务也不在本清单范围。
 
-## SQLite 登记与执行边界
+## SQLite 与接管结果
 
-上述 8 个任务定义和 3 个补充主题已放入 `config/` 并同步至 `data/db/news.sqlite3`。SQLite `tasks.scheduler_engine` 对这 8 项标为 `systemd`，新建的 3 项监控任务标为 `news-claw`。从旧仓库镜像的任务在本数据库中设置为 `enabled = false`，并在 `config_json` 记录原 unit、原始 systemd 日历表达式、来源/输出路径、当时观察到的 timer 状态和请求上限。false 表示 news-claw 不会启动它们；旧 systemd timer 仍由 stocks-quant 管理，未停用。
+11 项任务统一为 `scheduler_engine=news-claw`、`enabled=true`。旧 8 个 timer 已 disabled/inactive；Go engine 常驻且开机启动。tasks.task_type 分为 5 项 crawl、5 项 codex、1 项 publish；6 张表不变。
 
-`news-claw` 是新任务的目标调度引擎标签；当前已提供 Go 执行器和 Scrapy 采集入口，但尚未启动线上常驻调度；使用方式见 [engine.md](engine.md)。
+| 旧任务 | Go 计划（北京时间） | 随机延迟 | 迁移前最后结果 |
+| --- | --- | --- | --- |
+| 市场新闻 RSS | 每小时第 5 分钟 | 0–4 分钟 | 成功 |
+| 市场新闻 Codex 分析 | 每 3 小时第 10 分钟 | 0–2 分钟 | 失败 |
+| Optimus 供应链复核 | 周一 09:20 | 0–20 分钟 | 失败 |
+| 公司脉冲复核 | 周一、周四 10:10 | 0–20 分钟 | 成功 |
+| 科技史复核 | 周一 04:20 | 0–10 分钟 | 失败 |
+| OFR 市场温度 | 每次结束后至少 24 小时 | 无 | 成功 |
+| Codex 长文草稿 | 每天 19:15 | 无 | 程序成功，业务结果需看日志 |
+| 长文发布检查 | 每天 20:30 | 无 | 程序成功，业务结果需看日志 |
 
-Go 调度器已实现，旧任务仍保持外部 systemd 归属，尚未切换。特别是旧的小时 Google News RSS timer 仍给 stocks-quant 网站供稿；新建的机器人/物理 AI/太空新闻任务与其有主题重叠。真正切换前应先确定共用来源、缓存和输出的交接方案，再停用旧 timer 或明确保留唯一采集所有者，不能直接同时启用两个采集入口。
+原 systemd 表达式存放在配置的 legacy_schedule。每个 service 最后一次结果导入 task_runs，注明 engine=systemd，并保存 unit、时间和退出状态；没有导入全部历史运行。OFR 首次计划保持上次结束时间加 24 小时。
+
+旧 service 通过命令适配器执行，保留实际安装的账号、Codex 凭据环境、文件沙箱、原输入输出与发布批准流程。主机实际 service 的账号与仓库模板有差异，因此以安装的 unit 为准。Go 负责时间调度、运行记录、超时、互斥与恢复；systemd 目前仍负责 engine 托管和旧任务执行隔离。
+
+旧 RSS 改为每分钟最多 1 请求，与新 Scrapy 任务通过 web-fetch 串行、共享 Google 来源间隔与熔断状态，保留原网站 news_timeline.json 输出。新主题 RSS 与旧市场 RSS 的文档索引尚未统一，来源请求协调已经接入。
+
+业务脚本的既有失败会继续作为失败显示，不把调度迁移视为修复。使用与恢复规则见 [engine.md](engine.md)，网站数据和长文链路见 [website-workflow.md](website-workflow.md)。
 
 stocks-quant 的采集规则一并保留在任务配置：单进程串行、最多 6 请求/分钟、请求至少间隔 10 秒、优先缓存、同源进程锁；遇到 429、验证码、拒绝或黑名单时停止该来源，不自动重试，不使用代理或切换 IP。BaoStock 因黑名单状态保持暂停，没有将其列为可恢复采集来源。
 

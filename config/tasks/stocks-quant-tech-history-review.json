@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-tech-history-review",
-  "name": "历史任务：每周科技史故事研究",
+  "name": "每周科技史故事研究",
   "description": "每周使用内置缓存搜索索引，为未来 30 天科技史纪念日准备有来源证据的中英文故事候选。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "Mon *-*-* 04:20:00",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "20 4 * * 1",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_oncalendar",
+  "schedule_format": "cron",
   "topic_ids": [
     "technology-history-stories"
   ],
@@ -14,8 +14,8 @@
     "type": "cached_web_search_research",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-tech-history-review.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "allowed_domains": [
       "nasa.gov",
@@ -40,11 +40,39 @@
     "cooldown_days": 6,
     "randomized_delay": "up to 10 minutes",
     "stop_on_403_429_captcha_or_access_denial": true,
-    "automatic_retry_after_denial": false
+    "automatic_retry_after_denial": false,
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true,
-    "max_stories_per_run": 7
-  }
+    "migration_state": "go_scheduled_legacy_service",
+    "max_stories_per_run": 7,
+    "start_jitter_seconds": 600
+  },
+  "legacy_schedule": {
+    "schedule": "Mon *-*-* 04:20:00",
+    "format": "systemd_oncalendar",
+    "timer": "quant-tech-history-review.timer"
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.legacy_service",
+      "--unit",
+      "quant-tech-history-review.service"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 2160,
+    "stop_grace_seconds": 115,
+    "lock_group": "web-fetch",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-tech-history-review.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-tech-history-review.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "task_type": "codex"
 }

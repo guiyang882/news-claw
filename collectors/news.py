@@ -92,6 +92,12 @@ class RequestPolicy:
                     await asyncio.sleep(0.05)
                     continue
                 state = load_state(state_path)
+                if key == "google":
+                    for path in policy.get("shared_circuit_paths", []):
+                        legacy = load_state(Path(path))
+                        if legacy.get("open"):
+                            spider.fail(f"shared Google source circuit open: {path}")
+                            raise IgnoreRequest("shared Google source circuit open")
                 if state.get("blocked"):
                     spider.fail(f"source {key} is blocked: {state['blocked']}")
                     raise IgnoreRequest(f"persistent source circuit open: {key}")

@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-market-news-refresh",
-  "name": "历史任务：Tesla、SpaceX、Rocket Lab 新闻线索采集",
+  "name": "Tesla、SpaceX、Rocket Lab 新闻线索采集",
   "description": "镜像 stocks-quant 的小时 RSS 定时器；原任务给网站市场脉冲采集三个公司的 Google News RSS 线索。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "hourly",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "5 * * * *",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_timer",
+  "schedule_format": "cron",
   "topic_ids": [
     "robotics-and-humanoids",
     "physical-ai",
@@ -16,8 +16,8 @@
     "type": "google_news_rss",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-news-refresh.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "query_entities": [
       "Rocket Lab",
@@ -26,21 +26,52 @@
     ],
     "request_policy": {
       "max_requests_per_run": 3,
-      "max_requests_per_minute": 6,
-      "min_interval_seconds": 10,
+      "max_requests_per_minute": 1,
+      "min_interval_seconds": 60,
       "cache_before_request": true,
       "single_process_lock": true,
       "stop_on_403_429_or_access_denial": true,
-      "automatic_retry_after_denial": false
+      "automatic_retry_after_denial": false,
+      "shared_circuit_paths": [
+        "/mnt/quant-state/quant-web/news_circuit.json"
+      ]
     },
     "randomized_delay": "up to 4 minutes",
     "outputs": [
       "/mnt/quant-state/quant-web/news_timeline.json",
       "/mnt/quant-state/quant-web/news_collection_batches.jsonl"
-    ]
+    ],
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true
-  }
+    "migration_state": "go_scheduled_legacy_service",
+    "start_jitter_seconds": 240
+  },
+  "legacy_schedule": {
+    "schedule": "hourly",
+    "format": "systemd_timer",
+    "timer": "quant-news-refresh.timer"
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.legacy_service",
+      "--unit",
+      "quant-news-refresh.service"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 480,
+    "stop_grace_seconds": 115,
+    "lock_group": "web-fetch",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-news-refresh.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-news-refresh.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "task_type": "crawl"
 }

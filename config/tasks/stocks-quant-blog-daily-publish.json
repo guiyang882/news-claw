@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-blog-daily-publish",
-  "name": "历史任务：审核通过的本地市场文章发布",
+  "name": "审核通过的本地市场文章发布",
   "description": "每日检查本地收件箱和人工批准文件；校验通过后离线发布。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "*-*-* 20:30:00",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "30 20 * * *",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_oncalendar",
+  "schedule_format": "cron",
   "topic_ids": [
     "market-brief-drafts"
   ],
@@ -14,15 +14,55 @@
     "type": "local_publication",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-blog-daily.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "input_policy": "local_inbox_and_human_hash_bound_approval",
     "external_web_access": false,
-    "private_network": true
+    "private_network": true,
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true
+    "migration_state": "go_scheduled_legacy_service",
+    "start_jitter_seconds": 0
+  },
+  "legacy_schedule": {
+    "schedule": "*-*-* 20:30:00",
+    "format": "systemd_oncalendar",
+    "timer": "quant-blog-daily.timer"
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.legacy_service",
+      "--unit",
+      "quant-blog-daily.service"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 600,
+    "stop_grace_seconds": 115,
+    "lock_group": "",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-blog-daily.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-blog-daily.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "task_type": "publish",
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "stage": "publish",
+    "inputs": [
+      "/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"
+    ],
+    "outputs": [
+      "/mnt/quant-state/quant-web/blog/articles"
+    ],
+    "input_requirement": "existing draft validation and hash-bound editor approval must pass",
+    "after_task_id": "stocks-quant-blog-compose"
   }
 }

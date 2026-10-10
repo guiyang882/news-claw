@@ -1,12 +1,12 @@
 {
   "id": "stocks-quant-company-pulses-review",
-  "name": "历史任务：Rocket Lab 与 SpaceX 公司脉冲复核",
+  "name": "Rocket Lab 与 SpaceX 公司脉冲复核",
   "description": "每周两次复核 Rocket Lab 和 SpaceX 的公司、技术与里程碑变化。",
-  "scheduler_engine": "systemd",
-  "enabled": false,
-  "schedule": "Mon,Thu *-*-* 10:10:00",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "10 10 * * 1,4",
   "timezone": "Asia/Shanghai",
-  "schedule_format": "systemd_oncalendar",
+  "schedule_format": "cron",
   "topic_ids": [
     "space-race"
   ],
@@ -14,8 +14,8 @@
     "type": "authorized_source_review",
     "source_repo": "/mnt/quant/strategies/stocks-quant",
     "systemd_unit": "quant-company-pulses-review.timer",
-    "execution_owner": "external_systemd",
-    "external_timer_active": true,
+    "execution_owner": "news-claw_via_legacy_service",
+    "external_timer_active": false,
     "observed_at": "2026-10-10",
     "entities": [
       "Rocket Lab",
@@ -38,10 +38,38 @@
     "stop_on_403_429_captcha_or_access_denial": true,
     "automatic_retry_after_denial": false,
     "output": "/mnt/quant-state/quant-web/company_pulses.json",
-    "audit": "/mnt/quant-state/quant-web/company_pulse_batches.jsonl"
+    "audit": "/mnt/quant-state/quant-web/company_pulse_batches.jsonl",
+    "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "inventory_only_external_timer_active",
-    "do_not_start_from_news_claw": true
-  }
+    "migration_state": "go_scheduled_legacy_service",
+    "start_jitter_seconds": 1200
+  },
+  "legacy_schedule": {
+    "schedule": "Mon,Thu *-*-* 10:10:00",
+    "format": "systemd_oncalendar",
+    "timer": "quant-company-pulses-review.timer"
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.legacy_service",
+      "--unit",
+      "quant-company-pulses-review.service"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 2460,
+    "stop_grace_seconds": 115,
+    "lock_group": "web-fetch",
+    "adapter": "legacy_service",
+    "systemd_unit": "quant-company-pulses-review.service",
+    "recovery_command": [
+      "systemctl",
+      "stop",
+      "quant-company-pulses-review.service"
+    ],
+    "recovery_timeout_seconds": 110
+  },
+  "task_type": "codex"
 }

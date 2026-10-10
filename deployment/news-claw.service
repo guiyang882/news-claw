@@ -1,0 +1,24 @@
+[Unit]
+Description=News-claw Go task scheduling engine
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/quant/news-claw /mnt/quant-state/quant-web
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/mnt/quant/news-claw
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/mnt/quant/news-claw/bin/news-claw serve --root /mnt/quant/news-claw --workers 2 --poll 5s
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=130
+KillMode=mixed
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/mnt/quant/news-claw/data
+
+[Install]
+WantedBy=multi-user.target

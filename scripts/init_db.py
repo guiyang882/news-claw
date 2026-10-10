@@ -76,7 +76,7 @@ def sync_configs(connection: sqlite3.Connection) -> None:
                 task["id"],
                 task["name"],
                 task.get("description", ""),
-                collector.get("type", "custom"),
+                task.get("task_type", collector.get("type", "custom")),
                 task.get("scheduler_engine", "news-claw"),
                 int(task.get("enabled", True)),
                 task.get("schedule"),

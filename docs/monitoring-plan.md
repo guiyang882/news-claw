@@ -25,4 +25,6 @@
 
 目前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器。三个新任务先使用 Google News RSS 发现线索；官方来源、社区指标、文章全文与主题分析产物后续接入。运行方式见 [engine.md](engine.md)。
 
-另有来自 stocks-quant 的旧 systemd 定时任务已作为外部任务镜像登记；其运行情况和迁移边界见 [旧任务盘点](stocks-quant-task-inventory.md)。旧 Google News RSS timer 仍在外部运行，与未来启用的新空间新闻采集之间需要先完成去重/交接，避免同一来源双重采集。
+来自 stocks-quant 的 8 个旧任务已和这 3 个新任务统一交由 Go 调度，旧 timer 停用。运行计划和结果见 [旧任务盘点](stocks-quant-task-inventory.md)。旧市场 RSS 通过执行适配器继续给网站供稿，使用 web-fetch 串行及共享 Google 限流/熔断检查。
+
+最终产物应进入 stocks-quant 网站；现有 Codex 分析、文章草稿和审批后发布任务也采用 JSON 配置，由同一 Go engine 管理。新主题的证据核验、knowledge 产物和网站内容转换尚未自动接通，扩展顺序见 [网站工作流](website-workflow.md)。

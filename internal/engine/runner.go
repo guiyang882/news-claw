@@ -61,6 +61,9 @@ func (r *Runner) Serve(ctx context.Context, once bool) error {
 			}
 		}
 	}
+	if err = r.recoverExecutions(ctx); err != nil {
+		return err
+	}
 	if err = r.Store.Recover(time.Now()); err != nil {
 		return err
 	}
@@ -117,6 +120,75 @@ func (r *Runner) Serve(ctx context.Context, once bool) error {
 			}
 		}
 	}
+}
+
+// Adapters can own work outside the process group. Their configured recovery
+// command must succeed before interrupted runs release queue/source locks.
+func (r *Runner) recoverExecutions(ctx context.Context) error {
+	rows, err := r.Store.DB.Query(`SELECT id,task_id,metadata_json FROM task_runs WHERE status='running'
+        AND json_extract(metadata_json,'$.engine')=?`, Owner)
+	if err != nil {
+		return err
+	}
+	var runs []Run
+	for rows.Next() {
+		var raw string
+		var run Run
+		if err = rows.Scan(&run.ID, &run.TaskID, &raw); err != nil {
+			rows.Close()
+			return err
+		}
+		if err = json.Unmarshal([]byte(raw), &run.Meta); err != nil {
+			rows.Close()
+			return err
+		}
+		if len(run.Meta.Execution.RecoveryCommand) > 0 {
+			runs = append(runs, run)
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	for _, run := range runs {
+		if err = r.recoverExecution(ctx, run); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Runner) recoverExecution(ctx context.Context, run Run) error {
+	execution := run.Meta.Execution
+	if len(execution.RecoveryCommand) == 0 {
+		return nil
+	}
+	timeout := execution.RecoveryTimeoutSeconds
+	if timeout <= 0 {
+		timeout = 120
+	}
+	command := execution.RecoveryCommand[0]
+	if command == "" {
+		return fmt.Errorf("empty recovery executable for run %s", run.ID)
+	}
+	if command[0] == '.' {
+		command = resolve(r.Root, command)
+	}
+	stopCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(stopCtx, command, execution.RecoveryCommand[1:]...)
+	cmd.Dir = resolve(r.Root, execution.WorkingDir)
+	cmd.Env = cleanEnv(os.Environ(), execution.Env)
+	cmd.Env = cleanEnv(cmd.Env, map[string]string{"NEWS_CLAW_ROOT": r.Root, "NEWS_CLAW_DB": r.DBPath,
+		"NEWS_CLAW_TASK_ID": run.TaskID, "NEWS_CLAW_RUN_ID": run.ID})
+	cmd.WaitDelay = time.Second
+	output, err := cmd.CombinedOutput()
+	log.Printf("run=%s recovery error=%v output=%s", run.ID, err, output)
+	if err != nil {
+		return fmt.Errorf("recover interrupted run %s: %w (%s)", run.ID, err, output)
+	}
+	return nil
 }
 
 func (r *Runner) Execute(parent context.Context, run *Run) error {
@@ -188,6 +260,9 @@ func (r *Runner) Execute(parent context.Context, run *Run) error {
 		if _, dbErr := r.Store.DB.Exec("UPDATE task_runs SET metadata_json=? WHERE id=?", string(meta), run.ID); dbErr != nil {
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 			_ = cmd.Wait()
+			if recoveryErr := r.recoverExecution(context.Background(), *run); recoveryErr != nil {
+				return recoveryErr
+			}
 			return r.Store.Finish(run, "failed", dbErr, nil, time.Now())
 		}
 		wait := make(chan error, 1)
@@ -196,7 +271,11 @@ func (r *Runner) Execute(parent context.Context, run *Run) error {
 		case err = <-wait:
 		case <-ctx.Done():
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-			grace := time.NewTimer(5 * time.Second)
+			gracePeriod := 5 * time.Second
+			if execution.StopGraceSeconds > 0 {
+				gracePeriod = time.Duration(execution.StopGraceSeconds) * time.Second
+			}
+			grace := time.NewTimer(gracePeriod)
 			select {
 			case <-wait:
 			case <-grace.C:
@@ -222,7 +301,15 @@ func (r *Runner) Execute(parent context.Context, run *Run) error {
 			err, status = fmt.Errorf("invalid result.json: %w", parseErr), "failed"
 		}
 		if ok, present := result["success"].(bool); present && !ok && err == nil {
-			err, status = errors.New("collector reported an unsuccessful run"), "failed"
+			err, status = errors.New("task executor reported an unsuccessful run"), "failed"
+		}
+	}
+	// A killed adapter can leave external work alive. Keep the run/source locked
+	// until cleanup succeeds; on failure Serve exits and restart retries cleanup.
+	cleanup, _ := result["recovery_required"].(bool)
+	if cleanup || ctx.Err() != nil || (err != nil && cmd.Process != nil && result == nil) {
+		if recoveryErr := r.recoverExecution(context.Background(), *run); recoveryErr != nil {
+			return recoveryErr
 		}
 	}
 	log.Printf("run=%s task=%s status=%s error=%v", run.ID, run.TaskID, status, err)

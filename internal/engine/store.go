@@ -22,30 +22,34 @@ import (
 const Owner = "news-claw"
 
 type Execution struct {
-	Command        []string          `json:"command"`
-	WorkingDir     string            `json:"working_dir"`
-	Env            map[string]string `json:"env,omitempty"`
-	TimeoutSeconds int               `json:"timeout_seconds"`
-	LockGroup      string            `json:"lock_group,omitempty"`
-	User           string            `json:"user,omitempty"`
+	Command                []string          `json:"command"`
+	WorkingDir             string            `json:"working_dir"`
+	Env                    map[string]string `json:"env,omitempty"`
+	TimeoutSeconds         int               `json:"timeout_seconds"`
+	LockGroup              string            `json:"lock_group,omitempty"`
+	User                   string            `json:"user,omitempty"`
+	StopGraceSeconds       int               `json:"stop_grace_seconds,omitempty"`
+	RecoveryCommand        []string          `json:"recovery_command,omitempty"`
+	RecoveryTimeoutSeconds int               `json:"recovery_timeout_seconds,omitempty"`
 }
 
 type Config struct {
 	ScheduleFormat string    `json:"schedule_format"`
 	Execution      Execution `json:"execution"`
 	Options        struct {
-		Jitter       int  `json:"start_jitter_seconds"`
-		InitialDelay int  `json:"initial_delay_seconds"`
-		DoNotStart   bool `json:"do_not_start_from_news_claw"`
+		Jitter       int    `json:"start_jitter_seconds"`
+		InitialDelay int    `json:"initial_delay_seconds"`
+		DoNotStart   bool   `json:"do_not_start_from_news_claw"`
+		FirstRunAt   string `json:"first_run_at,omitempty"`
 	} `json:"options"`
 }
 
 type Task struct {
-	ID, Name, Schedule, Timezone, Engine string
-	Enabled                              bool
-	RawConfig                            string
-	Next, Fingerprint                    sql.NullString
-	Config                               Config
+	ID, Name, Type, Schedule, Timezone, Engine string
+	Enabled                                    bool
+	RawConfig                                  string
+	Next, Fingerprint                          sql.NullString
+	Config                                     Config
 }
 
 type RunMeta struct {
@@ -100,7 +104,7 @@ func Open(path string, readOnly bool) (*Store, error) {
 }
 
 func (s *Store) Tasks() ([]Task, error) {
-	rows, err := s.DB.Query(`SELECT id, name, COALESCE(schedule,''), timezone, scheduler_engine,
+	rows, err := s.DB.Query(`SELECT id, name, task_type, COALESCE(schedule,''), timezone, scheduler_engine,
         enabled, config_json, next_run_at, schedule_fingerprint FROM tasks ORDER BY id`)
 	if err != nil {
 		return nil, err
@@ -109,7 +113,7 @@ func (s *Store) Tasks() ([]Task, error) {
 	var tasks []Task
 	for rows.Next() {
 		var t Task
-		if err := rows.Scan(&t.ID, &t.Name, &t.Schedule, &t.Timezone, &t.Engine, &t.Enabled, &t.RawConfig, &t.Next, &t.Fingerprint); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Type, &t.Schedule, &t.Timezone, &t.Engine, &t.Enabled, &t.RawConfig, &t.Next, &t.Fingerprint); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(t.RawConfig), &t.Config); err != nil {
@@ -158,6 +162,17 @@ func (t Task) Validate() error {
 	}
 	if t.Config.Options.Jitter < 0 || t.Config.Options.InitialDelay < 0 {
 		return errors.New("delay and jitter must be nonnegative")
+	}
+	if t.Config.Execution.StopGraceSeconds < 0 {
+		return errors.New("stop grace must be nonnegative")
+	}
+	if t.Config.Execution.RecoveryTimeoutSeconds < 0 || (len(t.Config.Execution.RecoveryCommand) > 0 && t.Config.Execution.RecoveryCommand[0] == "") {
+		return errors.New("invalid execution recovery configuration")
+	}
+	if t.Config.Options.FirstRunAt != "" {
+		if _, err := parseStamp(t.Config.Options.FirstRunAt); err != nil {
+			return fmt.Errorf("invalid first_run_at: %w", err)
+		}
 	}
 	_, _, err := t.Calendar()
 	return err
@@ -234,6 +249,9 @@ func (s *Store) planTask(t Task, now time.Time) error {
 			return err
 		}
 		next := now.Add(time.Duration(t.Config.Options.InitialDelay) * time.Second)
+		if interval > 0 && t.Config.Options.FirstRunAt != "" {
+			next, _ = parseStamp(t.Config.Options.FirstRunAt)
+		}
 		if interval == 0 {
 			next = schedule.Next(now)
 			if next.IsZero() {

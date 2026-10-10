@@ -1,12 +1,12 @@
 # news-claw
 
-一个用于定时采集关注的新闻与事件，并持续整理为主题知识材料的项目。
+一个用于定时采集关注的新闻与事件，使用 Codex 整理为主题知识材料，并发布到 stocks-quant 网站的项目。网站代码位于 `/mnt/quant/strategies/stocks-quant`。
 
 ## 目录
 
 ```text
 config/
-  tasks/                 采集任务定义：频率、查询/入口、关联主题
+  tasks/                 JSON 任务定义：采集、Codex 整理、网站发布
   topics/                主题定义：关注范围、关键词、关注问题
 data/
   db/news.sqlite3        本地索引与任务运行状态（由 scripts/init_db.py 创建）
@@ -24,8 +24,8 @@ docs/                    监控任务计划与口径
 
 ## 核心划分
 
-- **Task（任务）** 描述“何时、从哪里、用什么方式抓取”。一个任务可以关联多个主题，同一个主题也可以由多个任务持续补充。
-- **调度引擎** 记录在 `tasks.scheduler_engine`，区分由 `news-claw` 管理的新任务与由 `systemd` 继续运行的旧任务。
+- **Task（任务）** 描述执行什么命令、何时执行、关联哪些主题；任务可以是采集、Codex 分析或发布。稳定 ID 用于关联每轮运行。
+- **调度引擎** 记录在 `tasks.scheduler_engine`。11 项任务统一由 Go engine 调度；旧 service 作为执行适配器，保留账号、文件沙箱和网站发布规则。
 - **SQLite 结构保持精简**：任务主题关联放在任务配置的 `topic_ids`；来源信息和文档主题关联随文档存为 JSON，减少单独的关联表。
 - **Topic（主题）** 描述“长期追踪什么问题”。抓取结果先进入原始归档，再经过去重、正文抽取和主题归属，最后汇总成主题材料。
 - **SQLite** 保存任务、主题、任务运行、文档索引和产物版本等可查询元数据；来源和主题关联使用 JSON，网页正文和长文本产物保存在文件中，数据库记录其相对路径与内容哈希。
@@ -71,8 +71,9 @@ data/knowledge/topics/<topic_slug>/summaries/v001.md
 3. 清洗与去重步骤生成标准正文，并将候选文档关联到一个或多个主题。
 4. 主题整理步骤按时间线、逻辑脉络、推理记录、关系和摘要生成有版本的产物，并登记在 `artifacts`。
 5. 每次运行保存输入文档集合、产物版本、统计数据和错误信息，便于增量重跑与回溯。
+6. Codex 任务生成网站数据或文章草稿，发布任务校验后写入网站读取的运行目录。长文发布沿用现有人工批准要求。
 
-当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。运行方式、恢复规则、测试和旧任务迁移说明见 [docs/engine.md](docs/engine.md)。文章全文、官方与社区来源、主题自动总结流程后续逐步接入。
+当前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器，三个新任务以 Google News RSS 开始采集新闻线索。原网站供稿、Codex 分析、草稿与发布任务保留原有输入输出。新主题从 RSS 到知识材料和网站的自动转换仍需补充；不能把采集成功当作网站已经发布。运行方式见 [docs/engine.md](docs/engine.md)，网站链路与扩展边界见 [docs/website-workflow.md](docs/website-workflow.md)。
 
 当前任务清单和默认监控口径见 [docs/monitoring-plan.md](docs/monitoring-plan.md)；从 stocks-quant 盘点并登记的旧 systemd 任务见 [docs/stocks-quant-task-inventory.md](docs/stocks-quant-task-inventory.md)。
 

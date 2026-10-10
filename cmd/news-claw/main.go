@@ -70,7 +70,7 @@ func run() error {
 		}
 		result := []map[string]any{}
 		for _, task := range tasks {
-			row := map[string]any{"task_id": task.ID, "name": task.Name, "enabled": task.Enabled, "scheduler_engine": task.Engine,
+			row := map[string]any{"task_id": task.ID, "name": task.Name, "task_type": task.Type, "enabled": task.Enabled, "scheduler_engine": task.Engine,
 				"managed": task.Managed(), "schedule": task.Schedule, "timezone": task.Timezone, "next_run_at": task.Next.String}
 			if task.Managed() {
 				if err := task.Validate(); err != nil {
