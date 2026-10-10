@@ -1,0 +1,17 @@
+{
+  "id": "us-market-stress-context",
+  "name": "美国市场压力背景指标",
+  "description": "保存 OFR 发布的公开美国金融压力指数数据，为市场背景分析提供可追溯输入。",
+  "enabled": true,
+  "keywords": ["OFR Financial Stress Index", "US financial stress"],
+  "questions": [
+    "官方数据更新至哪个观察日期？",
+    "本次数据是否通过结构和完整性校验？",
+    "相较前值的变化如何描述而不作因果外推？"
+  ],
+  "analysis_rules": [
+    "只记录官方发布数据及其观察日期，不把指标变化直接归因于单一事件。",
+    "遵守 24 小时冷却、缓存优先和 403/429 持久熔断规则。"
+  ],
+  "artifact_types": ["timeline", "summaries"]
+}

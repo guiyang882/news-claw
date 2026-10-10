@@ -1,0 +1,28 @@
+{
+  "id": "ai-products-attention-feedback",
+  "name": "海外 AI 产品关注度与反馈",
+  "description": "追踪海外用户对 Muse、Gemini Agent、GPT/ChatGPT 等 AI 产品的讨论、体验、采用情况和比较反馈。",
+  "enabled": true,
+  "keywords": [
+    "Muse AI",
+    "Gemini Agent",
+    "Google Gemini agent",
+    "GPT",
+    "ChatGPT",
+    "AI agent product review",
+    "AI assistant user feedback"
+  ],
+  "questions": [
+    "各产品的讨论热度相较近期基线如何变化，数据覆盖范围是什么？",
+    "用户认可的能力、主要痛点和典型使用场景分别是什么？",
+    "反馈是否来自可验证的实际使用，是否存在样本偏差或营销内容？",
+    "产品更新、价格、可用性或性能变化是否带来用户反馈转变？"
+  ],
+  "analysis_rules": [
+    "Muse 名称存在歧义，只有语境能确认是 AI 产品、模型或智能体时才纳入，并记录具体指代。",
+    "将讨论量、互动量、用户情绪、实际采用和任务效果分开描述，不把讨论热度直接等同于产品效果。",
+    "区分单条用户体验、社区样本和具有代表性的调查或平台数据。",
+    "优先保留原始讨论链接、日期、产品版本和场景。"
+  ],
+  "artifact_types": ["timeline", "logic", "inferences", "relations", "summaries"]
+}

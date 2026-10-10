@@ -1,0 +1,47 @@
+{
+  "id": "stocks-quant-company-pulses-review",
+  "name": "历史任务：Rocket Lab 与 SpaceX 公司脉冲复核",
+  "description": "每周两次复核 Rocket Lab 和 SpaceX 的公司、技术与里程碑变化。",
+  "scheduler_engine": "systemd",
+  "enabled": false,
+  "schedule": "Mon,Thu *-*-* 10:10:00",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "systemd_oncalendar",
+  "topic_ids": [
+    "space-race"
+  ],
+  "collector": {
+    "type": "authorized_source_review",
+    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "systemd_unit": "quant-company-pulses-review.timer",
+    "execution_owner": "external_systemd",
+    "external_timer_active": true,
+    "observed_at": "2026-10-10",
+    "entities": [
+      "Rocket Lab",
+      "SpaceX"
+    ],
+    "source_classes": [
+      "issuer investor relations",
+      "company websites",
+      "responsible regulators"
+    ],
+    "max_new_source_pages_per_run_total": 6,
+    "min_interval_seconds": 10,
+    "serial_requests": true,
+    "cooldown_days": 3,
+    "randomized_delay": "up to 20 minutes",
+    "excluded_sources": [
+      "automated SEC access",
+      "BaoStock"
+    ],
+    "stop_on_403_429_captcha_or_access_denial": true,
+    "automatic_retry_after_denial": false,
+    "output": "/mnt/quant-state/quant-web/company_pulses.json",
+    "audit": "/mnt/quant-state/quant-web/company_pulse_batches.jsonl"
+  },
+  "options": {
+    "migration_state": "inventory_only_external_timer_active",
+    "do_not_start_from_news_claw": true
+  }
+}

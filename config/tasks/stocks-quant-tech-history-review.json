@@ -1,0 +1,50 @@
+{
+  "id": "stocks-quant-tech-history-review",
+  "name": "历史任务：每周科技史故事研究",
+  "description": "每周使用内置缓存搜索索引，为未来 30 天科技史纪念日准备有来源证据的中英文故事候选。",
+  "scheduler_engine": "systemd",
+  "enabled": false,
+  "schedule": "Mon *-*-* 04:20:00",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "systemd_oncalendar",
+  "topic_ids": [
+    "technology-history-stories"
+  ],
+  "collector": {
+    "type": "cached_web_search_research",
+    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "systemd_unit": "quant-tech-history-review.timer",
+    "execution_owner": "external_systemd",
+    "external_timer_active": true,
+    "observed_at": "2026-10-10",
+    "allowed_domains": [
+      "nasa.gov",
+      "si.edu",
+      "loc.gov",
+      "computerhistory.org",
+      "home.cern",
+      "cern.ch",
+      "esa.int",
+      "isro.gov.in",
+      "nps.gov",
+      "ieee.org",
+      "acm.org",
+      "sciencehistory.org",
+      "royalsociety.org",
+      "nobelprize.org"
+    ],
+    "max_search_requests_per_run": 6,
+    "min_interval_seconds": 10,
+    "serial_requests": true,
+    "live_source_fetching": false,
+    "cooldown_days": 6,
+    "randomized_delay": "up to 10 minutes",
+    "stop_on_403_429_captcha_or_access_denial": true,
+    "automatic_retry_after_denial": false
+  },
+  "options": {
+    "migration_state": "inventory_only_external_timer_active",
+    "do_not_start_from_news_claw": true,
+    "max_stories_per_run": 7
+  }
+}

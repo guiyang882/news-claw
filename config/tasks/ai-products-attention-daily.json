@@ -1,0 +1,63 @@
+{
+  "id": "ai-products-attention-daily",
+  "name": "海外 AI 产品关注度与用户反馈",
+  "description": "追踪海外用户对 Muse、Gemini Agent、GPT/ChatGPT 等产品的关注变化、实际体验和反馈。",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "45 10,18 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "ai-products-attention-feedback"
+  ],
+  "collector": {
+    "type": "multi_source_news_and_public_discussion",
+    "languages": [
+      "en"
+    ],
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "google_search_min_interval_seconds": 45,
+      "honor_retry_after": true,
+      "retry_backoff_seconds": [
+        60,
+        300,
+        900
+      ]
+    },
+    "source_classes": [
+      "official_product_announcements",
+      "reputable_technology_news",
+      "public_forums_and_communities",
+      "public_product_reviews_and_benchmarks"
+    ],
+    "product_watchlist": [
+      "Muse",
+      "Gemini Agent",
+      "GPT",
+      "ChatGPT"
+    ],
+    "disambiguation": "Muse is ambiguous; include a result only when context supports that it refers to an AI product, model, or agent, and record the identified product/vendor when possible."
+  },
+  "options": {
+    "start_jitter_seconds": 300,
+    "lookback_hours": 18,
+    "max_items_per_run": 200,
+    "measure": [
+      "discussion_volume_and_change",
+      "engagement_signals_when_available",
+      "user_sentiment_with_evidence",
+      "reported_use_cases_and_outcomes",
+      "recurring_strengths_and_pain_points",
+      "product_comparisons_and_switching"
+    ],
+    "separate_anecdotes_from_representative_metrics": true,
+    "output_artifact_types": [
+      "timeline",
+      "logic",
+      "inferences",
+      "relations",
+      "summaries"
+    ]
+  }
+}

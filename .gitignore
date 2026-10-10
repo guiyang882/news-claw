@@ -1,0 +1,27 @@
+# Local databases and collected content
+/data/db/*.sqlite3
+/data/db/*.sqlite3-*
+/data/raw/**
+/data/normalized/**
+/data/knowledge/**
+/data/runs/**
+!/data/raw/.gitkeep
+!/data/raw/README.md
+!/data/normalized/.gitkeep
+!/data/normalized/README.md
+!/data/knowledge/.gitkeep
+!/data/knowledge/README.md
+!/data/runs/.gitkeep
+!/data/runs/README.md
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

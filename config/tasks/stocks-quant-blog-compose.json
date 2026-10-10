@@ -1,0 +1,28 @@
+{
+  "id": "stocks-quant-blog-compose",
+  "name": "历史任务：从本地审核资料包生成市场文章草稿",
+  "description": "每日读取已复核的本地资料包并生成草稿；缺少资料包时跳过，不访问机构网站。",
+  "scheduler_engine": "systemd",
+  "enabled": false,
+  "schedule": "*-*-* 19:15:00",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "systemd_oncalendar",
+  "topic_ids": [
+    "market-brief-drafts"
+  ],
+  "collector": {
+    "type": "local_content_generation",
+    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "systemd_unit": "quant-blog-compose.timer",
+    "execution_owner": "external_systemd",
+    "external_timer_active": true,
+    "observed_at": "2026-10-10",
+    "input_policy": "reviewed_local_source_packet_only",
+    "external_web_access": false,
+    "randomized_delay": "none"
+  },
+  "options": {
+    "migration_state": "inventory_only_external_timer_active",
+    "do_not_start_from_news_claw": true
+  }
+}

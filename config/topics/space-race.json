@@ -1,0 +1,28 @@
+{
+  "id": "space-race",
+  "name": "太空竞赛与航天产业",
+  "description": "追踪发射、可重复使用火箭、卫星网络、月球计划及主要国家和公司的竞争合作。",
+  "enabled": true,
+  "keywords": [
+    "SpaceX",
+    "Rocket Lab",
+    "Blue Origin",
+    "NASA Artemis",
+    "United Launch Alliance",
+    "reusable launch vehicle",
+    "satellite constellation",
+    "commercial spaceflight",
+    "lunar mission"
+  ],
+  "entities": ["SpaceX", "Rocket Lab", "Blue Origin", "NASA", "ULA"],
+  "questions": [
+    "发射、回收、卫星部署和深空任务的关键里程碑及结果是什么？",
+    "各参与方的技术、成本、发射节奏、客户和订单进展如何？",
+    "国家项目、商业公司和国际合作之间的竞争关系如何变化？"
+  ],
+  "analysis_rules": [
+    "SpaceX 按公司、技术和项目动态跟踪；如讨论证券表现，须先确认存在可交易证券及可靠数据来源。",
+    "区分计划目标、已完成里程碑和独立验证的任务结果。"
+  ],
+  "artifact_types": ["timeline", "logic", "inferences", "relations", "summaries"]
+}

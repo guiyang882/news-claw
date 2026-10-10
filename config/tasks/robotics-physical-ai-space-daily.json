@@ -1,0 +1,71 @@
+{
+  "id": "robotics-physical-ai-space-daily",
+  "name": "机器人、物理 AI 与太空竞赛新闻科技追踪",
+  "description": "每天两次汇总机器人、物理 AI、太空竞赛的新闻和技术进展，并关联重点公司与参与方。",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "15 14,22 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "robotics-and-humanoids",
+    "physical-ai",
+    "space-race"
+  ],
+  "collector": {
+    "type": "multi_source_news",
+    "languages": [
+      "en",
+      "zh"
+    ],
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "google_search_min_interval_seconds": 45,
+      "honor_retry_after": true,
+      "retry_backoff_seconds": [
+        60,
+        300,
+        900
+      ]
+    },
+    "source_classes": [
+      "company_announcements_and_filings",
+      "reputable_technology_and_business_news",
+      "research_papers_and_conference_updates",
+      "government_and_space_agency_updates"
+    ],
+    "entity_watchlist": [
+      "SpaceX",
+      "Tesla",
+      "Rocket Lab",
+      "Figure AI",
+      "Boston Dynamics",
+      "Agility Robotics",
+      "1X Technologies",
+      "NVIDIA",
+      "Blue Origin",
+      "NASA",
+      "ULA"
+    ],
+    "discover_related_entities": true
+  },
+  "options": {
+    "start_jitter_seconds": 300,
+    "lookback_hours": 18,
+    "max_items_per_run": 250,
+    "summarize": [
+      "news_and_company_developments",
+      "technical_progress_and_evidence",
+      "product_and_deployment_milestones",
+      "competition_and_partnerships",
+      "risks_and_open_questions"
+    ],
+    "output_artifact_types": [
+      "timeline",
+      "logic",
+      "inferences",
+      "relations",
+      "summaries"
+    ]
+  }
+}

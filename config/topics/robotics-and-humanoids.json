@@ -1,0 +1,23 @@
+{
+  "id": "robotics-and-humanoids",
+  "name": "机器人与人形机器人",
+  "description": "追踪工业、服务和人形机器人产品、技术、部署、融资及竞争进展。",
+  "enabled": true,
+  "keywords": [
+    "robotics",
+    "humanoid robot",
+    "Tesla Optimus",
+    "Figure AI",
+    "Boston Dynamics",
+    "Agility Robotics",
+    "1X Technologies",
+    "robot deployment",
+    "robot manipulation"
+  ],
+  "questions": [
+    "机器人在感知、操作、移动、可靠性和成本方面取得了哪些可验证进展？",
+    "哪些产品进入真实场景部署，规模、客户和运行数据是什么？",
+    "关键公司及其技术路线、供应链和商业化路径如何变化？"
+  ],
+  "artifact_types": ["timeline", "logic", "inferences", "relations", "summaries"]
+}

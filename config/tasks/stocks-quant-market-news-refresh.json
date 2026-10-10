@@ -1,0 +1,46 @@
+{
+  "id": "stocks-quant-market-news-refresh",
+  "name": "历史任务：Tesla、SpaceX、Rocket Lab 新闻线索采集",
+  "description": "镜像 stocks-quant 的小时 RSS 定时器；原任务给网站市场脉冲采集三个公司的 Google News RSS 线索。",
+  "scheduler_engine": "systemd",
+  "enabled": false,
+  "schedule": "hourly",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "systemd_timer",
+  "topic_ids": [
+    "robotics-and-humanoids",
+    "physical-ai",
+    "space-race"
+  ],
+  "collector": {
+    "type": "google_news_rss",
+    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "systemd_unit": "quant-news-refresh.timer",
+    "execution_owner": "external_systemd",
+    "external_timer_active": true,
+    "observed_at": "2026-10-10",
+    "query_entities": [
+      "Rocket Lab",
+      "SpaceX",
+      "Tesla"
+    ],
+    "request_policy": {
+      "max_requests_per_run": 3,
+      "max_requests_per_minute": 6,
+      "min_interval_seconds": 10,
+      "cache_before_request": true,
+      "single_process_lock": true,
+      "stop_on_403_429_or_access_denial": true,
+      "automatic_retry_after_denial": false
+    },
+    "randomized_delay": "up to 4 minutes",
+    "outputs": [
+      "/mnt/quant-state/quant-web/news_timeline.json",
+      "/mnt/quant-state/quant-web/news_collection_batches.jsonl"
+    ]
+  },
+  "options": {
+    "migration_state": "inventory_only_external_timer_active",
+    "do_not_start_from_news_claw": true
+  }
+}

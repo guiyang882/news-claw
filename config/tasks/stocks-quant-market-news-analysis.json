@@ -1,0 +1,34 @@
+{
+  "id": "stocks-quant-market-news-analysis",
+  "name": "历史任务：市场新闻本地分析",
+  "description": "每三小时处理已有新闻时间线并生成校验后的双语市场脉冲；此阶段不访问来源网页。",
+  "scheduler_engine": "systemd",
+  "enabled": false,
+  "schedule": "*-*-* 00/3:10:00",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "systemd_oncalendar",
+  "topic_ids": [
+    "robotics-and-humanoids",
+    "physical-ai",
+    "space-race"
+  ],
+  "collector": {
+    "type": "local_analysis",
+    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "systemd_unit": "quant-news-analysis.timer",
+    "execution_owner": "external_systemd",
+    "external_timer_active": true,
+    "observed_at": "2026-10-10",
+    "input": "/mnt/quant-state/quant-web/news_timeline.json",
+    "outputs": [
+      "/mnt/quant-state/quant-web/news_analysis.json",
+      "/mnt/quant-state/quant-web/news_analysis_batches.jsonl"
+    ],
+    "network_source_access": false,
+    "randomized_delay": "up to 2 minutes"
+  },
+  "options": {
+    "migration_state": "inventory_only_external_timer_active",
+    "do_not_start_from_news_claw": true
+  }
+}

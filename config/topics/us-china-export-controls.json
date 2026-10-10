@@ -1,0 +1,33 @@
+{
+  "id": "us-china-export-controls",
+  "name": "美国对华进出口管制",
+  "description": "跟踪美国对中国的出口管制、进口限制及相关贸易政策变化，并识别受影响行业、公司和供应链。",
+  "enabled": true,
+  "keywords": [
+    "US China export controls",
+    "BIS Entity List",
+    "export administration regulations",
+    "advanced computing",
+    "semiconductors",
+    "chipmaking equipment",
+    "artificial intelligence",
+    "telecommunications",
+    "aerospace",
+    "quantum",
+    "biotechnology",
+    "import restrictions",
+    "trade restrictions"
+  ],
+  "questions": [
+    "本次政策相较于此前规则有哪些新增、收紧、放宽或澄清？",
+    "规则由谁发布，何时生效，覆盖哪些产品、技术、实体或交易？",
+    "哪些行业、公司和供应链环节受到直接或间接影响，证据是什么？",
+    "企业有哪些合规、许可、替代供应或经营应对？"
+  ],
+  "analysis_rules": [
+    "优先记录政府原始文件，并区分正式规则、提案、公告和媒体报道。",
+    "区分直接受限、间接受影响和证据不足的影响判断。",
+    "标注政策发布日期、生效日期、司法辖区及原始来源。"
+  ],
+  "artifact_types": ["timeline", "logic", "inferences", "relations", "summaries"]
+}

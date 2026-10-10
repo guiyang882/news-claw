@@ -1,0 +1,17 @@
+{
+  "id": "market-brief-drafts",
+  "name": "市场文章资料包与审核稿",
+  "description": "只使用本地已复核资料包生成候选文章，并在人工批准后离线发布。",
+  "enabled": true,
+  "keywords": ["reviewed source packet", "market brief", "editorial approval"],
+  "questions": [
+    "资料包是否已人工复核并包含可验证的一手证据？",
+    "中英文稿件是否经过人工检查并与草稿哈希绑定？",
+    "缺少资料包或批准文件时，任务是否安全跳过？"
+  ],
+  "analysis_rules": [
+    "任务不自行抓取机构网站或来源网页。",
+    "发布前必须具备人工审核批准文件；定时运行不等于自动批准。"
+  ],
+  "artifact_types": ["summaries"]
+}

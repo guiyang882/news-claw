@@ -1,0 +1,17 @@
+{
+  "id": "technology-history-stories",
+  "name": "科技史故事资料",
+  "description": "历史科技事件的日期、原始证据与中英文故事素材，供网站离线故事库使用。",
+  "enabled": true,
+  "keywords": ["technology history", "science history", "engineering history", "anniversary"],
+  "questions": [
+    "事件日期是否有允许来源的直接证据？",
+    "故事中的发明、专利、公告、演示和首次应用日期是否分清？",
+    "中英文内容是否忠于同一组证据？"
+  ],
+  "analysis_rules": [
+    "沿用历史任务的授权域名范围和缓存搜索索引，不直接抓取来源网站。",
+    "搜索受阻、日期证据不足或来源未授权时不发布候选故事。"
+  ],
+  "artifact_types": ["timeline", "summaries"]
+}

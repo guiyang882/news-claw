@@ -1,0 +1,41 @@
+{
+  "id": "stocks-quant-optimus-supplier-review",
+  "name": "历史任务：Tesla Optimus 供应链周度复核",
+  "description": "每周检查 Tesla Optimus 供应链快照的重大变化；近期快照存在时跳过联网复核。",
+  "scheduler_engine": "systemd",
+  "enabled": false,
+  "schedule": "Mon *-*-* 09:20:00",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "systemd_oncalendar",
+  "topic_ids": [
+    "robotics-and-humanoids",
+    "physical-ai"
+  ],
+  "collector": {
+    "type": "authorized_source_review",
+    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "systemd_unit": "quant-optimus-supply-review.timer",
+    "execution_owner": "external_systemd",
+    "external_timer_active": true,
+    "observed_at": "2026-10-10",
+    "source_classes": [
+      "Tesla investor relations",
+      "supplier disclosures",
+      "named research institutions",
+      "reputable media"
+    ],
+    "max_new_source_pages_per_run": 6,
+    "min_interval_seconds": 10,
+    "serial_requests": true,
+    "cooldown_days": 7,
+    "randomized_delay": "up to 20 minutes",
+    "stop_on_403_429_captcha_or_access_denial": true,
+    "automatic_retry_after_denial": false,
+    "output": "/mnt/quant-state/quant-web/optimus_supply_chain.json",
+    "audit": "/mnt/quant-state/quant-web/optimus_supply_chain_batches.jsonl"
+  },
+  "options": {
+    "migration_state": "inventory_only_external_timer_active",
+    "do_not_start_from_news_claw": true
+  }
+}

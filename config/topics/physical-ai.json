@@ -1,0 +1,22 @@
+{
+  "id": "physical-ai",
+  "name": "物理 AI 与具身智能",
+  "description": "追踪 AI 在物理世界中的感知、推理、规划和行动能力，包括具身模型、世界模型及自主系统。",
+  "enabled": true,
+  "keywords": [
+    "physical AI",
+    "embodied AI",
+    "embodied intelligence",
+    "world model",
+    "robot foundation model",
+    "vision language action model",
+    "autonomous systems",
+    "simulation to real transfer"
+  ],
+  "questions": [
+    "模型能力有哪些实验、基准或真实部署证据？",
+    "数据、算力、仿真和硬件分别构成哪些瓶颈？",
+    "物理 AI 与传统机器人控制、生成式 AI 的结合方式如何演进？"
+  ],
+  "artifact_types": ["timeline", "logic", "inferences", "relations", "summaries"]
+}

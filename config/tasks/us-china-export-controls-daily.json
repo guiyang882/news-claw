@@ -1,0 +1,62 @@
+{
+  "id": "us-china-export-controls-daily",
+  "name": "中美进出口管制政策追踪",
+  "description": "每日追踪美国对华出口管制及相关贸易限制的政策变化、涉及行业和受影响公司。",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "15 7 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "us-china-export-controls"
+  ],
+  "collector": {
+    "type": "multi_source_news",
+    "languages": [
+      "en",
+      "zh"
+    ],
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "google_search_min_interval_seconds": 45,
+      "honor_retry_after": true,
+      "retry_backoff_seconds": [
+        60,
+        300,
+        900
+      ]
+    },
+    "source_classes": [
+      "us_government_primary_sources",
+      "federal_register_and_regulatory_notices",
+      "company_filings_and_announcements",
+      "reputable_international_news"
+    ],
+    "priority_sources": [
+      "BIS",
+      "Federal Register",
+      "USTR",
+      "US Treasury",
+      "US Congress"
+    ]
+  },
+  "options": {
+    "start_jitter_seconds": 300,
+    "lookback_hours": 30,
+    "max_items_per_run": 150,
+    "track_policy_deltas": true,
+    "identify_affected_industries_and_companies": true,
+    "impact_labels": [
+      "direct",
+      "indirect",
+      "uncertain"
+    ],
+    "output_artifact_types": [
+      "timeline",
+      "logic",
+      "inferences",
+      "relations",
+      "summaries"
+    ]
+  }
+}
