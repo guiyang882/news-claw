@@ -5,7 +5,7 @@
 | 配置 | 当前值 |
 | --- | --- |
 | 任务 ID / 类型 | daily-blog-agy-codex / workflow |
-| 频率 | 每日上海时间 22:30，随机延迟 0–420 秒 |
+| 频率 | 每日北京时间 07:00，随机延迟 0–420 秒 |
 | 候选题与大纲 | Codex，gpt-6.1-sol；最多 3 个候选，自动选择一题并生成 6–9 节大纲 |
 | 阅读目标 | 中英文各约 20 分钟；默认允许约 17–23 分钟的篇幅区间 |
 | 写稿 | agy，gemini-3.8-flash-high（Gemini 3.8 Flash High） |
@@ -106,6 +106,6 @@ bin/news-claw enqueue --task daily-blog-agy-codex
 /mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.daily_blog --reset-provider codex
 ```
 
-频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。长文任务提前到 22:30，给新增规划和长文修订留出时间；最大随机延迟加整轮超时仍在当天结束前。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
+频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。每日博客在北京时间 07:00 开始，保留最多七分钟随机延迟；整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
 
 CLI 参数已在本机 --help 核对；Codex 结构化响应方式参考 [非交互模式](https://learn.chatgpt.com/docs/non-interactive-mode)，模型标识参考 [GPT-6.1 Sol 文档](https://developers.openai.com/api/docs/models/gpt-6.1-sol)。
