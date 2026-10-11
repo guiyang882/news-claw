@@ -132,6 +132,10 @@ class RequestPolicy:
 
     async def process_response(self, request, response, spider):
         if response.status in {401, 403, 429}:
+            request.meta["failure_detail"] = {
+                "category": "http_rate_limited" if response.status == 429 else "http_access_denied",
+                "url": request.url, "http_status": response.status,
+            }
             key = source_key(request.url)
             state_path, lock_path = policy_paths(spider.root, key)
             with lock_path.open("a") as lock:
@@ -146,7 +150,8 @@ class RequestPolicy:
                 atomic_json(state_path, {**state, "source": key, "blocked": f"HTTP {response.status}",
                                         "blocked_at": utcnow(), "retry_after": retry_after,
                                         "not_before": max(float(state.get("not_before", 0)), retry_after_deadline(retry_after))})
-            spider.fail(f"source {key} stopped after HTTP {response.status}")
+            spider.fail(f"source {key} stopped after HTTP {response.status}: {request.url}",
+                        **request.meta["failure_detail"])
             raise IgnoreRequest(f"source denied or rate limited: {key}")
         return response
 
@@ -180,13 +185,21 @@ class NewsSpider(scrapy.Spider):
         self.request_budget = int(task["collector"].get("request_policy", {}).get("max_requests_per_run", 12))
         self.requests_made, self.items_seen, self.items_new, self.items_emitted = 0, 0, 0, 0
         self.errors = []
+        self.failure_details = []
         self.items_filtered = 0
         self.max_items = int(task.get("options", {}).get("max_items_per_run", 150))
         self.cutoff = datetime.now(timezone.utc) - timedelta(hours=float(task.get("options", {}).get("lookback_hours", 30)))
 
-    def fail(self, message):
+    def fail(self, message, *, category=None, url=None, http_status=None):
         if message not in self.errors:
             self.errors.append(message)
+        if category:
+            detail = {"category": category, "url": url, "http_status": http_status}
+            if category == "robots_denied":
+                detail["robots_url"] = urljoin(url, "/robots.txt")
+                detail["blocked_before_download"] = True
+            if detail not in self.failure_details:
+                self.failure_details.append(detail)
         self.logger.error(message)
 
     async def start(self):
@@ -196,7 +209,12 @@ class NewsSpider(scrapy.Spider):
 
     def failed_request(self, failure):
         request = failure.request
-        self.fail(f"{request.url}: {failure.value}")
+        detail = request.meta.get("failure_detail", {"category": "request_error", "url": request.url})
+        message = f"{request.url}: {failure.value}"
+        if failure.check(IgnoreRequest) and str(failure.value) == "Forbidden by robots.txt":
+            detail = {"category": "robots_denied", "url": request.url}
+            message += " (local robots policy block; endpoint was not downloaded)"
+        self.fail(message, **detail)
 
     def matches_source(self, source, title, text):
         keywords = source.get("include_keywords", [])
@@ -422,6 +440,7 @@ def main():
               "items_seen": spider.items_seen if spider else 0, "items_new": spider.items_new if spider else 0,
               "items_filtered": spider.items_filtered if spider else 0,
               "requests_made": spider.requests_made if spider else 0, "cache_hits": stats.get("httpcache/hit", 0),
+              "failure_details": spider.failure_details if spider else [],
               "errors": (spider.errors if spider else []) + failures, "finished_at": utcnow()}
     if stats.get("log_count/ERROR", 0):
         result["success"] = False

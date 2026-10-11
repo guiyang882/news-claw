@@ -25,6 +25,6 @@
 
 目前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器。2026-10-11 排查后，三个新闻任务改用 Federal Register API、Google AI 博客、OpenAI、Hacker News、NASA 与 NVIDIA 的公开来源，并按关键词与主题筛选；原 Google News 查询被 robots.txt 拒绝，已移出启用配置。采集器跨域名共享至少 10 秒请求间隔，回看 72 小时以覆盖官方来源的低频更新，重复条目按内容去重。社区指标、文章全文补充与主题分析产物仍需后续完善。运行方式见 [engine.md](engine.md)。
 
-来自 stocks-quant 的 8 个旧任务已和这 3 个新任务统一交由 Go 调度，旧 timer 停用。运行计划和结果见 [旧任务盘点](stocks-quant-task-inventory.md)。旧市场 RSS 通过执行适配器继续给网站供稿，使用 web-fetch 串行及共享 Google 限流/熔断检查。
+来自 stocks-quant 的 8 个旧任务已和这 3 个新任务统一交由 Go 管理，旧 timer 停用。运行计划和结果见 [旧任务盘点](stocks-quant-task-inventory.md)。旧市场 Google RSS 已因访问与用途限制暂停，保留网站历史时间线；三个新新闻任务继续使用已验证的替代来源。详见 [Google News 访问核查](operations/2026-10-11-google-news-access.md)。
 
 最终产物应进入 stocks-quant 网站；现有 Codex 分析、文章草稿和审批后发布任务也采用 JSON 配置，由同一 Go engine 管理。新主题的证据核验、knowledge 产物和网站内容转换尚未自动接通，扩展顺序见 [网站工作流](website-workflow.md)。

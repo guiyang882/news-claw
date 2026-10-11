@@ -17,7 +17,7 @@
 
 ## SQLite 与接管结果
 
-最初接管 11 项任务，统一为 `scheduler_engine=news-claw`。新增每日博客工作流后，现有 12 项定义、10 项启用；旧草稿与发布两项停用并保留历史。任务类型包含 5 项 crawl、5 项 codex、1 项 publish、1 项 workflow。旧 8 个 timer 已 disabled/inactive；Go engine 常驻且开机启动；6 张表不变。
+最初接管 11 项任务，统一为 `scheduler_engine=news-claw`。当前 12 项定义、9 项启用；旧草稿与发布两项停用并保留历史，小时级 Google News RSS 于 2026-10-11 因来源访问与用途限制暂停，详见 [访问核查](operations/2026-10-11-google-news-access.md)。任务类型包含 5 项 crawl、5 项 codex、1 项 publish、1 项 workflow。旧 8 个 timer 已 disabled/inactive；Go engine 常驻且开机启动；6 张表不变。
 
 | 旧任务 | Go 计划（北京时间） | 随机延迟 | 迁移前最后结果 |
 | --- | --- | --- | --- |
@@ -34,7 +34,7 @@
 
 旧 service 通过命令适配器执行，沿用本机账号、Codex 登录环境与原输入输出。用户要求所有模型调用 full 权限后，已更新 CLI 参数，并通过覆盖配置移除 engine 和模型 service 的文件系统限制。每日博客由新工作流直接执行，旧人工批准入口保留。主机实际 service 的账号与仓库模板有差异，因此以安装的 unit 为准。Go 负责时间调度、运行记录、超时、互斥与恢复；systemd 目前仍负责 engine 托管和旧任务的启动。
 
-旧 RSS 改为每分钟最多 1 请求，与新 Scrapy 任务通过 web-fetch 串行、共享 Google 来源间隔与熔断状态，保留原网站 news_timeline.json 输出。新主题 RSS 与旧市场 RSS 的文档索引尚未统一，来源请求协调已经接入。
+旧 RSS 的限速、共享锁和历史输出配置保留，但该任务当前停用。原网站 news_timeline.json 保留历史数据；三个新主题采集任务继续运行，其文档索引与旧网站时间线尚未统一。
 
 业务脚本的既有失败会继续作为失败显示，不把调度迁移视为修复。使用与恢复规则见 [engine.md](engine.md)，网站数据和长文链路见 [website-workflow.md](website-workflow.md)。
 

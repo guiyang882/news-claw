@@ -89,7 +89,9 @@ engine 使用 DB 旁的 flock 锁，子进程继承锁描述符：engine 意外�
 
 RSS 保存标题、链接、发布时间和 feed 提供的正文或摘要，尚未跟进下载文章全文。source.include_keywords 按词或短语边界筛选条目；source.topic_ids 可以指定任务主题的子集，避免将航天公告同时标为机器人材料。Muse 产品消歧、讨论代表性、关注度指标与政策影响判断仍需后续整理，Hacker News 首页 RSS 仅代表部分讨论。
 
-2026-10-11 排查发现 Google News 的 robots.txt 不允许当前客户端访问 /rss/search，原 7 个查询已从启用任务中移除；采集模板改用 NASA 公开 RSS。robots 检查保持启用。Rocket Lab 投资者网站的权限检查返回 HTTP 403，已停止该来源并记录熔断；当前航天来源不保证覆盖每家公司的公告。
+2026-10-11 排查发现 Google News 的 robots.txt 不允许当前客户端访问 /rss/search，原 7 个查询已从启用任务中移除；采集模板改用 NASA 公开 RSS。robots 检查保持启用。复核订阅用途后，小时级旧 Google RSS 任务也已暂停，详见 [访问核查](operations/2026-10-11-google-news-access.md)。Rocket Lab 投资者网站的权限检查返回 HTTP 403，已停止该来源并记录熔断；当前航天来源不保证覆盖每家公司的公告。
+
+`metadata_json.result.failure_details` 区分 `robots_denied`（端点尚未下载）、`http_access_denied`（401/403）与 `http_rate_limited`（429），记录实际端点与 HTTP 状态；robots 拦截的端点 HTTP 状态为空。已有失败记录保留原始结果。
 
 原始响应按来源/日期/哈希归档到 data/raw，结构化条目存入 data/normalized 与 documents。内容去重，重复条目合并主题关联。HTTP 缓存 30 分钟，命中缓存不消耗网络额度。
 
@@ -111,7 +113,7 @@ RSS 保存标题、链接、发布时间和 feed 提供的正文或摘要，尚�
 
 旧任务由 collectors.legacy_service 执行原 oneshot service。service 保留实际安装的账号、Codex HOME/环境、文件沙箱、原数据路径、缓存、审计和锁；离线发布仍使用 PrivateNetwork 及哈希绑定人工批准。systemd 用于进程托管与旧任务执行隔离，11 项时间计划由 Go 管理。Go 调度层没有 systemd 专用代码。
 
-小时 RSS 改为每小时第 5 分钟加最多 4 分钟随机延迟，旧脚本通过 drop-in 限制为每分钟 1 请求。RSS 适配器与新 Scrapy 任务共用 web-fetch 互斥、Google 来源边界间隔与熔断检查；新任务也读取旧脚本的 Google 熔断文件。旧脚本内部保持自己的缓存、锁和熔断；任务结束后保守预留至少 60 秒再允许新请求。两个熔断文件恢复时需分别核对，清理一个不会解除另一个。
+已暂停的小时 RSS 保留每小时第 5 分钟加最多 4 分钟随机延迟的配置，旧脚本通过 drop-in 限制为每分钟 1 请求。RSS 适配器与新 Scrapy 任务共用 web-fetch 互斥、Google 来源边界间隔与熔断检查；新任务也读取旧脚本的 Google 熔断文件。旧脚本内部保持自己的缓存、锁和熔断；任务结束后保守预留至少 60 秒再允许新请求。两个熔断文件恢复时需分别核对，清理一个不会解除另一个；恢复 Google RSS 还需先满足访问与用途许可条件。
 
 迁移脚本默认仅预览，`--apply` 检查旧任务未运行，备份配置和 SQLite，停用旧 timer，安装 engine service/RSS drop-in，同步 JSON 和计划，再启动服务。失败会恢复原配置、数据库、unit 和 timer 状态。备份保存在忽略提交的 data/runs/handoff-*。已经迁移时不要重复 apply。
 

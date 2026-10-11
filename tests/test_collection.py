@@ -50,6 +50,11 @@ class CollectionTest(unittest.TestCase):
                     self.end_headers()
                     self.wfile.write(b"limited")
                     return
+                if self.path == "/forbidden":
+                    self.send_response(403)
+                    self.end_headers()
+                    self.wfile.write(b"denied")
+                    return
                 if self.path == "/federal":
                     body = json.dumps({"results": [
                         {"title": "China semiconductor export controls", "html_url": owner.base + "/notice-a",
@@ -138,6 +143,8 @@ class CollectionTest(unittest.TestCase):
         first = self.collect()
         self.assertEqual(first["status"], "failed", first["log"])
         self.assertEqual(sum(path == "/denied" for path, _ in self.requests), 1)
+        details = json.loads(first["metadata_json"])["result"]["failure_details"]
+        self.assertEqual(details, [{"category": "http_rate_limited", "url": self.base + "/denied", "http_status": 429}])
         state = next(value for path in (self.root / "data/runs/request-policy").glob("*.json")
                      if (value := json.loads(path.read_text())).get("blocked"))
         self.assertGreater(state["not_before"], time.time() + 50, "Retry-After deadline not persisted")
@@ -154,6 +161,18 @@ class CollectionTest(unittest.TestCase):
         self.assertIn("Forbidden by robots.txt", result["error"])
         self.assertIn(self.base + "/rss", result["error"])
         self.assertEqual([path for path, _ in self.requests], ["/robots.txt"])
+        details = json.loads(result["metadata_json"])["result"]["failure_details"]
+        self.assertEqual(details, [{"category": "robots_denied", "url": self.base + "/rss",
+                                   "http_status": None, "robots_url": self.base + "/robots.txt",
+                                   "blocked_before_download": True}])
+
+    def test_http_access_denial_is_not_reported_as_robots_or_rate_limit(self):
+        self.seed(paths=("/forbidden",))
+        result = self.collect()
+        self.assertEqual(result["status"], "failed", result["log"])
+        details = json.loads(result["metadata_json"])["result"]["failure_details"]
+        self.assertEqual(details, [{"category": "http_access_denied", "url": self.base + "/forbidden", "http_status": 403}])
+        self.assertEqual(sum(path == "/forbidden" for path, _ in self.requests), 1)
 
     def test_federal_register_notices_are_filtered_and_archived(self):
         self.seed(paths=("/federal",))
