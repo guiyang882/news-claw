@@ -24,7 +24,7 @@ flowchart LR
 | AI 产品与 Agent | 海外如何讨论 Muse、Gemini Agent、GPT，用户反馈如何？ |
 | 机器人、物理 AI 与商业航天 | Tesla、Rocket Lab、SpaceX 等公司的技术与产业进展如何？ |
 
-当前接入 Federal Register、Google AI 博客、OpenAI、Hacker News、NASA 与 NVIDIA 的公开 RSS 或 API。产品反馈的代表性与政策影响需要进一步整理；长文写作需要正文或研究材料支撑。采集器支持 RSS、Atom 和网页，可继续添加来源。
+当前通过 Google News RSS 追踪主题新闻，并接入 Federal Register、Google AI 博客、OpenAI、Hacker News、NASA 与 NVIDIA 的 RSS 或 API。产品反馈的代表性与政策影响需要进一步整理；长文写作需要正文或研究材料支撑。采集器支持 RSS、Atom 和网页，可继续添加来源。
 
 ## 任务如何组织
 

@@ -63,6 +63,24 @@ def retry_after_deadline(value: str):
             return 0
 
 
+class SourceRobotsPolicy:
+    """Apply an explicit feed override to its configured URL only."""
+
+    def process_request(self, request, spider):
+        source = request.meta.get("source")
+        if source is None:
+            # Scrapy's internal robots request has its own bypass flag.
+            return
+        override = (source.get("obey_robots_txt", True) is False
+                    and source.get("type") in {"rss", "atom"}
+                    and request.url == request.meta.get("robots_override_url"))
+        # Redirect requests copy meta. Recompute the flag so a feed exception
+        # cannot carry over to another URL, such as a publisher article.
+        request.meta["dont_obey_robotstxt"] = override
+        if override and request.url not in spider.robots_override_urls:
+            spider.robots_override_urls.append(request.url)
+
+
 class RequestPolicy:
     """Shared disk state enforces minimum intervals even between crawler runs."""
 
@@ -186,6 +204,7 @@ class NewsSpider(scrapy.Spider):
         self.requests_made, self.items_seen, self.items_new, self.items_emitted = 0, 0, 0, 0
         self.errors = []
         self.failure_details = []
+        self.robots_override_urls = []
         self.items_filtered = 0
         self.max_items = int(task.get("options", {}).get("max_items_per_run", 150))
         self.cutoff = datetime.now(timezone.utc) - timedelta(hours=float(task.get("options", {}).get("lookback_hours", 30)))
@@ -204,8 +223,11 @@ class NewsSpider(scrapy.Spider):
 
     async def start(self):
         for source in self.sources:
-            yield scrapy.Request(source["url"], callback=self.parse_source, errback=self.failed_request,
-                                 meta={"source": source})
+            request = scrapy.Request(source["url"], callback=self.parse_source, errback=self.failed_request,
+                                     meta={"source": source})
+            if source.get("obey_robots_txt", True) is False:
+                request.meta["robots_override_url"] = request.url
+            yield request
 
     def failed_request(self, failure):
         request = failure.request
@@ -358,6 +380,11 @@ def validate(task):
     for source in sources:
         if source.get("type") not in {"rss", "atom", "page", "federal_register"} or urlparse(source.get("url", "")).scheme not in {"http", "https"}:
             raise ValueError(f"invalid source: {source}")
+        obey_robots = source.get("obey_robots_txt", True)
+        if not isinstance(obey_robots, bool):
+            raise ValueError("source.obey_robots_txt must be a boolean")
+        if not obey_robots and source["type"] not in {"rss", "atom"}:
+            raise ValueError("source.obey_robots_txt=false is supported only for RSS/Atom feeds")
         keywords = source.get("include_keywords", [])
         if not isinstance(keywords, list) or any(not isinstance(word, str) or not word.strip() for word in keywords):
             raise ValueError("source.include_keywords must be a list of nonempty strings")
@@ -415,7 +442,8 @@ def main():
         "RETRY_ENABLED": False, "COOKIES_ENABLED": False,
         "HTTPCACHE_ENABLED": True, "HTTPCACHE_DIR": str(root / "data/runs/http-cache"),
         "HTTPCACHE_EXPIRATION_SECS": 1800, "HTTPCACHE_IGNORE_HTTP_CODES": [401, 403, 429, 500, 502, 503, 504],
-        "DOWNLOADER_MIDDLEWARES": {"collectors.news.RequestPolicy": 950},
+        "DOWNLOADER_MIDDLEWARES": {"collectors.news.SourceRobotsPolicy": 95,
+                                  "collectors.news.RequestPolicy": 950},
         "ITEM_PIPELINES": {"collectors.news.DocumentPipeline": 300},
         "LOG_LEVEL": "INFO",
     })
@@ -441,6 +469,7 @@ def main():
               "items_filtered": spider.items_filtered if spider else 0,
               "requests_made": spider.requests_made if spider else 0, "cache_hits": stats.get("httpcache/hit", 0),
               "failure_details": spider.failure_details if spider else [],
+              "robots_override_urls": spider.robots_override_urls if spider else [],
               "errors": (spider.errors if spider else []) + failures, "finished_at": utcnow()}
     if stats.get("log_count/ERROR", 0):
         result["success"] = False

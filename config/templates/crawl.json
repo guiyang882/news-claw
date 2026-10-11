@@ -28,6 +28,7 @@
         "name": "nasa-news-releases",
         "type": "rss",
         "url": "https://www.nasa.gov/news-release/feed/",
+        "obey_robots_txt": true,
         "language": "en",
         "source_class": "government_and_space_agency_updates"
       }

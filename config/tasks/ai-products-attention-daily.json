@@ -17,7 +17,7 @@
     "request_policy": {
       "max_concurrent_requests_per_host": 1,
       "min_interval_seconds_per_host": 10,
-      "google_search_min_interval_seconds": 45,
+      "google_search_min_interval_seconds": 60,
       "honor_retry_after": true,
       "retry_backoff_seconds": [
         60,
@@ -46,6 +46,30 @@
     ],
     "disambiguation": "Muse is ambiguous; include a result only when context supports that it refers to an AI product, model, or agent, and record the identified product/vendor when possible.",
     "sources": [
+      {
+        "name": "muse-ai",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%22Muse%22+AI+%28product+OR+agent%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false
+      },
+      {
+        "name": "gemini-agent",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%22Gemini%22+agent+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false
+      },
+      {
+        "name": "gpt-feedback",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%28ChatGPT+OR+GPT%29+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false
+      },
       {
         "name": "google-ai-announcements",
         "type": "rss",
@@ -77,7 +101,14 @@
           "llm"
         ]
       }
-    ]
+    ],
+    "robots_override": {
+      "scope": "explicit_google_news_rss_urls_only",
+      "requested_by": "user",
+      "reason": "User explicitly requested Google News RSS restoration and ignoring robots for these feeds.",
+      "requested_at": "2026-10-11",
+      "http_denial_and_rate_limit_circuits_retained": true
+    }
   },
   "options": {
     "start_jitter_seconds": 300,

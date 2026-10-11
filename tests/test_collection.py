@@ -55,6 +55,11 @@ class CollectionTest(unittest.TestCase):
                     self.end_headers()
                     self.wfile.write(b"denied")
                     return
+                if self.path == "/rss-redirect":
+                    self.send_response(302)
+                    self.send_header("Location", "/rss-target")
+                    self.end_headers()
+                    return
                 if self.path == "/federal":
                     body = json.dumps({"results": [
                         {"title": "China semiconductor export controls", "html_url": owner.base + "/notice-a",
@@ -174,6 +179,48 @@ class CollectionTest(unittest.TestCase):
         self.assertEqual(details, [{"category": "http_access_denied", "url": self.base + "/forbidden", "http_status": 403}])
         self.assertEqual(sum(path == "/forbidden" for path, _ in self.requests), 1)
 
+    def set_robots_override(self):
+        with closing(sqlite3.connect(self.db)) as db, db:
+            config = json.loads(db.execute("SELECT config_json FROM tasks WHERE id='test'").fetchone()[0])
+            config["collector"]["sources"][0]["obey_robots_txt"] = False
+            db.execute("UPDATE tasks SET config_json=? WHERE id='test'", (json.dumps(config),))
+
+    def test_feed_override_does_not_disable_robots_for_other_sources(self):
+        self.robots = b"User-agent: *\nDisallow: /rss\n"
+        self.seed(paths=("/rss", "/rss-other"))
+        self.set_robots_override()
+        result = self.collect()
+        self.assertEqual(result["status"], "failed", result["log"])
+        self.assertEqual(result["items_new"], 1)
+        self.assertEqual(sorted(path for path, _ in self.requests), ["/robots.txt", "/rss"])
+        metadata = json.loads(result["metadata_json"])["result"]
+        self.assertEqual(metadata["robots_override_urls"], [self.base + "/rss"])
+        self.assertEqual(metadata["failure_details"][0]["url"], self.base + "/rss-other")
+
+    def test_feed_override_does_not_follow_redirect_to_disallowed_url(self):
+        self.robots = b"User-agent: *\nDisallow: /rss\n"
+        self.seed(paths=("/rss-redirect",))
+        self.set_robots_override()
+        result = self.collect()
+        self.assertEqual(result["status"], "failed", result["log"])
+        self.assertEqual(sorted(path for path, _ in self.requests), ["/robots.txt", "/rss-redirect"])
+        metadata = json.loads(result["metadata_json"])["result"]
+        self.assertEqual(metadata["robots_override_urls"], [self.base + "/rss-redirect"])
+        self.assertEqual(metadata["failure_details"][0]["category"], "robots_denied")
+        self.assertEqual(metadata["failure_details"][0]["url"], self.base + "/rss-target")
+
+    def test_feed_override_retains_http_rate_limit_circuit(self):
+        self.seed(paths=("/denied",))
+        self.set_robots_override()
+        first = self.collect()
+        self.assertEqual(first["status"], "failed", first["log"])
+        self.assertEqual([path for path, _ in self.requests], ["/denied"])
+        details = json.loads(first["metadata_json"])["result"]["failure_details"]
+        self.assertEqual(details[0]["category"], "http_rate_limited")
+        second = self.collect()
+        self.assertEqual(second["status"], "failed", second["log"])
+        self.assertEqual([path for path, _ in self.requests], ["/denied"])
+
     def test_federal_register_notices_are_filtered_and_archived(self):
         self.seed(paths=("/federal",))
         with closing(sqlite3.connect(self.db)) as db, db:
@@ -270,6 +317,16 @@ class CollectionTest(unittest.TestCase):
 
 
 class SharedCircuitTest(unittest.IsolatedAsyncioTestCase):
+    def test_robots_override_requires_a_boolean_and_feed_type(self):
+        from collectors.news import validate
+        task = {"collector": {"sources": [{"type": "rss", "url": "https://example.com/feed",
+                                           "obey_robots_txt": "false"}]}}
+        with self.assertRaisesRegex(ValueError, "must be a boolean"):
+            validate(task)
+        task["collector"]["sources"][0].update(type="page", obey_robots_txt=False)
+        with self.assertRaisesRegex(ValueError, "only for RSS/Atom"):
+            validate(task)
+
     async def test_scrapy_obeys_legacy_google_circuit(self):
         import scrapy
         from scrapy.exceptions import IgnoreRequest

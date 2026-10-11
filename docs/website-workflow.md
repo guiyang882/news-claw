@@ -20,7 +20,7 @@ flowchart LR
 
 | 阶段 | 任务 ID | 入口 / 输出 |
 | --- | --- | --- |
-| 采集网站市场新闻（因 Google RSS 访问与用途限制暂停） | stocks-quant-market-news-refresh | `web.news_collector` → `/mnt/quant-state/quant-web/news_timeline.json`，保留历史数据 |
+| 采集网站市场新闻 | stocks-quant-market-news-refresh | `web.news_collector` → `/mnt/quant-state/quant-web/news_timeline.json` |
 | Codex 分析并更新网站数据 | stocks-quant-market-news-analysis | `web.news_analysis` → `news_analysis.json`、历史快照和审计 |
 | 候选题与长文大纲、Gemini 写稿、Codex 复核、humanizer 与发布 | daily-blog-agy-codex | 本地证据 → `workflows.daily_blog` → `blog/articles/`、`blog/manifest.json` |
 | 原 Codex 市场草稿（停用并保留） | stocks-quant-blog-compose | `blog/source-packets/YYYY-MM-DD.json` → `blog/inbox/YYYY-MM-DD.json` |
@@ -81,7 +81,7 @@ agy / Gemini 可使用 [agy 模板](../config/templates/agy.json) 处理本地�
 
 ## 平替范围与后续连接
 
-当前 12 项任务定义、9 项启用，时间调度由 Go 管理，旧 8 个 timer 停用。每日博客直接运行多阶段脚本，不调用旧博客 service；原两项博客任务停用并保留历史。小时级 Google RSS 入口因访问与用途限制暂停，详见 [核查记录](operations/2026-10-11-google-news-access.md)，市场分析仍可使用既有时间线。其余旧任务通过命令调用 service 适配器。systemd 目前用于托管 engine 和隔离旧任务执行。
+当前 12 项任务定义、10 项启用，时间调度由 Go 管理，旧 8 个 timer 停用。每日博客直接运行多阶段脚本，不调用旧博客 service；原两项博客任务停用并保留历史。小时级 Google RSS 入口已按用户要求恢复，详见 [恢复记录](operations/2026-10-11-google-news-restoration.md)。其余旧任务通过命令调用 service 适配器。systemd 目前用于托管 engine 和隔离旧任务执行。
 
 Go 核心没有 systemd 或网站专用分支。后续可将某项 `execution.command` 换成直接执行的脚本或其他容器适配器，配置相应恢复命令；切换前需重现该任务实际使用的权限、Codex 凭据环境、网络限制和校验规则。
 

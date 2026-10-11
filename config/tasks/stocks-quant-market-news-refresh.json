@@ -1,9 +1,9 @@
 {
   "id": "stocks-quant-market-news-refresh",
   "name": "Tesla、SpaceX、Rocket Lab 新闻线索采集",
-  "description": "原小时级 Google News RSS 入口已暂停：robots 禁止 RSS 抓取，订阅内容仅限个人阅读器使用，当前网站发布流程不满足该用途。保留历史运行与配置，等待适用于网站研究发布的来源。",
+  "description": "Go 调度的小时级 Google News RSS 线索采集：Rocket Lab、SpaceX、Tesla；按用户要求恢复，每分钟最多一个请求，保留缓存与拒绝熔断。",
   "scheduler_engine": "news-claw",
-  "enabled": false,
+  "enabled": true,
   "schedule": "5 * * * *",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
@@ -19,13 +19,13 @@
     "execution_owner": "news-claw_via_legacy_service",
     "external_timer_active": false,
     "access_review": {
-      "status": "paused",
+      "status": "enabled_user_override",
       "reviewed_at": "2026-10-11",
-      "reason": "robots_disallows_rss_and_feed_restricts_use_to_personal_noncommercial_feed_reader",
+      "reason": "User explicitly requested restoring Google News RSS and overriding robots for this source.",
       "robots_url": "https://news.google.com/robots.txt",
       "terms_url": "https://policies.google.com/terms",
-      "evidence": "Validated local Google News robots cache and all three legacy RSS channel copyright notices; no extra RSS probes made.",
-      "resume_condition": "Auditable permission for this research and website publishing use, or replacement with permitted sources; keep rate limits and request budget."
+      "provider_use_restrictions": "Existing feed notices restrict use to a personal, noncommercial feed reader; user override is not provider permission.",
+      "http_denial_and_rate_limit_circuits_retained": true
     },
     "observed_at": "2026-10-10",
     "query_entities": [
@@ -53,7 +53,7 @@
     "migration_observed_at": "2026-10-10T08:44:00+00:00"
   },
   "options": {
-    "migration_state": "paused_source_access_review",
+    "migration_state": "go_scheduled_legacy_service",
     "start_jitter_seconds": 240
   },
   "legacy_schedule": {

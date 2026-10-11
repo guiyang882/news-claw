@@ -2,6 +2,8 @@
 
 核查日期：2026-10-11，北京时间。此次复用本地 robots、RSS 缓存与运行日志，没有追加 Google News RSS 探测请求。
 
+后续状态：用户随后明确要求忽略 Google RSS 的 robots 并恢复采集，配置现已恢复。本文保留当时核查事实与暂停记录；当前配置和验证结果见 [恢复记录](2026-10-11-google-news-restoration.md)。
+
 ## 实际失败原因
 
 三个 Scrapy 新闻任务的五次失败均来自 `Forbidden by robots.txt`。缓存中的 robots 请求返回 HTTP 200；Scrapy 随后在本地拦截 `/rss/search`，没有下载该 RSS 端点。因此，这些记录不能用来判断 Google 对出口 IP 限流或封禁。

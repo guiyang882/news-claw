@@ -20,7 +20,7 @@
     "request_policy": {
       "max_concurrent_requests_per_host": 1,
       "min_interval_seconds_per_host": 10,
-      "google_search_min_interval_seconds": 45,
+      "google_search_min_interval_seconds": 60,
       "honor_retry_after": true,
       "retry_backoff_seconds": [
         60,
@@ -56,6 +56,40 @@
     ],
     "discover_related_entities": true,
     "sources": [
+      {
+        "name": "space-race",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%28SpaceX+OR+%22Rocket+Lab%22+OR+%22Blue+Origin%22%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false,
+        "topic_ids": [
+          "space-race"
+        ]
+      },
+      {
+        "name": "robotics",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%28Tesla+Optimus+OR+%22Figure+AI%22+OR+humanoid+robotics%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false,
+        "topic_ids": [
+          "robotics-and-humanoids",
+          "physical-ai"
+        ]
+      },
+      {
+        "name": "physical-ai",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=%22physical+AI%22+%28NVIDIA+OR+robotics+OR+research%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false,
+        "topic_ids": [
+          "physical-ai"
+        ]
+      },
       {
         "name": "nasa-news-releases",
         "type": "rss",
@@ -104,7 +138,14 @@
         "reason": "HTTP 403 during robots permission check; persistent circuit open; not scheduled",
         "checked_at": "2026-10-11T13:51:40+00:00"
       }
-    ]
+    ],
+    "robots_override": {
+      "scope": "explicit_google_news_rss_urls_only",
+      "requested_by": "user",
+      "reason": "User explicitly requested Google News RSS restoration and ignoring robots for these feeds.",
+      "requested_at": "2026-10-11",
+      "http_denial_and_rate_limit_circuits_retained": true
+    }
   },
   "options": {
     "start_jitter_seconds": 300,

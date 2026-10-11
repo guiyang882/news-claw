@@ -18,7 +18,7 @@
     "request_policy": {
       "max_concurrent_requests_per_host": 1,
       "min_interval_seconds_per_host": 10,
-      "google_search_min_interval_seconds": 45,
+      "google_search_min_interval_seconds": 60,
       "honor_retry_after": true,
       "retry_backoff_seconds": [
         60,
@@ -48,6 +48,14 @@
     ],
     "sources": [
       {
+        "name": "us-china-trade-controls",
+        "type": "rss",
+        "url": "https://news.google.com/rss/search?q=China+%28%22export+controls%22+OR+%22import+restrictions%22+OR+%22BIS%22%29+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen",
+        "language": "en",
+        "source_class": "public_news_discovery",
+        "obey_robots_txt": false
+      },
+      {
         "name": "federal-register-china-trade",
         "type": "federal_register",
         "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=50&order=newest&conditions%5Bterm%5D=China",
@@ -64,7 +72,14 @@
           "industry and security"
         ]
       }
-    ]
+    ],
+    "robots_override": {
+      "scope": "explicit_google_news_rss_urls_only",
+      "requested_by": "user",
+      "reason": "User explicitly requested Google News RSS restoration and ignoring robots for these feeds.",
+      "requested_at": "2026-10-11",
+      "http_denial_and_rate_limit_circuits_retained": true
+    }
   },
   "options": {
     "start_jitter_seconds": 300,
