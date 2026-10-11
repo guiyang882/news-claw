@@ -32,7 +32,8 @@
       "automatic_retry_after_denial": false,
       "shared_circuit_paths": [
         "/mnt/quant-state/quant-web/news_circuit.json"
-      ]
+      ],
+      "min_interval_seconds_global": 10
     },
     "source_classes": [
       "company_announcements_and_filings",
@@ -56,31 +57,58 @@
     "discover_related_entities": true,
     "sources": [
       {
-        "name": "space-race",
+        "name": "nasa-news-releases",
         "type": "rss",
-        "url": "https://news.google.com/rss/search?q=%28SpaceX+OR+%22Rocket+Lab%22+OR+%22Blue+Origin%22%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "url": "https://www.nasa.gov/news-release/feed/",
         "language": "en",
-        "source_class": "public_news_discovery"
+        "source_class": "government_and_space_agency_updates",
+        "include_keywords": [
+          "spacex",
+          "rocket lab",
+          "commercial",
+          "launch",
+          "artemis",
+          "space station"
+        ],
+        "topic_ids": [
+          "space-race"
+        ]
       },
       {
-        "name": "robotics",
+        "name": "nvidia-robotics",
         "type": "rss",
-        "url": "https://news.google.com/rss/search?q=%28Tesla+Optimus+OR+%22Figure+AI%22+OR+humanoid+robotics%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "url": "https://blogs.nvidia.com/feed/",
         "language": "en",
-        "source_class": "public_news_discovery"
-      },
+        "source_class": "company_announcements_and_filings",
+        "include_keywords": [
+          "robot",
+          "robots",
+          "robotics",
+          "humanoid",
+          "humanoids",
+          "physical ai",
+          "tesla",
+          "optimus",
+          "simulation"
+        ],
+        "topic_ids": [
+          "robotics-and-humanoids",
+          "physical-ai"
+        ]
+      }
+    ],
+    "unavailable_sources": [
       {
-        "name": "physical-ai",
-        "type": "rss",
-        "url": "https://news.google.com/rss/search?q=%22physical+AI%22+%28NVIDIA+OR+robotics+OR+research%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
-        "language": "en",
-        "source_class": "public_news_discovery"
+        "name": "rocket-lab-investor-news",
+        "url": "https://investors.rocketlabcorp.com/rss/news-releases.xml",
+        "reason": "HTTP 403 during robots permission check; persistent circuit open; not scheduled",
+        "checked_at": "2026-10-11T13:51:40+00:00"
       }
     ]
   },
   "options": {
     "start_jitter_seconds": 300,
-    "lookback_hours": 18,
+    "lookback_hours": 72,
     "max_items_per_run": 250,
     "summarize": [
       "news_and_company_developments",

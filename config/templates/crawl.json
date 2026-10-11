@@ -8,9 +8,15 @@
   "schedule_format": "cron",
   "schedule": "50 6 * * *",
   "timezone": "Asia/Shanghai",
-  "topic_ids": ["space-race"],
+  "topic_ids": [
+    "space-race"
+  ],
   "execution": {
-    "command": [".venv/bin/python", "-m", "collectors.news"],
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.news"
+    ],
     "working_dir": ".",
     "timeout_seconds": 1800,
     "lock_group": "web-fetch"
@@ -19,11 +25,11 @@
     "type": "multi_source_news",
     "sources": [
       {
-        "name": "space-news",
+        "name": "nasa-news-releases",
         "type": "rss",
-        "url": "https://news.google.com/rss/search?q=SpaceX+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "url": "https://www.nasa.gov/news-release/feed/",
         "language": "en",
-        "source_class": "public_news_discovery"
+        "source_class": "government_and_space_agency_updates"
       }
     ],
     "request_policy": {
@@ -33,7 +39,10 @@
       "max_requests_per_run": 12,
       "stop_on_403_429_or_access_denial": true,
       "automatic_retry_after_denial": false,
-      "shared_circuit_paths": ["/mnt/quant-state/quant-web/news_circuit.json"]
+      "shared_circuit_paths": [
+        "/mnt/quant-state/quant-web/news_circuit.json"
+      ],
+      "min_interval_seconds_global": 10
     }
   },
   "options": {
@@ -44,7 +53,11 @@
   "workflow": {
     "website_repo": "/mnt/quant/strategies/stocks-quant",
     "stage": "news_discovery",
-    "outputs": ["data/raw", "data/normalized", "documents"],
+    "outputs": [
+      "data/raw",
+      "data/normalized",
+      "documents"
+    ],
     "publication_status": "requires_topic_analysis_and_website_adapter"
   }
 }

@@ -22,7 +22,7 @@ cp config/templates/crawl.json config/tasks/my-topic-daily.json
 4. 设置与现有任务错开的 schedule。采集模板另有最多 5 分钟启动随机延迟和请求限流。
 5. 将 enabled 改为 true 后运行 make init。常驻 engine 自动读取 SQLite 中的新配置；bin/news-claw check 可只读检查同步后的调度配置。
 
-采集器支持 rss、atom 和 page 来源；请求之前复用缓存，Google 来源共享限流和熔断状态。站点权限、请求预算和间隔应按来源设置。
+采集器支持 rss、atom、page 和 federal_register 来源；采集模板使用 NASA 公开 RSS。include_keywords 可筛选条目，来源的 topic_ids 可限定归属。请求之前复用缓存，跨来源间隔默认至少 10 秒，Google 来源另有共享限流和熔断状态。站点权限、请求预算和间隔应按来源设置。
 
 ## Codex 与发布任务的执行边界
 

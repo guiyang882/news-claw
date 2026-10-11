@@ -23,7 +23,7 @@
 
 先观察一到两周的重复率、有效来源比例、主题覆盖和每轮人工阅读量，再调整 cron 时间、回看窗口、关键词、来源范围和每轮上限。更改任务范围时保留稳定的任务与主题 ID，以便延续历史。
 
-目前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器。三个新任务先使用 Google News RSS 发现线索；官方来源、社区指标、文章全文与主题分析产物后续接入。运行方式见 [engine.md](engine.md)。
+目前已接入 Go 调度器和 Scrapy RSS/Atom/网页采集器。2026-10-11 排查后，三个新闻任务改用 Federal Register API、Google AI 博客、OpenAI、Hacker News、NASA 与 NVIDIA 的公开来源，并按关键词与主题筛选；原 Google News 查询被 robots.txt 拒绝，已移出启用配置。采集器跨域名共享至少 10 秒请求间隔，回看 72 小时以覆盖官方来源的低频更新，重复条目按内容去重。社区指标、文章全文补充与主题分析产物仍需后续完善。运行方式见 [engine.md](engine.md)。
 
 来自 stocks-quant 的 8 个旧任务已和这 3 个新任务统一交由 Go 调度，旧 timer 停用。运行计划和结果见 [旧任务盘点](stocks-quant-task-inventory.md)。旧市场 RSS 通过执行适配器继续给网站供稿，使用 web-fetch 串行及共享 Google 限流/熔断检查。
 

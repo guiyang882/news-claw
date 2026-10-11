@@ -30,7 +30,8 @@
       "automatic_retry_after_denial": false,
       "shared_circuit_paths": [
         "/mnt/quant-state/quant-web/news_circuit.json"
-      ]
+      ],
+      "min_interval_seconds_global": 10
     },
     "source_classes": [
       "us_government_primary_sources",
@@ -47,17 +48,27 @@
     ],
     "sources": [
       {
-        "name": "us-china-trade-controls",
-        "type": "rss",
-        "url": "https://news.google.com/rss/search?q=China+%28%22export+controls%22+OR+%22import+restrictions%22+OR+%22BIS%22%29+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen",
+        "name": "federal-register-china-trade",
+        "type": "federal_register",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=50&order=newest&conditions%5Bterm%5D=China",
         "language": "en",
-        "source_class": "public_news_discovery"
+        "source_class": "us_government_primary_sources",
+        "include_keywords": [
+          "export",
+          "import",
+          "tariff",
+          "sanction",
+          "entity list",
+          "semiconductor",
+          "dual-use",
+          "industry and security"
+        ]
       }
     ]
   },
   "options": {
     "start_jitter_seconds": 300,
-    "lookback_hours": 30,
+    "lookback_hours": 72,
     "max_items_per_run": 150,
     "track_policy_deltas": true,
     "identify_affected_industries_and_companies": true,

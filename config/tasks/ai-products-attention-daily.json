@@ -29,7 +29,8 @@
       "automatic_retry_after_denial": false,
       "shared_circuit_paths": [
         "/mnt/quant-state/quant-web/news_circuit.json"
-      ]
+      ],
+      "min_interval_seconds_global": 10
     },
     "source_classes": [
       "official_product_announcements",
@@ -46,31 +47,41 @@
     "disambiguation": "Muse is ambiguous; include a result only when context supports that it refers to an AI product, model, or agent, and record the identified product/vendor when possible.",
     "sources": [
       {
-        "name": "muse-ai",
+        "name": "google-ai-announcements",
         "type": "rss",
-        "url": "https://news.google.com/rss/search?q=%22Muse%22+AI+%28product+OR+agent%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "url": "https://blog.google/technology/ai/rss/",
         "language": "en",
-        "source_class": "public_news_discovery"
+        "source_class": "official_product_announcements"
       },
       {
-        "name": "gemini-agent",
+        "name": "openai-announcements",
         "type": "rss",
-        "url": "https://news.google.com/rss/search?q=%22Gemini%22+agent+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "url": "https://openai.com/news/rss.xml",
         "language": "en",
-        "source_class": "public_news_discovery"
+        "source_class": "official_product_announcements"
       },
       {
-        "name": "gpt-feedback",
+        "name": "hacker-news-ai-discussion",
         "type": "rss",
-        "url": "https://news.google.com/rss/search?q=%28ChatGPT+OR+GPT%29+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "url": "https://news.ycombinator.com/rss",
         "language": "en",
-        "source_class": "public_news_discovery"
+        "source_class": "public_forums_and_communities",
+        "include_keywords": [
+          "muse",
+          "gemini",
+          "gpt",
+          "chatgpt",
+          "openai",
+          "agent",
+          "agents",
+          "llm"
+        ]
       }
     ]
   },
   "options": {
     "start_jitter_seconds": 300,
-    "lookback_hours": 18,
+    "lookback_hours": 72,
     "max_items_per_run": 200,
     "measure": [
       "discussion_volume_and_change",

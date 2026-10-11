@@ -31,6 +31,7 @@ class CollectionTest(unittest.TestCase):
                 connection.executescript(migration.read_text())
             connection.execute("INSERT INTO schema_migrations VALUES (4,'test','2026-10-10T00:00:00Z')")
         self.requests = []
+        self.robots = b"User-agent: *\nAllow: /\n"
         self.http_lock = threading.Lock()
         owner = self
 
@@ -41,7 +42,7 @@ class CollectionTest(unittest.TestCase):
                 if self.path == "/robots.txt":
                     self.send_response(200)
                     self.end_headers()
-                    self.wfile.write(b"User-agent: *\nAllow: /\n")
+                    self.wfile.write(owner.robots)
                     return
                 if self.path == "/denied":
                     self.send_response(429)
@@ -49,7 +50,19 @@ class CollectionTest(unittest.TestCase):
                     self.end_headers()
                     self.wfile.write(b"limited")
                     return
-                if self.path == "/broken":
+                if self.path == "/federal":
+                    body = json.dumps({"results": [
+                        {"title": "China semiconductor export controls", "html_url": owner.base + "/notice-a",
+                         "publication_date": datetime.now(timezone.utc).date().isoformat(), "abstract": "Export license changes."},
+                        {"title": "Health research notice", "html_url": owner.base + "/notice-b",
+                         "publication_date": datetime.now(timezone.utc).date().isoformat(), "abstract": "Unrelated research."}]}).encode()
+                elif self.path == "/rss-mixed":
+                    items = "".join(f'<item><title>{title}</title><link>{owner.base}/article-{i}</link>'
+                        f'<pubDate>{format_datetime(datetime.now(timezone.utc))}</pubDate>'
+                        '<description>Short summary</description><content:encoded><![CDATA[<p>Extended source text.</p>]]></content:encoded></item>'
+                        for i, title in enumerate(("Robot deployment", "Muse AI feedback", "Museum weather forecast")))
+                    body = ('<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>' + items + '</channel></rss>').encode()
+                elif self.path == "/broken":
                     body = b"<html>not a feed</html>"
                 elif self.path == "/page":
                     body = b"<html><head><title>Launch report</title></head><body><nav>Menu</nav><article>A successful launch.</article></body></html>"
@@ -77,8 +90,8 @@ class CollectionTest(unittest.TestCase):
         config = {"id": task, "schedule_format": "cron", "topic_ids": topics or ["space-race"],
                   "execution": {"command": [PYTHON, "-m", "collectors.news"], "working_dir": str(REPO),
                                 "timeout_seconds": 30, "lock_group": "web-fetch"},
-                  "collector": {"sources": [{"name": path.strip("/"), "type": "page" if path == "/page" else "rss", "url": self.base + path} for path in paths],
-                                "request_policy": {"min_interval_seconds_per_host": interval, "max_requests_per_run": budget}},
+                  "collector": {"sources": [{"name": path.strip("/"), "type": "page" if path == "/page" else "federal_register" if path == "/federal" else "rss", "url": self.base + path} for path in paths],
+                                "request_policy": {"min_interval_seconds_per_host": interval, "min_interval_seconds_global": 0, "max_requests_per_run": budget}},
                   "options": {"max_items_per_run": 10, "lookback_hours": 30}}
         with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.execute("""INSERT INTO tasks(id,name,task_type,scheduler_engine,enabled,schedule,timezone,config_json,created_at,updated_at)
@@ -125,12 +138,51 @@ class CollectionTest(unittest.TestCase):
         first = self.collect()
         self.assertEqual(first["status"], "failed", first["log"])
         self.assertEqual(sum(path == "/denied" for path, _ in self.requests), 1)
-        state = json.loads(next((self.root / "data/runs/request-policy").glob("*.json")).read_text())
+        state = next(value for path in (self.root / "data/runs/request-policy").glob("*.json")
+                     if (value := json.loads(path.read_text())).get("blocked"))
         self.assertGreater(state["not_before"], time.time() + 50, "Retry-After deadline not persisted")
         before = len(self.requests)
         second = self.collect()
         self.assertEqual(second["status"], "failed", second["log"])
         self.assertEqual(len(self.requests), before, "blocked source retried after restart")
+
+    def test_robots_denial_preserves_endpoint_and_reason(self):
+        self.robots = b"User-agent: *\nDisallow: /rss\n"
+        self.seed()
+        result = self.collect()
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("Forbidden by robots.txt", result["error"])
+        self.assertIn(self.base + "/rss", result["error"])
+        self.assertEqual([path for path, _ in self.requests], ["/robots.txt"])
+
+    def test_federal_register_notices_are_filtered_and_archived(self):
+        self.seed(paths=("/federal",))
+        with closing(sqlite3.connect(self.db)) as db, db:
+            config = json.loads(db.execute("SELECT config_json FROM tasks WHERE id='test'").fetchone()[0])
+            config["collector"]["sources"][0]["include_keywords"] = ["export"]
+            db.execute("UPDATE tasks SET config_json=? WHERE id='test'", (json.dumps(config),))
+        result = self.collect()
+        self.assertEqual(result["status"], "succeeded", result["log"])
+        self.assertEqual((result["items_seen"], result["items_new"]), (2, 1))
+        with closing(sqlite3.connect(self.db)) as db:
+            title, raw, normalized = db.execute("SELECT title,raw_path,normalized_path FROM documents").fetchone()
+        self.assertIn("China semiconductor", title)
+        self.assertTrue(raw.endswith(".json"))
+        self.assertEqual(json.loads((self.root / normalized).read_text())["record_type"], "regulatory_notice")
+
+    def test_rss_keyword_boundaries_content_and_source_topics(self):
+        self.seed(paths=("/rss-mixed",), topics=["physical-ai", "space-race"])
+        with closing(sqlite3.connect(self.db)) as db, db:
+            config = json.loads(db.execute("SELECT config_json FROM tasks WHERE id='test'").fetchone()[0])
+            config["collector"]["sources"][0].update(include_keywords=["robot", "muse"], topic_ids=["physical-ai"])
+            db.execute("UPDATE tasks SET config_json=? WHERE id='test'", (json.dumps(config),))
+        result = self.collect()
+        self.assertEqual(result["status"], "succeeded", result["log"])
+        self.assertEqual((result["items_seen"], result["items_new"]), (3, 2))
+        with closing(sqlite3.connect(self.db)) as db:
+            for normalized, links in db.execute("SELECT normalized_path,topic_links_json FROM documents"):
+                self.assertIn("Extended source text", json.loads((self.root / normalized).read_text())["text"])
+                self.assertEqual({item["topic_id"] for item in json.loads(links)}, {"physical-ai"})
 
     def test_shared_interval_across_tasks(self):
         self.seed(task="one", paths=("/rss",), interval=0.25)
@@ -139,6 +191,22 @@ class CollectionTest(unittest.TestCase):
         self.assertEqual(self.collect("two")["status"], "succeeded")
         times = [timestamp for _, timestamp in self.requests]
         self.assertGreaterEqual(len(times), 3)
+        self.assertTrue(all(b - a >= 0.23 for a, b in zip(times, times[1:])), times)
+
+    def test_global_interval_survives_switching_hosts_and_tasks(self):
+        self.seed(task="one", paths=("/rss",))
+        self.seed(task="two", paths=("/page",))
+        with closing(sqlite3.connect(self.db)) as db, db:
+            for task in ("one", "two"):
+                config = json.loads(db.execute("SELECT config_json FROM tasks WHERE id=?", (task,)).fetchone()[0])
+                config["collector"]["request_policy"]["min_interval_seconds_global"] = 0.25
+                if task == "two":
+                    config["collector"]["sources"][0]["url"] = self.base.replace("127.0.0.1", "localhost") + "/page"
+                db.execute("UPDATE tasks SET config_json=? WHERE id=?", (json.dumps(config), task))
+        self.assertEqual(self.collect("one")["status"], "succeeded")
+        self.assertEqual(self.collect("two")["status"], "succeeded")
+        times = [timestamp for _, timestamp in self.requests]
+        self.assertEqual(len(times), 4)
         self.assertTrue(all(b - a >= 0.23 for a, b in zip(times, times[1:])), times)
 
     def test_budget_and_invalid_feed_fail_the_run(self):

@@ -303,6 +303,30 @@ func (r *Runner) Execute(parent context.Context, run *Run) error {
 		if ok, present := result["success"].(bool); present && !ok && err == nil {
 			err, status = errors.New("task executor reported an unsuccessful run"), "failed"
 		}
+		if status == "failed" {
+			detail, _ := result["error"].(string)
+			if detail == "" {
+				if messages, ok := result["errors"].([]any); ok {
+					for _, message := range messages {
+						if text, ok := message.(string); ok && text != "" {
+							if detail != "" {
+								detail += "; "
+							}
+							detail += text
+							if len(detail) >= 2000 {
+								break
+							}
+						}
+					}
+				}
+			}
+			if detail != "" {
+				if len(detail) > 2000 {
+					detail = detail[:2000]
+				}
+				err = fmt.Errorf("%v: %s", err, detail)
+			}
+		}
 	}
 	// A killed adapter can leave external work alive. Keep the run/source locked
 	// until cleanup succeeds; on failure Serve exits and restart retries cleanup.

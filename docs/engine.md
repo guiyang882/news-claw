@@ -85,13 +85,17 @@ engine 使用 DB 旁的 flock 锁，子进程继承锁描述符：engine 意外�
 
 ## Scrapy 采集范围
 
-三个新任务已配置共 7 个 Google News RSS 查询入口。sources 支持 rss、atom 和 page；网页类型保存 HTML 和基础正文抽取结果。
+三个新闻任务接入 Federal Register API、Google AI 博客、OpenAI、Hacker News、NASA 与 NVIDIA，共 6 个来源。sources 支持 rss、atom、page 和 federal_register；网页类型保存 HTML 和基础正文抽取结果，federal_register 解析官方 API 的公告列表与摘要。
 
-RSS 保存标题、链接、发布时间和 feed 描述，作为新闻发现线索，尚未跟进下载文章全文。Google 链接可能仍是包装链接。Muse 产品消歧、社区反馈、关注度指标、政策影响判断和主题知识产物需要后续接入。
+RSS 保存标题、链接、发布时间和 feed 提供的正文或摘要，尚未跟进下载文章全文。source.include_keywords 按词或短语边界筛选条目；source.topic_ids 可以指定任务主题的子集，避免将航天公告同时标为机器人材料。Muse 产品消歧、讨论代表性、关注度指标与政策影响判断仍需后续整理，Hacker News 首页 RSS 仅代表部分讨论。
+
+2026-10-11 排查发现 Google News 的 robots.txt 不允许当前客户端访问 /rss/search，原 7 个查询已从启用任务中移除；采集模板改用 NASA 公开 RSS。robots 检查保持启用。Rocket Lab 投资者网站的权限检查返回 HTTP 403，已停止该来源并记录熔断；当前航天来源不保证覆盖每家公司的公告。
 
 原始响应按来源/日期/哈希归档到 data/raw，结构化条目存入 data/normalized 与 documents。内容去重，重复条目合并主题关联。HTTP 缓存 30 分钟，命中缓存不消耗网络额度。
 
-每轮最多 12 个网络请求，包含 robots.txt 和重定向；每域名最多一个并发，普通来源间隔至少 10 秒，Google 服务共享至少 45 秒间隔。跨轮次请求时间和熔断状态保存在 data/runs/request-policy，通过文件锁共享。遵守 robots.txt。
+每轮最多 12 个网络请求，包含 robots.txt 和重定向；每域名最多一个并发，普通来源间隔至少 10 秒，Google 服务共享至少 45 秒间隔。min_interval_seconds_global 默认 10 秒，在不同域名和任务之间共享请求间隔；本地测试显式设为 0。跨轮次请求时间和熔断状态保存在 data/runs/request-policy，通过文件锁共享。遵守 robots.txt。
+
+失败时，task_runs.error 同时保留执行程序 result.json 中的 error 或 errors 摘要，日志保留完整信息，避免数据库仅显示 exit status 1。
 
 遇到 401/403/429 停止来源并持久化熔断，记录 Retry-After，不自动重试或恢复。判断可恢复后显式清除熔断（保留请求间隔）：
 

@@ -80,11 +80,13 @@ class RequestPolicy:
         interval = float(policy.get("min_interval_seconds_per_host", 10))
         if key == "google":
             interval = max(interval, float(policy.get("google_search_min_interval_seconds", 45)))
+        global_interval = float(policy.get("min_interval_seconds_global", 10))
         if spider.requests_made >= spider.request_budget:
             spider.fail("network request budget exhausted")
             raise IgnoreRequest("network request budget exhausted")
         state_path, lock_path = policy_paths(spider.root, key)
-        with lock_path.open("a") as lock:
+        global_path, global_lock_path = policy_paths(spider.root, "__all_sources__")
+        with lock_path.open("a") as lock, global_lock_path.open("a") as global_lock:
             while True:
                 try:
                     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -101,13 +103,23 @@ class RequestPolicy:
                 if state.get("blocked"):
                     spider.fail(f"source {key} is blocked: {state['blocked']}")
                     raise IgnoreRequest(f"persistent source circuit open: {key}")
+                try:
+                    fcntl.flock(global_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    fcntl.flock(lock, fcntl.LOCK_UN)
+                    await asyncio.sleep(0.05)
+                    continue
+                global_state = load_state(global_path)
                 permitted_at = float(state.get("last_request_at", 0)) + max(interval, float(state.get("interval", 0)))
-                wait = max(permitted_at, float(state.get("not_before", 0))) - time.time()
+                global_permitted_at = float(global_state.get("last_request_at", 0)) + max(
+                    global_interval, float(global_state.get("interval", 0)))
+                wait = max(permitted_at, global_permitted_at, float(state.get("not_before", 0))) - time.time()
                 if wait > 0:
                     # Release while sleeping so a denial response can open the
                     # circuit immediately, including requests to another host
                     # that shares this service key.
                     fcntl.flock(lock, fcntl.LOCK_UN)
+                    fcntl.flock(global_lock, fcntl.LOCK_UN)
                     await asyncio.sleep(wait)
                     continue
                 if spider.requests_made >= spider.request_budget:
@@ -115,6 +127,7 @@ class RequestPolicy:
                     raise IgnoreRequest("network request budget exhausted")
                 spider.requests_made += 1
                 atomic_json(state_path, {**state, "source": key, "last_request_at": time.time(), "interval": interval})
+                atomic_json(global_path, {"source": "__all_sources__", "last_request_at": time.time(), "interval": global_interval})
                 break
 
     async def process_response(self, request, response, spider):
@@ -167,6 +180,7 @@ class NewsSpider(scrapy.Spider):
         self.request_budget = int(task["collector"].get("request_policy", {}).get("max_requests_per_run", 12))
         self.requests_made, self.items_seen, self.items_new, self.items_emitted = 0, 0, 0, 0
         self.errors = []
+        self.items_filtered = 0
         self.max_items = int(task.get("options", {}).get("max_items_per_run", 150))
         self.cutoff = datetime.now(timezone.utc) - timedelta(hours=float(task.get("options", {}).get("lookback_hours", 30)))
 
@@ -181,13 +195,22 @@ class NewsSpider(scrapy.Spider):
                                  meta={"source": source})
 
     def failed_request(self, failure):
-        self.fail(str(failure.value))
+        request = failure.request
+        self.fail(f"{request.url}: {failure.value}")
+
+    def matches_source(self, source, title, text):
+        keywords = source.get("include_keywords", [])
+        matched = not keywords or any(re.search(r"(?<!\w)" + re.escape(word) + r"(?!\w)",
+                                                title + " " + text, re.I) for word in keywords)
+        if not matched:
+            self.items_filtered += 1
+        return matched
 
     def archive(self, response, source):
         digest = hashlib.sha256(response.body).hexdigest()
         slug = re.sub(r"[^a-zA-Z0-9_-]", "-", source.get("name", source_key(response.url)))[:100]
         date = datetime.now(timezone.utc).strftime("%Y/%m/%d")
-        extension = "xml" if source["type"] in {"rss", "atom"} else "html"
+        extension = "json" if source["type"] == "federal_register" else "xml" if source["type"] in {"rss", "atom"} else "html"
         raw = Path(f"data/raw/webpages/{slug}/{date}/{digest}.{extension}")
         meta = Path(f"data/raw/metadata/{slug}/{date}/{digest}.json")
         target = self.root / raw
@@ -208,6 +231,33 @@ class NewsSpider(scrapy.Spider):
     def parse_source(self, response):
         source = response.meta["source"]
         archived = self.archive(response, source)
+        if source["type"] == "federal_register":
+            try:
+                result = json.loads(response.text)
+                entries = result["results"]
+                if not isinstance(entries, list):
+                    raise ValueError("results must be a list")
+                for entry in entries:
+                    self.items_seen += 1
+                    title, url = entry["title"], entry["html_url"]
+                    if not isinstance(title, str) or urlparse(url).scheme not in {"https", "http"}:
+                        raise ValueError("notice needs a title and public URL")
+                    publication = published_time(entry["publication_date"])
+                    if not publication:
+                        raise ValueError("notice has no valid publication date")
+                    if datetime.fromisoformat(publication) < self.cutoff:
+                        continue
+                    text = clean_text(entry.get("abstract") or "")
+                    if not self.matches_source(source, title, text):
+                        continue
+                    if self.items_emitted >= self.max_items:
+                        break
+                    self.items_emitted += 1
+                    yield {**archived, "canonical_url": url, "title": title, "published_at": publication,
+                           "record_type": "regulatory_notice", "text": text}
+            except (KeyError, TypeError, ValueError) as error:
+                self.fail(f"invalid Federal Register response {response.url}: {error}")
+            return
         if source["type"] == "page":
             self.items_seen += 1
             if self.items_emitted < self.max_items:
@@ -236,11 +286,15 @@ class NewsSpider(scrapy.Spider):
             publication = published_time(entry.xpath("pubDate/text() | published/text() | updated/text() | date/text()").get())
             if publication and datetime.fromisoformat(publication) < self.cutoff:
                 continue
+            title = clean_text(entry.xpath("title/text()").get(default=""))
+            text = clean_text(" ".join(entry.xpath("encoded/text() | content/text() | description/text() | summary/text()").getall()))
+            if not self.matches_source(source, title, text):
+                continue
             self.items_emitted += 1
             yield {**archived, "canonical_url": urljoin(response.url, link.strip()),
-                   "title": clean_text(entry.xpath("title/text()").get(default="")),
+                   "title": title,
                    "published_at": publication, "record_type": "feed_entry",
-                   "text": clean_text(" ".join(entry.xpath("description/text() | summary/text() | content/text()").getall()))}
+                   "text": text}
 
 
 class DocumentPipeline:
@@ -258,7 +312,8 @@ class DocumentPipeline:
         normalized_path = f"data/normalized/documents/{doc_id}.json"
         if not (spider.root / normalized_path).exists():
             atomic_json(spider.root / normalized_path, normalized)
-        topics = [{"topic_id": topic, "assigned_by": "task", "confidence": None} for topic in spider.task.get("topic_ids", [])]
+        topics = [{"topic_id": topic, "assigned_by": "task", "confidence": None}
+                  for topic in item["source"].get("topic_ids", spider.task.get("topic_ids", []))]
         with self.connection:
             self.connection.execute("BEGIN IMMEDIATE")
             cursor = self.connection.execute("""INSERT OR IGNORE INTO documents
@@ -281,14 +336,20 @@ class DocumentPipeline:
 def validate(task):
     sources = task.get("collector", {}).get("sources", [])
     if not sources:
-        raise ValueError("collector.sources must contain an RSS, Atom or page entry")
+        raise ValueError("collector.sources must contain an RSS, Atom, page or Federal Register entry")
     for source in sources:
-        if source.get("type") not in {"rss", "atom", "page"} or urlparse(source.get("url", "")).scheme not in {"http", "https"}:
+        if source.get("type") not in {"rss", "atom", "page", "federal_register"} or urlparse(source.get("url", "")).scheme not in {"http", "https"}:
             raise ValueError(f"invalid source: {source}")
+        keywords = source.get("include_keywords", [])
+        if not isinstance(keywords, list) or any(not isinstance(word, str) or not word.strip() for word in keywords):
+            raise ValueError("source.include_keywords must be a list of nonempty strings")
+        if "topic_ids" in source and (not isinstance(source["topic_ids"], list) or not source["topic_ids"]
+                or any(topic not in task.get("topic_ids", []) for topic in source["topic_ids"])):
+            raise ValueError("source.topic_ids must be a nonempty subset of task.topic_ids")
     policy = task["collector"].get("request_policy", {})
     if int(policy.get("max_requests_per_run", 12)) <= 0:
         raise ValueError("max_requests_per_run must be positive")
-    for key in ("min_interval_seconds_per_host", "google_search_min_interval_seconds"):
+    for key in ("min_interval_seconds_per_host", "min_interval_seconds_global", "google_search_min_interval_seconds"):
         if float(policy.get(key, 10)) < 0:
             raise ValueError(f"{key} must be nonnegative")
     if int(task.get("options", {}).get("max_items_per_run", 150)) <= 0:
@@ -359,6 +420,7 @@ def main():
     stats = crawler.stats.get_stats()
     result = {"success": bool(spider) and not spider.errors and not failures and not stats.get("item_dropped_count", 0),
               "items_seen": spider.items_seen if spider else 0, "items_new": spider.items_new if spider else 0,
+              "items_filtered": spider.items_filtered if spider else 0,
               "requests_made": spider.requests_made if spider else 0, "cache_hits": stats.get("httpcache/hit", 0),
               "errors": (spider.errors if spider else []) + failures, "finished_at": utcnow()}
     if stats.get("log_count/ERROR", 0):

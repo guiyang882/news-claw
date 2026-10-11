@@ -307,6 +307,10 @@ class ModelRunner:
                 self.previous_finished = time.monotonic()
 
 
+class ReadingLengthError(ValueError):
+    """A ready article needs a bounded content edit before factual review."""
+
+
 def build_draft(result, packet, config, day, *, plan, humanized=False):
     validate_shape(result, read_json(SCHEMAS / "daily-blog-draft.schema.json"))
     if result["status"] != "ready":
@@ -342,7 +346,10 @@ def build_draft(result, packet, config, day, *, plan, humanized=False):
             raise ValueError("Article is too short or lacks sections")
         reading[language] = editorial.reading_metrics(body, language, config["workflow"]["reading"])
         if not lengths[language]["minimum"] <= reading[language]["units"] <= lengths[language]["maximum"]:
-            raise ValueError(f"{language} article does not meet the approximate reading time target")
+            raise ReadingLengthError(
+                f"{language} article does not meet the approximate reading time target: "
+                f"{reading[language]['units']} units; required "
+                f"{lengths[language]['minimum']}–{lengths[language]['maximum']}")
         item["reading_time"] = f"约 {reading[language]['minutes']} 分钟" if language == "zh" else f"{reading[language]['minutes']} min read"
         if any(url not in body for url in urls):
             raise ValueError("Both languages must cite every declared evidence URL")
@@ -517,6 +524,42 @@ def length_prompt(settings):
             "Follow the approved section budgets and central question; never pad or fabricate to meet length. ")
 
 
+def prepare_draft(generated, packet, config, day, plan, runner, directory, repair_budget, label):
+    """Repair length once across draft/correction, then apply all normal checks."""
+    try:
+        return generated, build_draft(generated, packet, config, day, plan=plan)
+    except ReadingLengthError:
+        if repair_budget["remaining"] <= 0:
+            raise
+        settings = config["workflow"]
+        required = editorial.length_requirements(settings["reading"])
+        metrics = {language: {**editorial.reading_metrics(generated["article"][language]["body_markdown"],
+                                                       language, settings["reading"]), **required[language]}
+                   for language in ("zh", "en")}
+        atomic_json(directory / f"{label}-length-validation.json", metrics)
+        repair_budget["remaining"] -= 1
+        prompt = ("Edit this bilingual draft to meet the measured length requirements before factual review. "
+            "Do not use tools, fetch sources, add facts or change the selected topic. "
+            "Preserve used_source_ids, tags and fact_checks exactly. Preserve the corrected evidence boundaries, "
+            "dates, figures, issuer attribution, inline citations and uncertainty in BOTH languages. "
+            "Aim at the target, not the minimum: expand only source-supported reasoning, conditional implications, "
+            "counterarguments and observation criteria from the outline. Never pad with repetition or invent missing details. "
+            "Do not weaken a caveat or reintroduce facts removed by an earlier factual correction. "
+            "Keep languages consistent; the word count excludes URLs and code blocks. "
+            "Return insufficient_evidence if the material cannot support the required depth. "
+            + length_prompt(settings) + "Return the original draft JSON schema.\nINPUT_DATA_JSON\n"
+            + json.dumps({"model_draft": generated, "packet": packet, "editorial_plan": plan,
+                          "measured_lengths": metrics}, ensure_ascii=False))
+        repaired = runner("repair_length", prompt, SCHEMAS / "daily-blog-draft.schema.json",
+                          directory / f"{label}-length-repair")
+        if repaired["status"] != "ready":
+            return repaired, None
+        for key in ("used_source_ids", "tags", "fact_checks"):
+            if repaired["article"][key] != generated["article"][key]:
+                raise ValueError("Length repair changed source or fact-check metadata")
+        return repaired, build_draft(repaired, packet, config, day, plan=plan)
+
+
 def run(config, root, db, directory, *, execute=False, model_runner=None, day=None):
     settings = config["workflow"]
     sys.path.insert(0, settings["website_repo"])
@@ -593,7 +636,12 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             if generated["status"] != "ready":
                 atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
                 return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
-            original = build_draft(generated, packet, config, day, plan=plan)
+            repair_budget = {"remaining": settings.get("max_length_repairs", 0)}
+            generated, original = prepare_draft(generated, packet, config, day, plan, runner, directory,
+                                                repair_budget, "01")
+            if original is None:
+                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
             atomic_json(directory / "original-draft.json", original)
             first = runner("review", review_prompt(original, packet), SCHEMAS / "daily-blog-verdict.schema.json", directory / "02-codex-review")
             if first["article_sha256"] != digest(original) or first["packet_sha256"] != digest(packet):
@@ -619,7 +667,11 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 # Correction changes prose and claims; keep the already validated topic metadata.
                 generated = deepcopy(generated)
                 generated["article"]["tags"] = original_tags
-                original = build_draft(generated, packet, config, day, plan=plan)
+                generated, original = prepare_draft(generated, packet, config, day, plan, runner, directory,
+                                                    repair_budget, "02b")
+                if original is None:
+                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                    return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
                 atomic_json(directory / "corrected-draft.json", original)
                 first = runner("review_revised", review_prompt(original, packet), SCHEMAS / "daily-blog-verdict.schema.json", directory / "02c-codex-re-review")
             require_verdict(first, original, packet)

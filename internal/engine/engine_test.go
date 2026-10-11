@@ -342,6 +342,40 @@ func TestFailedAdapterCleanupRetainsSourceLock(t *testing.T) {
 	}
 }
 
+func TestExecutionRetainsBusinessFailureDetails(t *testing.T) {
+	for _, test := range []struct {
+		name, result, want string
+		exit               int
+	}{
+		{"error", `{"success":false,"error":"en article: 3237 units; minimum 3400"}`, "3237 units", 1},
+		{"errors", `{"success":false,"errors":["Forbidden by robots.txt"]}`, "Forbidden by robots.txt", 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			s, db := testStore(t)
+			addTask(t, s, "failure", "* * * * *", "cron", "")
+			s.Enqueue("failure", time.Now())
+			run, err := s.Claim(time.Now().Add(time.Second))
+			if err != nil || run == nil {
+				t.Fatal("claim", err)
+			}
+			code := "0"
+			if test.exit != 0 {
+				code = "1"
+			}
+			run.Meta.Execution.Command = []string{"/bin/sh", "-c", `printf '%s' '` + test.result + `' > "$NEWS_CLAW_RESULT_PATH"; exit ` + code}
+			runner := Runner{Store: s, DBPath: db, Root: t.TempDir()}
+			if err := runner.Execute(context.Background(), run); err != nil {
+				t.Fatal(err)
+			}
+			var status, message string
+			s.DB.QueryRow("SELECT status,error FROM task_runs WHERE id=?", run.ID).Scan(&status, &message)
+			if status != "failed" || !strings.Contains(message, test.want) {
+				t.Fatal(status, message)
+			}
+		})
+	}
+}
+
 func TestWorkerKeepsSingletonLockAfterParentClosesIt(t *testing.T) {
 	_, path := testStore(t)
 	lock, err := LockEngine(path)

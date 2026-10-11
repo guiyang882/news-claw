@@ -87,11 +87,14 @@ class DailyBlogTests(unittest.TestCase):
         if stage == "plan":
             self.assertIn("EDITORIAL_SKILL", prompt)
             value = self.plan(json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1]))
-        elif stage in ("draft", "revise"):
+        elif stage in ("draft", "revise", "repair_length"):
             self.assertTrue((self.directory / "blog-outline.md").is_file())
             self.assertTrue((self.directory / "topic-candidates.json").is_file())
             payload = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
             self.assertEqual(payload["editorial_plan"]["selected_candidate_id"], "candidate-0")
+            if stage == "repair_length":
+                self.assertIn("measured_lengths", payload)
+                self.assertLess(payload["measured_lengths"]["en"]["units"], payload["measured_lengths"]["en"]["minimum"])
             value = self.draft()
         elif stage == "humanize":
             self.assertIn("HUMANIZER_SKILL", prompt)
@@ -149,6 +152,7 @@ class DailyBlogTests(unittest.TestCase):
         self.assertEqual(self.calls, ["plan"])
 
     def test_short_article_with_twenty_minute_label_is_rejected(self):
+        self.config["workflow"]["max_length_repairs"] = 0
         def shorten(value):
             for language in ("zh", "en"):
                 value["article"][language]["reading_time"] = "20 min read"
@@ -157,6 +161,50 @@ class DailyBlogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reading time"):
             self.run_blog()
         self.assertEqual(self.calls, ["plan", "draft"])
+
+    def test_short_factual_correction_is_repaired_then_reviewed(self):
+        self.responses["review"] = lambda value: value.update(approved=False, issues=["Correct the claim"])
+        self.responses["revise"] = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort corrected text.\n" for i in range(6)))
+        result = self.run_blog()
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(self.calls, ["plan", "draft", "review", "revise", "repair_length", "review_revised", "humanize", "final_review"])
+        report = json.loads((self.directory / "02b-length-validation.json").read_text())
+        self.assertLess(report["en"]["units"], report["en"]["minimum"])
+
+    def test_short_initial_draft_is_repaired_before_review(self):
+        self.responses["draft"] = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        self.assertEqual(self.run_blog()["business_status"], "published")
+        self.assertEqual(self.calls, ["plan", "draft", "repair_length", "review", "humanize", "final_review"])
+
+    def test_length_repair_is_bounded_and_cannot_change_evidence(self):
+        shorten = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        self.responses.update(draft=shorten, repair_length=shorten)
+        with self.assertRaisesRegex(ValueError, "reading time"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan", "draft", "repair_length"])
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_length_repair_cannot_change_fact_metadata(self):
+        self.responses["draft"] = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        self.responses["repair_length"] = lambda value: value["article"]["fact_checks"][0].update(
+            claim="This invented claim must fail the metadata check.")
+        with self.assertRaisesRegex(ValueError, "Length repair changed"):
+            self.run_blog()
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_length_repair_budget_is_shared_with_factual_correction(self):
+        shorten = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        self.responses.update(draft=shorten, revise=shorten)
+        self.responses["review"] = lambda value: value.update(approved=False, issues=["Still unsupported"])
+        with self.assertRaisesRegex(ValueError, "reading time"):
+            self.run_blog()
+        self.assertEqual(self.calls, ["plan", "draft", "repair_length", "review", "revise"])
+        self.assertFalse((self.site / "manifest.json").exists())
 
     def test_humanizer_cannot_shorten_below_long_form_target(self):
         self.responses["humanize"] = lambda value: value["article"]["en"].update(

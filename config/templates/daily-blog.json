@@ -68,6 +68,7 @@
     "stages": [
       "codex_topics_and_outline",
       "agy_draft",
+      "codex_length_repair_if_needed",
       "codex_fact_review",
       "codex_correction_if_rejected",
       "codex_re_review_if_corrected",
@@ -78,7 +79,7 @@
     "publication_policy": "User-authorized model-reviewed publication; never generates human approvals. Reject unsupported claims; preserve evidence dates; one attempt and one article per day.",
     "network_policy": {
       "source_web_requests": 0,
-      "max_cli_invocations_per_day": 7,
+      "max_cli_invocations_per_day": 8,
       "automatic_retries": 0,
       "provider_denial": "persistent_circuit_requires_explicit_reset"
     },
@@ -114,8 +115,10 @@
     },
     "stage_timeout_seconds": {
       "revise": 900,
-      "humanize": 900
+      "humanize": 900,
+      "repair_length": 900
     },
-    "editorial_skill": "/root/.codex/skills/research-blog-editor/SKILL.md"
+    "editorial_skill": "/root/.codex/skills/research-blog-editor/SKILL.md",
+    "max_length_repairs": 1
   }
 }
