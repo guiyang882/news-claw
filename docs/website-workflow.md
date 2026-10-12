@@ -28,6 +28,8 @@ flowchart LR
 
 网站依照现有运行路径读取数据和文章，无需每轮修改主题代码或重新部署网站。供应链、公司脉冲、科技史和 OFR 任务也保留原网站数据输出路径。
 
+当前生产链路为 Cloudflare → Nginx（80/443）→ Gunicorn（`quant-web.service`，127.0.0.1:8000）→ Flask。Nginx 接替 Caddy 的入口职责；应用和内容任务仍保留各自的执行入口。
+
 每日博客使用用户授权的模型复核发布方式，两个版本均在最终哈希绑定的复核通过后发布，记录为 model_review；详见 [每日博客](daily-blog.md)。原市场资料包和人工批准校验器保留，原批准文件仍需由人工提供，不能生成假批准。
 
 ## Codex 参数配置
@@ -88,3 +90,31 @@ Go 核心没有 systemd 或网站专用分支。后续可将某项 `execution.co
 三个新主题的采集输出到 raw、normalized 和 documents。每日博客已读取这些缓存，并结合现有网站公司研究材料生成候选分析和发布后的 knowledge 索引。RSS 线索保持待核验属性；后续可增加官方与社区原文、主题时间线和关系整理，提高文章证据质量。原市场长文资料包的特定规则保留在旧流程。
 
 任务先保持文件接口和脚本输入校验。需要自动串联时再增加以成功产物和输入指纹为依据的触发机制，不能仅凭上游到过计划时间就发布。
+
+## Nginx 网站检查与重载
+
+每日博客、原批准发布任务及其模板增加 `workflow.website_runtime`。这份配置供 `workflows.website_maintenance` 读取，包含 Nginx / 应用服务、显式命令数组、本机端口、域名和超时；博客发布器本身继续只原子更新正文与清单，不执行服务命令。
+
+| 变更 | 动作 | 命令与校验 |
+| --- | --- | --- |
+| 博客、新闻及其他运行时 JSON | `content_update_action: none` | 无需重启或重载 |
+| Flask / Python 代码、启动时读取的报告 | `reload-application` | HUP 仅发给 Gunicorn 主进程；新 worker 启动，旧 worker 正常退出 |
+| Nginx 入口配置 | `reload-proxy` | `nginx -t` 成功后执行 `systemctl reload nginx.service` |
+| 仅核对网站状态 | `check` | 服务运行状态、Nginx 配置、本机 HTTP 和 HTTPS 健康接口 |
+
+```bash
+python3 -m workflows.website_maintenance \
+  --task-config config/tasks/daily-blog-agy-codex.json --action check
+
+python3 -m workflows.website_maintenance \
+  --task-config config/tasks/daily-blog-agy-codex.json \
+  --action reload-application --execute
+
+python3 -m workflows.website_maintenance \
+  --task-config config/tasks/daily-blog-agy-codex.json \
+  --action reload-proxy --execute
+```
+
+重载动作缺少 `--execute` 时只输出计划。执行前检查两层服务、Nginx 配置和健康接口，执行后再次检查；任何一步失败立即停止，返回失败结果，不重试或自动回退 Caddy。HTTPS 连接固定使用回环地址，同时保留真实域名的 SNI 与证书校验。当前服务已停止或健康失败时，应先排查并按网站部署手册恢复，再执行热重载。
+
+从 Go 队列执行时读取本轮 `NEWS_CLAW_TASK_CONFIG_PATH`，并把业务结果写入 `NEWS_CLAW_RESULT_PATH`，继续使用已有 `task_runs`。可复用 [网站维护模板](../config/templates/website-maintenance.json)，默认关闭、动作为只检查；没有新增每天强制重启网站的计划。Certbot 的证书续期和续期后 Nginx 重载仍由网站已安装的 `certbot.timer` 与 deploy hook 管理。

@@ -75,6 +75,8 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 
 发布与原发布器使用相同 publish.lock，检查当天运行时文章和 slug 冲突，先保存内容与复核证明，再原子替换 manifest.json。新文件按网站目录所属账号设置 owner 和 0640 权限，网站进程可以读取。无需修改网站主题、重启网站或每轮部署代码。
 
+网站入口现为 Nginx，后端仍为 `quant-web.service` 中的 Gunicorn。`workflow.website_runtime` 明确内容发布不重启服务；需要加载应用代码或 Nginx 配置时，使用[分层维护命令](website-workflow.md#nginx-网站检查与重载)。
+
 ## 状态与迭代
 
 每轮 task_runs 的 metadata_json.result.business_status 记录业务结果：

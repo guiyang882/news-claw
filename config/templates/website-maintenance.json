@@ -1,0 +1,60 @@
+{
+  "id": "example-website-maintenance",
+  "name": "Nginx 网站检查与维护模板",
+  "description": "通过本机 HTTP/HTTPS 检查 Nginx 与 Gunicorn；仅在代码或配置变更时显式选择对应热重载动作。",
+  "task_type": "workflow",
+  "scheduler_engine": "news-claw",
+  "enabled": false,
+  "schedule_format": "cron",
+  "schedule": "47 6 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [],
+  "options": {
+    "start_jitter_seconds": 180
+  },
+  "execution": {
+    "command": [
+      "python3",
+      "-m",
+      "workflows.website_maintenance",
+      "--action",
+      "check"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 120,
+    "stop_grace_seconds": 5,
+    "lock_group": "website-maintenance"
+  },
+  "workflow": {
+    "website_runtime": {
+      "proxy": "nginx",
+      "application_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "application_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "health": {
+        "host": "growthyoung.com",
+        "application_port": 8000,
+        "https_port": 443,
+        "path": "/healthz",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30
+    }
+  }
+}

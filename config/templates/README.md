@@ -7,6 +7,7 @@
 | [agy.json](agy.json) | agy | 本机 agy CLI，使用已配置的模型 | 非交互提示词、模型选择、工作目录、超时 |
 | [publish.json](publish.json) | publish | 网站现有审批后发布 service 的命令适配器 | 草稿输入、网站输出、校验要求 |
 | [daily-blog.json](daily-blog.json) | workflow | workflows.daily_blog，多阶段博客工作流 | 候选选题、约20分钟大纲、Gemini写稿、Codex复核、humanizer、发布 |
+| [website-maintenance.json](website-maintenance.json) | workflow | workflows.website_maintenance | Nginx / Gunicorn 本机健康检查、配置校验与显式热重载 |
 
 模板均为完整 JSON，默认 enabled=false。初始化只读取 config/tasks/*.json，模板留在本目录时不会进入 SQLite 或被调度。文件是复制用的配置示例，没有变量替换、继承或自动渲染机制。
 
@@ -55,3 +56,11 @@ agy.json 沿用同一 Go 命令协议、SQLite task_runs、日志、超时和互
 默认使用五段 cron。需要结束后冷却时，改为 schedule_format=completion_interval、schedule="24h"，用 options.initial_delay_seconds 设置首次延迟。两个调度模式使用同一执行协议。
 
 每日博客模板对应 [完整工作流](../../docs/daily-blog.md)，由执行脚本解释 workflow 中的模型、素材与发布参数。planner/reviewer 均显式配置 gpt-6.1-sol、service_tier=fast 和 reasoning_effort=null；null 保留模型默认，也可改为 medium/high 等。Go 仍使用通用命令协议。本机启用的 daily-blog-agy-codex 已接管每日发文，模板保持关闭。复制启用另一份前应调整发布目标或停用原任务，避免重复。
+
+## Nginx 网站维护模板
+
+维护模板默认关闭，执行动作为 `check`。它通过回环 HTTP 检查 Gunicorn，通过回环 HTTPS 检查 Nginx，同时验证 `growthyoung.com` 的证书域名与信任链，不访问公网或外部数据源。检查命令和本机端口都在 `workflow.website_runtime` 中配置。
+
+代码更新时，选择 `--action reload-application --execute`，向 `quant-web.service` 的 Gunicorn 主进程发送 HUP；入口配置更新时，选择 `--action reload-proxy --execute`，先执行 `nginx -t` 再重载 Nginx。缺少 `--execute` 时只输出计划。各动作先检查当前健康状态，执行后再检查；失败停止，不切换到 Caddy、不循环重启。
+
+博客与新闻运行时数据更新不执行这些重载动作。维护模板没有同步进 SQLite，也没有启用新的定时重启；确需周期健康检查时，复制为任务并保留 `check` 动作，按上面的规则调整时间与启用状态。完整维护命令见 [网站运维](../../docs/website-workflow.md#nginx-网站检查与重载)。
