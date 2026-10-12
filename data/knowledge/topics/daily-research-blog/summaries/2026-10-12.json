@@ -1,0 +1,41 @@
+{
+  "approval_kind": "model_review",
+  "article_sha256": "2ca3e2bb7774530b5382fd90881234accadc33deeafa385b583b50c2571596fe",
+  "day": "2026-10-12",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "订单与融资消息分别证明了什么，投资者还需要哪些交付、经营和资本证据，才能判断 Rocket Lab 的增长是否改善每股结果？",
+    "section_count": 7,
+    "selected_candidate_id": "candidate-rklb-conversion",
+    "target_reading_minutes": 20,
+    "title": "Rocket Lab 的订单要过几道关，才能成为股东的回报？"
+  },
+  "editorial_plan_sha256": "e970cc0bf1abddcd0313d6074f3dfa92fb829bf738374cfe3c57dd31ab01a24c",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "0ab9b420af59ee596780bef8dd67539bfd73cce52aaf860533de849c40d7750a",
+  "reading_estimates": {
+    "en": {
+      "minutes": 18,
+      "rate": 200,
+      "units": 3531
+    },
+    "zh": {
+      "minutes": 21,
+      "rate": 300,
+      "units": 6250
+    }
+  },
+  "slug": "daily-research-2026-10-12",
+  "source_urls": [
+    "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-announces-second-quarter-2026-financial-results-posts",
+    "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-secures-largest-ever-electron-commercial-deal-20",
+    "https://investors.rocketlabcorp.com/news",
+    "https://rocketlabcorp.com/launch/neutron/",
+    "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-fully-funds-iridium-acquisition-including-completion"
+  ],
+  "summary": "依据截至 2026 年 10 月 8 日的研究快照，区分 Rocket Lab 的已确认收入、订单积压、实际发射与远期协议，并检查 Neutron 硬件目标和 Iridium 收购融资。文章围绕一个问题展开：还需要哪些交付、经营和资本证据，才能判断增长改善了每股结果？",
+  "summary_en": "The research snapshot dated October 8, 2026 distinguishes Rocket Lab's recognized revenue, backlog, completed launches, and future agreements. This article examines those records, Neutron's hardware target, and Iridium acquisition financing, asking what further delivery, operating, and capital evidence is needed to assess results per share.",
+  "title": "Rocket Lab 的订单需要怎样兑现，股东才能受益？",
+  "title_en": "What must Rocket Lab's orders deliver for shareholders to benefit?",
+  "version": 1
+}

@@ -46,6 +46,8 @@ class DailyBlogTests(unittest.TestCase):
         (self.root / "company_pulses.json").write_text(json.dumps(self.pulses))
         self.calls = []
         self.responses = {}
+        self.payloads = {}
+        self.schemas = {}
 
     def draft(self):
         article = {"tags": ["primary-sources"], "used_source_ids": ["source-a", "source-b"],
@@ -84,10 +86,12 @@ class DailyBlogTests(unittest.TestCase):
 
     def model(self, stage, prompt, schema, directory):
         self.calls.append(stage)
+        self.payloads[stage] = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
+        self.schemas[stage] = json.loads(schema.read_text())
         if stage == "plan":
             self.assertIn("EDITORIAL_SKILL", prompt)
             value = self.plan(json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1]))
-        elif stage in ("draft", "revise", "repair_length"):
+        elif stage in ("draft", "revise", "repair_length", "revise_final"):
             self.assertTrue((self.directory / "blog-outline.md").is_file())
             self.assertTrue((self.directory / "topic-candidates.json").is_file())
             payload = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
@@ -107,7 +111,7 @@ class DailyBlogTests(unittest.TestCase):
         else:
             payload = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
             value = {"approved": True, "facts_supported": True, "languages_consistent": True, "citations_valid": True,
-                "humanizer_applied": stage == "final_review", "article_sha256": payload["article_sha256"],
+                "humanizer_applied": stage in ("final_review", "final_review_revised"), "article_sha256": payload["article_sha256"],
                 "packet_sha256": payload["packet_sha256"], "issues": [], "reason": "Offline fixture passed."}
         if stage in self.responses:
             self.responses[stage](value)
@@ -123,6 +127,84 @@ class DailyBlogTests(unittest.TestCase):
         self.assertEqual(result["business_status"], "preview")
         self.assertEqual(self.calls, [])
         self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_every_writing_stage_has_only_the_selected_sources(self):
+        self.pulses["sources"].append({"id": "source-c", "url": "https://example.org/c", "publisher": "Other issuer",
+                                      "source_date": "2026-10-09", "title": "Out-of-scope record"})
+        self.pulses["companies"]["test"]["metrics"].append({"source_ids": ["source-c"], "label": "Unrelated", "value": "Other"})
+        (self.root / "company_pulses.json").write_text(json.dumps(self.pulses))
+        self.responses["review"] = lambda value: value.update(approved=False, issues=["Fix the inline citations"])
+        self.assertEqual(self.run_blog()["business_status"], "published")
+        self.assertIn("source-c", [source["id"] for source in self.payloads["plan"]["packet"]["sources"]])
+        for stage in ("draft", "review", "revise", "review_revised", "humanize", "final_review"):
+            with self.subTest(stage=stage):
+                self.assertEqual({source["id"] for source in self.payloads[stage]["packet"]["sources"]}, {"source-a", "source-b"})
+                self.assertTrue(all(set(item["source_ids"]) <= {"source-a", "source-b"}
+                                    for item in self.payloads[stage]["packet"]["evidence"]))
+        for stage in ("draft", "revise", "humanize"):
+            properties = self.schemas[stage]["properties"]["article"]["properties"]
+            self.assertEqual(properties["used_source_ids"]["items"]["enum"], ["source-a", "source-b"])
+            self.assertEqual(properties["fact_checks"]["items"]["properties"]["source_id"]["enum"], ["source-a", "source-b"])
+
+    def recovery_fixture(self):
+        run_id = "a" * 32
+        saved = self.root / "data/runs" / run_id
+        packet = blog.collect_packet(self.config, self.root, self.db, DAY)
+        plan = self.plan({"packet_sha256": blog.digest(packet)})
+        draft = self.draft()
+        original = blog.build_draft(draft, packet, self.config, DAY, plan=plan)
+        review = {"approved": False, "facts_supported": True, "languages_consistent": True, "citations_valid": False,
+                  "humanizer_applied": False, "article_sha256": blog.digest(original), "packet_sha256": blog.digest(packet),
+                  "issues": ["Fix the inline citations"], "reason": "Offline review fixture"}
+        for stage, value in (("00-codex-plan", plan), ("01-agy-draft", draft), ("02-codex-review", review),
+                             ("02b-codex-correction", draft)):
+            blog.atomic_json(saved / stage / "response.json", value)
+        blog.atomic_json(saved / "source-packet.json", packet)
+        blog.atomic_json(saved / "blog-outline.json", plan)
+        blog.atomic_json(saved / "result.json", {"success": False, "error": "Article uses sources outside the selected topic plan"})
+        blog.atomic_json(saved / "recovery-corrected-draft.json", draft)
+        blog.atomic_json(self.root / "data/runs/daily-blog-days" / (DAY.isoformat() + ".json"),
+                         {"status": "failed", "run_id": run_id})
+        self.config["workflow"]["manual_recovery"] = {"day": DAY.isoformat(), "run_id": run_id,
+                                                       "draft_filename": "recovery-corrected-draft.json"}
+        def live(stage, prompt, schema, directory):
+            value = self.model(stage, prompt, schema, directory)
+            live.calls.append(stage)
+            return value
+        live.calls = []
+        live.settings = self.config["workflow"]
+        return saved, live
+
+    def test_manual_recovery_reuses_models_and_keeps_failed_history(self):
+        saved, live = self.recovery_fixture()
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(result["recovered_from"], "a" * 32)
+        self.assertEqual(self.calls, ["review_revised", "humanize", "final_review"])
+        self.assertEqual(len(result["model_calls"]), 7)
+        self.assertEqual(blog.read_json(saved / "result.json")["success"], False)
+        self.assertEqual(blog.read_json(self.directory / "recovery-audit.json")["previous_attempt"]["status"], "failed")
+        again = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(again["business_status"], "already_published")
+        self.assertEqual(len(self.calls), 3)
+
+    def test_recovery_cannot_exceed_the_original_daily_budget(self):
+        saved, live = self.recovery_fixture()
+        self.config["workflow"]["network_policy"]["max_cli_invocations_per_day"] = 6
+        with self.assertRaisesRegex(ValueError, "invocation limit"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, [])
+        marker = self.root / "data/runs/daily-blog-days" / (DAY.isoformat() + ".json")
+        self.assertEqual(blog.read_json(marker)["status"], "failed")
+
+    def test_recovery_rejects_a_different_publication_day(self):
+        saved, live = self.recovery_fixture()
+        packet = blog.read_json(saved / "source-packet.json")
+        packet["day"] = "2026-10-09"
+        blog.atomic_json(saved / "source-packet.json", packet)
+        with self.assertRaisesRegex(ValueError, "publication day"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, [])
 
     def test_invalid_outline_evidence_stops_before_gemini(self):
         self.responses["plan"] = lambda value: value["outline"]["sections"][0]["evidence_refs"][0].update(locator="invented/path")
@@ -299,6 +381,29 @@ class DailyBlogTests(unittest.TestCase):
     def test_final_review_must_confirm_humanizer_work(self):
         self.responses["final_review"] = lambda value: value.update(humanizer_applied=False)
         with self.assertRaisesRegex(ValueError, "humanizer"):
+            self.run_blog()
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_final_editorial_correction_requires_an_independent_re_review(self):
+        self.responses["final_review"] = lambda value: value.update(approved=False, issues=["Fix an existing evidence locator"])
+        result = self.run_blog()
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(self.calls[-3:], ["final_review", "revise_final", "final_review_revised"])
+        proof = blog.read_json(self.site / "automation-reviews/daily-research-2026-10-10.json")
+        self.assertEqual(proof["final_review"]["article_sha256"], blog.digest(proof["draft"]))
+
+    def test_final_correction_is_bounded_and_cannot_change_sources(self):
+        reject = lambda value: value.update(approved=False, issues=["Still unsupported"])
+        self.responses.update(final_review=reject, final_review_revised=reject)
+        with self.assertRaisesRegex(ValueError, "rejected"):
+            self.run_blog()
+        self.assertEqual(self.calls[-2:], ["revise_final", "final_review_revised"])
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_final_correction_cannot_change_topic_metadata(self):
+        self.responses["final_review"] = lambda value: value.update(approved=False, issues=["Fix a locator"])
+        self.responses["revise_final"] = lambda value: value["article"].update(tags=["primary-sources", "space-race"])
+        with self.assertRaisesRegex(ValueError, "Final correction changed"):
             self.run_blog()
         self.assertFalse((self.site / "manifest.json").exists())
 

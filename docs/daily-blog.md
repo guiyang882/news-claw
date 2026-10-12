@@ -11,10 +11,10 @@
 | 写稿 | agy，gemini-3.8-flash-high（Gemini 3.8 Flash High） |
 | 事实复核、修订、最终复核 | Codex，gpt-6.1-sol |
 | Codex 推理与速度 | planner/reviewer 的 reasoning_effort=null，沿用模型默认；service_tier=fast |
-| 修订规则 | /root/.codex/skills/humanizer/SKILL.md；每轮保存完整副本与 SHA256 |
+| 修订规则 | /root/.codex/skills/humanizer/SKILL.md；保留实质信息，合并重复结尾；保存完整副本与 SHA256 |
 | 输入 | 近两天 SQLite 文档与 normalized 文件、已有公司研究快照、新闻标题线索 |
 | 发布位置 | /mnt/quant-state/quant-web/blog；网站代码在 /mnt/quant/strategies/stocks-quant |
-| 模型调用 | 通常 5 次；允许一次事实纠错和一次篇幅修订，最多 8 次；串行，相邻调用完成后至少间隔 10 秒 |
+| 模型调用 | 通常 5 次；各允许一次事实纠错、篇幅修订和终稿纠错，最多 10 次；串行，相邻调用完成后至少间隔 10 秒 |
 | 超时与互斥 | 整轮 75 分钟；agy 1200 秒、Codex 写作修订各 900 秒、规划与复核各 300 秒；model-cli 与本地新闻分析互斥 |
 
 ```mermaid
@@ -30,7 +30,11 @@ flowchart LR
     V -->|通过| D
     V -->|拒稿| S[保存稿件与问题，停止发布]
     D --> E[Codex 最终复核]
-    E --> F[结构与哈希校验]
+    E -->|通过| F[结构与哈希校验]
+    E -->|拒稿且未终稿纠错| U[一次终稿纠错]
+    U --> W[独立最终再复核]
+    W -->|通过| F
+    W -->|拒稿| S
     F --> G[原子写入网站清单]
     G --> H[网站博客、Feed 与 Sitemap]
 ```
@@ -44,6 +48,8 @@ flowchart LR
 选中题目的大纲包含中英文标题、核心问题、暂定论点、讨论范围和读者能带走的判断。六至九个章节分别说明用途、论点、引用定位、证据边界和中英文篇幅预算，覆盖开篇利害、证据案例、机制、最强反论证与证伪条件、判断影响及未决问题。题目至少有两个不同来源 URL，纯标题线索不能独立支撑长文。
 
 在 Gemini 启动前写入 `topic-candidates.json`、`blog-outline.json` 和方便 Review 的 `blog-outline.md`。逐章引用必须指向本轮资料包的真实 source_id 和 locator；大纲绑定资料包 SHA256。只有通过结构、引用和篇幅预算校验才开始写稿。选题阶段缺少证据则停止该轮。
+
+选题后，写稿、篇幅修订、事实复核、纠错和 humanizer 都只收到所选候选题的来源与证据子集。运行目录 `draft-source.schema.json` 将 `used_source_ids` 和事实核验 `source_id` 限定为这些 ID。审核发现超出范围的文字时，应要求删除或改为条件分析；不能要求引入其他候选题或资料包中的新来源。复核哈希仍绑定归档的完整资料包与实际稿件。
 
 ### 约 20 分钟的正文
 
@@ -62,6 +68,8 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 初稿或事实纠错稿篇幅未达标时，max_length_repairs 默认允许整轮一次篇幅修订。程序保存中英文实际字数与目标区间，再交给 Codex 按原资料和大纲修订；来源 ID、标签、事实核验记录必须完全保持，修订后的正文仍需通过字数、引用和独立事实复核。缺少材料时可以返回 insufficient_evidence，不能用新事实或重复文字补足篇幅。再次不达标则停止，humanizer 后的篇幅不达标也停止。
 
 只有经过 humanizer 的终稿才附加对应编写与复核说明。这些内容修订步骤有次数上限，不会重试失败或遭拒的模型 API 请求。max_length_repairs、修订阶段超时和最大 CLI 调用次数均在任务 JSON 中配置。
+
+最终复核拒稿时，`max_final_revisions: 1` 允许一次终稿纠错，再独立复核一次。终稿纠错沿用 humanizer，可合并重复的结论、修正已有事实的定位，或将复合事实拆成多个真实证据记录；来源 ID 与标签保持不变，不增加新事实、日期或出处。再次拒稿则停止。humanizer 本身保留每个独特的事实和证据边界，同时删除空泛重复，篇幅仍受原检查约束。
 
 这项任务采用用户授权的模型复核发布方式，复核证明保存在 blog/automation-reviews/。原市场文章任务 stocks-quant-blog-compose、stocks-quant-blog-daily-publish 已停用，配置和历史保留；原人工批准函数及 approvals 文件格式保留。新流程的模型证明使用 approval_kind=model_review，不生成带人工 reviewed_by 的批准文件。
 
@@ -82,6 +90,22 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 | preview | 离线检查完成，未调用模型或发布 |
 
 每日最多保留一次自动模型写稿尝试和一篇运行时文章。模型供应方返回拒绝、鉴权或限流信号后持久熔断，不自动重试；修复原因后由操作者显式复位。输入不足或审核不通过时不会为凑每日数量编造文章。
+
+### 当天来源校验失败的人工恢复
+
+已有纠错稿因超出选题来源范围停止时，可以先在原运行目录保存修正稿，再临时给任务 JSON 增加：
+
+```json
+"manual_recovery": {
+  "day": "2026-10-12",
+  "run_id": "4bc5d86326d71bb26ea1678749b2b815",
+  "draft_filename": "recovery-corrected-draft.json"
+}
+```
+
+字段放在 `workflow` 中。执行 `make init` 后，通过 Go 的 `enqueue --task daily-blog-agy-codex` 手动入队；队列保存配置快照后即可删除临时字段，再次 `make init`。定时触发不能使用当天人工恢复配置；过期恢复配置不影响下一天的普通流程。
+
+恢复只接受该任务当天已失败的来源校验或最终复核记录，复用原资料包、选题、Gemini 写稿及已完成的审核。来源修正稿必须先通过完整来源、链接、结构与篇幅校验；继续独立事实复核、humanizer 和最终复核。若保存的 humanizer 稿已被最终审核拒绝，复用八个已完成阶段，只运行一次终稿纠错与最终再复核。之前的调用计入同一天最多十次预算，不清除供应方熔断，不重新生成文章或伪造复核结果。原失败记录保留，新运行写入 `recovery-audit.json` 和 `recovered_from`；发布成功后仍按当天一篇防重。
 
 运行目录 data/runs/&lt;run_id&gt;/ 保存资料包、两个 skill 副本、候选题、完整大纲、各阶段提示词与响应、原稿、终稿和发布结果。task_runs 的 result 保存所选题目、阅读目标、大纲哈希以及 JSON/Markdown 路径；写稿或复核失败时仍记录已生成的大纲，方便调整。CLI 日志保持在忽略目录。
 

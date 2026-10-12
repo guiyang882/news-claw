@@ -74,12 +74,14 @@
       "codex_re_review_if_corrected",
       "codex_humanizer",
       "codex_final_review",
+      "codex_final_correction_if_rejected",
+      "codex_final_re_review_if_corrected",
       "offline_publish"
     ],
     "publication_policy": "User-authorized model-reviewed publication; never generates human approvals. Reject unsupported claims; preserve evidence dates; one attempt and one article per day.",
     "network_policy": {
       "source_web_requests": 0,
-      "max_cli_invocations_per_day": 8,
+      "max_cli_invocations_per_day": 10,
       "automatic_retries": 0,
       "provider_denial": "persistent_circuit_requires_explicit_reset"
     },
@@ -116,9 +118,11 @@
     "stage_timeout_seconds": {
       "revise": 900,
       "humanize": 900,
-      "repair_length": 900
+      "repair_length": 900,
+      "revise_final": 900
     },
     "editorial_skill": "/root/.codex/skills/research-blog-editor/SKILL.md",
-    "max_length_repairs": 1
+    "max_length_repairs": 1,
+    "max_final_revisions": 1
   }
 }
