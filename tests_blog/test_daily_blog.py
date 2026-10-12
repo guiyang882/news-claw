@@ -316,7 +316,7 @@ class DailyBlogTests(unittest.TestCase):
             self.assertGreaterEqual(result["reading_estimates"][language]["minutes"], 17)
             self.assertLessEqual(result["reading_estimates"][language]["minutes"], 23)
         self.assertNotEqual(articles[0]["reading_time"], "5 min read")
-        proof = json.loads((self.site / "automation-reviews/daily-research-2026-10-10.json").read_text())
+        proof = json.loads((self.site / "automation-reviews/offline-topic-outline-2026-10-10.json").read_text())
         self.assertEqual(proof["final_review"]["article_sha256"], blog.digest(proof["draft"]))
         with closing(sqlite3.connect(self.db)) as connection:
             self.assertIsNotNone(connection.execute("SELECT 1 FROM artifacts WHERE id='daily-blog-2026-10-10'").fetchone())
@@ -326,11 +326,11 @@ class DailyBlogTests(unittest.TestCase):
             report.write_text(json.dumps({"schema_version": 1, "strategies": []}))
             app = create_app(report, self.root / "stats.sqlite3", self.root / "feedback.sqlite3")
             client = app.test_client()
-            for path in ("/blog/daily-research-2026-10-10", "/blog/daily-research-2026-10-10?lang=en",
-                         "/blog/daily-research-2026-10-10.md", "/blog", "/blog/feed.xml", "/blog-sitemap.xml"):
+            for path in ("/blog/offline-topic-outline-2026-10-10", "/blog/offline-topic-outline-2026-10-10?lang=en",
+                         "/blog/offline-topic-outline-2026-10-10.md", "/blog", "/blog/feed.xml", "/blog-sitemap.xml"):
                 response = client.get(path)
                 self.assertEqual(response.status_code, 200, path)
-                self.assertIn(b"daily-research-2026-10-10" if path.endswith("xml") else b"Offline" if ".md" in path else b"", response.data)
+                self.assertIn(b"offline-topic-outline-2026-10-10" if path.endswith("xml") else b"Offline" if ".md" in path else b"", response.data)
         count = len(self.calls)
         self.assertEqual(self.run_blog()["business_status"], "already_published")
         self.assertEqual(len(self.calls), count)
@@ -351,7 +351,7 @@ class DailyBlogTests(unittest.TestCase):
         result = self.run_blog()
         self.assertEqual(result["business_status"], "published")
         self.assertEqual(self.calls, ["plan", "draft", "review", "revise", "review_revised", "humanize", "final_review"])
-        proof = json.loads((self.site / "automation-reviews/daily-research-2026-10-10.json").read_text())
+        proof = json.loads((self.site / "automation-reviews/offline-topic-outline-2026-10-10.json").read_text())
         self.assertTrue(proof["initial_review"]["approved"])
         self.assertEqual(proof["initial_review"]["article_sha256"], blog.digest(proof["original_draft"]))
         self.assertEqual(proof["draft"]["article"]["tags"], self.draft()["article"]["tags"])
@@ -389,7 +389,7 @@ class DailyBlogTests(unittest.TestCase):
         result = self.run_blog()
         self.assertEqual(result["business_status"], "published")
         self.assertEqual(self.calls[-3:], ["final_review", "revise_final", "final_review_revised"])
-        proof = blog.read_json(self.site / "automation-reviews/daily-research-2026-10-10.json")
+        proof = blog.read_json(self.site / "automation-reviews/offline-topic-outline-2026-10-10.json")
         self.assertEqual(proof["final_review"]["article_sha256"], blog.digest(proof["draft"]))
 
     def test_final_correction_is_bounded_and_cannot_change_sources(self):
@@ -461,6 +461,73 @@ class DailyBlogTests(unittest.TestCase):
             self.assertIn('service_tier="fast"', command)
             reasoning = [value for value in command if value.startswith("model_reasoning_effort=")]
             self.assertEqual(reasoning, ['model_reasoning_effort="high"'] if effort else [])
+
+
+class PresentationTests(unittest.TestCase):
+    setUp = DailyBlogTests.setUp
+    draft = DailyBlogTests.draft
+    plan = DailyBlogTests.plan
+    model = DailyBlogTests.model
+    run_blog = DailyBlogTests.run_blog
+
+    def test_publication_has_topic_url_references_and_no_process_footer(self):
+        result = self.run_blog()
+        self.assertEqual(result["slug"], "offline-topic-outline-2026-10-10")
+        proof = blog.read_json(self.site / "automation-reviews" / (result["slug"] + ".json"))
+        for localized in (proof["draft"]["article"], proof["draft"]["article"]["en"]):
+            self.assertNotIn("Drafted with", localized["body_markdown"])
+            self.assertNotIn("编写与复核", localized["body_markdown"])
+            self.assertIn("2026-10-09", localized["body_markdown"])
+        self.assertIn("## References", proof["draft"]["article"]["en"]["body_markdown"])
+        self.assertTrue((self.root / "data/knowledge/topics/daily-research-blog/articles" / result["slug"] / "zh.md").is_file())
+
+    def test_only_catalogued_inline_images_and_bounded_diagrams_are_accepted(self):
+        from workflows import blog_presentation as p
+        asset = {"path": "/static/images/reviewed.jpg", "source_url": "https://example.org/photo", "license_url": "https://example.org/license"}
+        p.validate_markup('![Launch](/static/images/reviewed.jpg)\n```mermaid\nflowchart TB\n A --> B\n```', [asset], set())
+        for body in ('## Writing and review\nDrafted with an internal model.', '![Launch](https://unknown.test/a.jpg)', '![Launch][unreviewed]', '<img src="/static/images/reviewed.jpg">',
+                     '```mermaid\nflowchart TB\nclick A "https://unknown.test"\n```', '```mermaid\n%%{init: {}}%%\nflowchart TB\n A --> B\n```'):
+            with self.subTest(body=body), self.assertRaises(ValueError):
+                p.validate_markup(body, [asset], set())
+
+    def test_media_hash_is_checked_and_caption_retains_license(self):
+        from workflows import blog_presentation as p
+        assets = p.load_media(self.config, blog.ROOT)
+        self.assertEqual(assets[0]["license"], "CC BY-SA 4.0")
+        figure = p.image_figure(assets[0], "zh")
+        self.assertIn(assets[0]["creator"], figure)
+        self.assertIn(assets[0]["source_url"], figure)
+        catalog = {"version": 1, "assets": [dict(assets[0], sha256="0" * 64)]}
+        path = self.root / "media.json"
+        blog.atomic_json(path, catalog)
+        self.config["workflow"]["presentation"]["media_catalog"] = "media.json"
+        with self.assertRaisesRegex(ValueError, "hash mismatch"):
+            p.load_media(self.config, self.root)
+
+    def test_reviewed_revision_replaces_one_article_and_preserves_history(self):
+        from workflows.revise_blog import replace_publication
+        result = self.run_blog()
+        previous = load_runtime_articles(self.site)[0]
+        proof = blog.read_json(self.site / "automation-reviews" / (result["slug"] + ".json"))
+        revised = deepcopy(proof["draft"])
+        revised["article"]["slug"] = "topic-revised-2026-10-10"
+        verdict = dict(proof["final_review"], article_sha256=blog.digest(revised))
+        rejected = dict(verdict, approved=False)
+        before = (self.site / "manifest.json").read_bytes()
+        with self.assertRaisesRegex(ValueError, "rejected"):
+            replace_publication(revised, proof["packet"], rejected, previous, proof, self.site, "revision", proof["skill_sha256"])
+        self.assertEqual((self.site / "manifest.json").read_bytes(), before)
+        published = replace_publication(revised, proof["packet"], verdict, previous, proof, self.site, "revision", proof["skill_sha256"])
+        current = load_runtime_articles(self.site)
+        self.assertEqual(len(current), 1)
+        self.assertEqual(current[0]["aliases"], [result["slug"]])
+        self.assertEqual(len(list((self.site / "revisions").glob("*.json"))), 1)
+        blog.record_publication(self.root, self.db, published, revised, proof["packet"])
+        with sqlite3.connect(self.db) as db:
+            row = db.execute("SELECT metadata_json FROM artifacts WHERE id=?", ("daily-blog-2026-10-10",)).fetchone()
+        self.assertEqual(json.loads(row[0])["slug"], published["slug"])
+        with self.assertRaisesRegex(ValueError, "changed"):
+            replace_publication(revised, proof["packet"], verdict, previous, proof, self.site, "revision", proof["skill_sha256"])
 
 
 if __name__ == "__main__":

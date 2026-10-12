@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "electron-capstone-2022",
+      "path": "/static/images/blog/electron-capstone-launch-2022.jpg",
+      "sha256": "65626dada4d166615a543acb11a238a0e3d1dce13cd00dde108a3dbe53d8c460",
+      "creator": "Yourong F. Wang",
+      "source_url": "https://commons.wikimedia.org/wiki/File:CAPSTONE-LAUNCH.jpg",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "year": 2022,
+      "width": 3997,
+      "height": 2998,
+      "modified": false,
+      "match_keywords": [
+        "rocket lab",
+        "electron",
+        "capstone"
+      ],
+      "alt_zh": "Electron 发射 CAPSTONE 任务的长曝光轨迹，2022 年历史照片",
+      "alt_en": "Long exposure of Electron launching CAPSTONE in 2022",
+      "caption_zh": "2022 年 Electron 发射 CAPSTONE 任务的历史照片；仅展示发射场景，不作为 2026 年经营表现的证据。",
+      "caption_en": "Electron launching CAPSTONE in 2022. A historical illustration, not evidence of operating performance in 2026."
+    }
+  ]
+}

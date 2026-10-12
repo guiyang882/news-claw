@@ -1,6 +1,10 @@
 {
   "approval_kind": "model_review",
-  "article_sha256": "2ca3e2bb7774530b5382fd90881234accadc33deeafa385b583b50c2571596fe",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/rocket-lab-orders-shareholder-returns-2026-10-12/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/rocket-lab-orders-shareholder-returns-2026-10-12/zh.md"
+  },
+  "article_sha256": "67c131b669f57883d5b1def837fba18b598bb026565c7a85548aeaa9e82c4cf6",
   "day": "2026-10-12",
   "editorial_plan": {
     "candidate_count": 2,
@@ -12,20 +16,21 @@
   },
   "editorial_plan_sha256": "e970cc0bf1abddcd0313d6074f3dfa92fb829bf738374cfe3c57dd31ab01a24c",
   "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
-  "packet_sha256": "0ab9b420af59ee596780bef8dd67539bfd73cce52aaf860533de849c40d7750a",
+  "packet_sha256": "dcfc6a1a6db83142c98d7069a2147df529a8e38421e138eb32e07c32077db86c",
+  "publication_kind": "revision",
   "reading_estimates": {
     "en": {
-      "minutes": 18,
+      "minutes": 20,
       "rate": 200,
-      "units": 3531
+      "units": 3821
     },
     "zh": {
-      "minutes": 21,
+      "minutes": 23,
       "rate": 300,
-      "units": 6250
+      "units": 6814
     }
   },
-  "slug": "daily-research-2026-10-12",
+  "slug": "rocket-lab-orders-shareholder-returns-2026-10-12",
   "source_urls": [
     "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-announces-second-quarter-2026-financial-results-posts",
     "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-secures-largest-ever-electron-commercial-deal-20",
@@ -37,5 +42,6 @@
   "summary_en": "The research snapshot dated October 8, 2026 distinguishes Rocket Lab's recognized revenue, backlog, completed launches, and future agreements. This article examines those records, Neutron's hardware target, and Iridium acquisition financing, asking what further delivery, operating, and capital evidence is needed to assess results per share.",
   "title": "Rocket Lab 的订单需要怎样兑现，股东才能受益？",
   "title_en": "What must Rocket Lab's orders deliver for shareholders to benefit?",
+  "url": "https://growthyoung.com/blog/rocket-lab-orders-shareholder-returns-2026-10-12",
   "version": 1
 }

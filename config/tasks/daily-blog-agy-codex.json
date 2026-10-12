@@ -123,6 +123,16 @@
     },
     "editorial_skill": "/root/.codex/skills/research-blog-editor/SKILL.md",
     "max_length_repairs": 1,
-    "max_final_revisions": 1
+    "max_final_revisions": 1,
+    "presentation": {
+      "slug_style": "topic-date",
+      "max_topic_words": 8,
+      "media_catalog": "config/media/approved-assets.json",
+      "preferred_tables": 2,
+      "preferred_diagrams": 2,
+      "emphasis": "restrained_bold_italic_underline",
+      "public_process_notes": false,
+      "references": "source_based_appendix"
+    }
   }
 }

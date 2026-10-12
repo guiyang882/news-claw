@@ -57,7 +57,7 @@ flowchart LR
 
 统计排除链接 URL 和代码块。网站的 reading_time 从实际正文计算，忽略模型自行填的标签。初稿、纠错稿和 humanizer 后的终稿均需达标，并至少有六个二级章节。不能依靠重复或无关背景凑篇幅；若现有资料支撑不了这个深度，应报告材料不足。
 
-Gemini 按所选大纲写稿，来源限于该题列出的 source_ids。后续 Codex 检查是否展开章节论点、保留反论证和边界，防止长文偏离大纲。使用已有网站署名、标签词表、中英双语格式和内容寻址 Markdown。正文说明模型辅助编写与复核的方式。
+Gemini 按所选大纲写稿，来源限于该题列出的 source_ids。后续 Codex 检查是否展开章节论点、保留反论证和边界，防止长文偏离大纲。使用已有网站署名、标签词表、中英双语格式和内容寻址 Markdown。正文面向读者讨论问题和证据；模型、skill 与执行过程保存在内部复核记录中。
 
 网页采集由现有 crawl 任务负责，本工作流不主动下载来源网页。RSS 标题与摘要标为待核验线索；已有公司研究快照标明快照截止日和原披露口径，不能宣称已重新验证一手原文或把未来计划写成完成结果。写稿和复核使用同一份资料包；文档内容哈希须与 SQLite 一致，未来日期和过期研究快照不用于供稿。已有机构研究内容不进入本流程。
 
@@ -67,7 +67,7 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 
 初稿或事实纠错稿篇幅未达标时，max_length_repairs 默认允许整轮一次篇幅修订。程序保存中英文实际字数与目标区间，再交给 Codex 按原资料和大纲修订；来源 ID、标签、事实核验记录必须完全保持，修订后的正文仍需通过字数、引用和独立事实复核。缺少材料时可以返回 insufficient_evidence，不能用新事实或重复文字补足篇幅。再次不达标则停止，humanizer 后的篇幅不达标也停止。
 
-只有经过 humanizer 的终稿才附加对应编写与复核说明。这些内容修订步骤有次数上限，不会重试失败或遭拒的模型 API 请求。max_length_repairs、修订阶段超时和最大 CLI 调用次数均在任务 JSON 中配置。
+正文不附加“编写与复核”等内部流程说明，也不声称文章经过了并未发生的人工批准。这些内容修订步骤有次数上限，不会重试失败或遭拒的模型 API 请求。max_length_repairs、修订阶段超时和最大 CLI 调用次数均在任务 JSON 中配置。
 
 最终复核拒稿时，`max_final_revisions: 1` 允许一次终稿纠错，再独立复核一次。终稿纠错沿用 humanizer，可合并重复的结论、修正已有事实的定位，或将复合事实拆成多个真实证据记录；来源 ID 与标签保持不变，不增加新事实、日期或出处。再次拒稿则停止。humanizer 本身保留每个独特的事实和证据边界，同时删除空泛重复，篇幅仍受原检查约束。
 
@@ -109,7 +109,7 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 
 运行目录 data/runs/&lt;run_id&gt;/ 保存资料包、两个 skill 副本、候选题、完整大纲、各阶段提示词与响应、原稿、终稿和发布结果。task_runs 的 result 保存所选题目、阅读目标、大纲哈希以及 JSON/Markdown 路径；写稿或复核失败时仍记录已生成的大纲，方便调整。CLI 日志保持在忽略目录。
 
-发布证明绑定完整 editorial_plan。只将发布后的简短索引写入 data/knowledge/topics/daily-research-blog/summaries/YYYY-MM-DD.json，并登记到现有 artifacts 表；索引增加选题摘要、大纲哈希和实际阅读估算。数据库仍为六张表。
+发布证明绑定完整 editorial_plan。将发布后的简短索引写入 data/knowledge/topics/daily-research-blog/summaries/YYYY-MM-DD.json，并登记到现有 artifacts 表；索引包含选题摘要、大纲哈希、实际阅读估算和文章路径；经审核的中英文 Markdown 归档到 `data/knowledge/topics/daily-research-blog/articles/<topic-date>/`，便于版本管理。文章修订会更新同一天的索引和 artifacts 记录，保留其 ID。数据库仍为六张表。
 
 ## 运维
 
@@ -138,3 +138,33 @@ bin/news-claw enqueue --task daily-blog-agy-codex
 频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。每日博客在北京时间 07:30 开始，保留最多七分钟随机延迟；整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
 
 CLI 参数已在本机 --help 核对；Codex 结构化响应方式参考 [非交互模式](https://learn.chatgpt.com/docs/non-interactive-mode)，模型标识参考 [GPT-6.1 Sol 文档](https://developers.openai.com/api/docs/models/gpt-6.1-sol)，推理与速度字段参考 [OpenAI 配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。
+
+
+## 文章呈现与主题地址
+
+实际任务和模板的 `workflow.presentation` 显式设置：
+
+| 字段 | 默认值 | 用途 |
+| --- | --- | --- |
+| `slug_style` / `max_topic_words` | `topic-date` / `8` | 所选英文主题压缩成短地址，后接发布日期 |
+| `preferred_tables` / `preferred_diagrams` | `2` / `2` | 提示写稿模型制作有解释作用的表格和 Mermaid 图 |
+| `emphasis` | `restrained_bold_italic_underline` | 少量加粗、斜体与下划线标出判断依据 |
+| `public_process_notes` | `false` | 正文省略模型与工具流程说明；内部审计保留 |
+| `references` | `source_based_appendix` | 终稿末尾按实际来源生成参考资料 |
+| `media_catalog` | `config/media/approved-assets.json` | 已核验的本地图片、作者、出处、许可和文件哈希 |
+
+图片只从许可清单选择与所选主题匹配的素材，须通过网站静态路径和 SHA256 校验。图片旁说明创作者、原始来源、许可、是否修改及历史照片的时间；不把历史照片当作本期经营证据。清单目前包含 Electron 的 CAPSTONE 发射照片（2022，Yourong F. Wang，CC BY-SA 4.0）。其他主题需先补充经核验的相关素材，不自动复制搜索图片。图库对应网站 `web/static/images/blog/` 的素材与许可记录。
+
+Mermaid 只接受限定长度的流程图，不允许交互链接和配置指令；网站使用已有的本地 Mermaid 库并在严格模式下渲染。图注须说明箭头是分析关联、假设还是真实时间顺序。表格可在手机上独立横向滚动；正文中的表格、图、强调和引用在 humanizer 与最终复核中保留。
+
+### 已发布文章的显式修订
+
+用户要求更新文章时，将双语稿和短主题名保存为 `{"model_draft": <daily-blog-draft>, "topic_slug": "topic-name"}`。沿用已有文章的资料包、选题和发布日期，加入经核验的图库。临时将任务执行命令设置为：
+
+```json
+["/mnt/quant/strategies/stocks-quant/web/.venv/bin/python", "-m", "workflows.revise_blog", "--slug", "existing-slug", "--draft", "/absolute/staged-revision.json"]
+```
+
+`make init` 后通过 Go `enqueue` 显式入队，配置快照保存后恢复原执行命令并再次 `make init`。修订命令要求正在运行的 Go 手动任务记录；这次用户请求独立限定一次 Codex 最终复核，不重新调用 Gemini，不清除每日防重记录或供应方熔断。复核失败就停止。
+
+复核通过后先写入不可变正文与新证明，再锁定并原子替换已有文章。等待复核期间若旧文章已变化则拒绝覆盖。旧元数据与证明保存到运行时 `revisions/`，旧地址作为 `aliases` 提供 301 跳转（包括英文参数与 Markdown 地址）；首页、RSS 与 sitemap 使用新规范地址。文章总数不增加。
