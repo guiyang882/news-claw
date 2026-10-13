@@ -68,7 +68,10 @@ def load_media(config, root):
 
 
 def selected_media(packet, plan):
-    text = json.dumps(plan["outline"], ensure_ascii=False).lower()
+    # Exclusion notes can name unrelated assets; they must not select a photo.
+    outline = plan["outline"]
+    text = " ".join(str(outline.get(key, "")) for key in
+                    ("title_zh", "title_en", "central_question")).lower()
     return [asset for asset in packet.get("approved_media", [])
             if any(word.lower() in text for word in asset["match_keywords"])]
 

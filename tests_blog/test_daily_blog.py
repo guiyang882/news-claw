@@ -513,6 +513,22 @@ class PresentationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "hash mismatch"):
             p.load_media(self.config, self.root)
 
+    def test_excluded_photo_mentions_do_not_attach_unrelated_media(self):
+        from workflows import blog_presentation as p
+        assets = p.load_media(self.config, blog.ROOT)
+        plan = self.plan({"packet_sha256": "fixture"})
+        plan["outline"].update(title_zh="Starship 的运力如何转成 Starlink 服务？",
+                               title_en="When does Starship capacity become usable Starlink service?",
+                               central_question="Which deployment and service evidence is still needed?")
+        plan["outline"]["sections"][-1]["boundaries"].append("Omit the unrelated Electron / Rocket Lab CAPSTONE launch photo.")
+        packet = {"approved_media": assets}
+        self.assertEqual(p.selected_media(packet, plan), [])
+        self.assertEqual(p.with_hero("Article without a photo.", p.selected_media(packet, plan), "en"), "Article without a photo.")
+        plan["outline"]["sections"][-1]["boundaries"].pop()
+        plan["outline"].update(title_zh="Rocket Lab 订单怎样兑现？", central_question="What would validate Rocket Lab's order conversion?")
+        plan["outline"]["title_en"] = "What must Rocket Lab orders deliver for shareholders?"
+        self.assertEqual(p.selected_media(packet, plan)[0]["id"], "electron-capstone-2022")
+
     def test_reviewed_revision_replaces_one_article_and_preserves_history(self):
         from workflows.revise_blog import replace_publication
         result = self.run_blog()
