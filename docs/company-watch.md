@@ -53,3 +53,5 @@ SEC 条目以 `sec_filing` 入库，页面标为“SEC filing · metadata only�
 Coinbase 增加 `company-coinbase-cache-refresh`，每小时 :17 从已校验的本地缓存合并线索。只复用 `ai-products-attention-daily` 中已配置的 Gemini agent / GPT feedback 两条 RSS 渠道，并要求标题以完整单词匹配 Coinbase；不改变上游采集配置、不新增网络请求，不重试已拒绝的博客。媒体线索标为 `Media headline · cached, unverified`，与 SEC 元数据及发行方公告分开标注，原始发布时间、采集时间和来源链接保持不变。
 
 模型提示明确区分媒体报道与发行方公告，同一事件的多篇标题不视为独立佐证。为补齐初始 Amazon、Coinbase 简报，串行运行间隔由 60 分钟调整为至少 10 分钟；每天每公司一次、每日合计三次、40,000 token 预留及 120,000 总预算不变，正常日程仍相隔四小时。该间隔是本地任务分散策略，非提供方配额。生成仍只调用一次 Gemini，Codex 复核后最多修订一次再复核；未知方向不得为了温度计有数字而强制赋分。
+
+首次补齐运行：缓存发布 `95b3824c92da940cf1a961d7d246e124` 合并三条媒体线索和一条 SEC 披露索引，外部请求为零。Amazon 简报 `355f4a882c21cae789cf3d8f53fd462d` 一次 Gemini＋一次 Codex 复核通过，Gemini 用量 16,087 token；Coinbase 简报 `be5540900da2999eec598fde233442a2` 一次 Gemini＋Codex 复核、修订、再次复核后发布，Gemini 用量 14,425 token。两次生成间隔超过十分钟。Coinbase 修订修正媒体归属和标题的证据强度；未改写来源、未补造中性分数。两家公司当前均依据各自新闻情绪分项 50 与 OFR 分项 57 合成为 53。
