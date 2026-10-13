@@ -150,10 +150,10 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, now=No
     settings = config['workflow']
     company = settings['company']
     budget = settings['budget']
-    if (budget['max_daily_company_attempts'] != 1 or not 1 <= budget['max_daily_shared_attempts'] <= 3
+    if (budget['max_daily_company_attempts'] != 1 or not 1 <= budget['max_daily_shared_attempts'] <= 5
             or budget['minimum_company_spacing_seconds'] < 600
             or budget['reserved_tokens_per_attempt'] < 40000
-            or not 40000 <= budget['new_company_daily_token_budget'] <= 120000
+            or not 40000 <= budget['new_company_daily_token_budget'] <= 200000
             or not 1 <= budget['max_events'] <= 8 or not 1 <= budget['max_input_chars'] <= 16000):
         raise ValueError('Company model budget exceeds its reviewed limits')
     # Only the already published cache is eligible for the brief; fetching is separate.
@@ -163,7 +163,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, now=No
     bundle = validate_bundle(models.read_json(path))
     events = [event for event in bundle['events'] if event['company'] == company
               and now - timedelta(days=7) <= datetime.fromisoformat(event['published_at']) <= now][:budget['max_events']]
-    if len(events) < 2:
+    if not events:
         return {'success': True, 'business_status': 'insufficient_evidence', 'model_calls': []}
     fingerprint = content_digest({'events': events, 'writer': settings['writer'], 'recipe': 1})
     directory.mkdir(parents=True, exist_ok=True)
@@ -202,6 +202,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, now=No
                 'price forecasts or investment advice. Developments are announced items; catalysts are checks still to make; '
                 'risks describe evidence gaps. Do not transfer a claim between products or label a partnership AI-related unless the excerpt says so. '
                 'Absence from these excerpts is not proof that independent validation does not exist. '
+                'A single source is sufficient only for a narrow, explicitly attributed brief; do not imply corroboration. '
                 'At most 2 items per list, 200 characters per item and 400 per summary. '
                 'Copy only listed evidence IDs. Input: ' + json.dumps(packet, ensure_ascii=False))
             if len(prompt) > budget['max_input_chars']:

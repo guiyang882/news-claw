@@ -1,0 +1,24 @@
+{
+  "id": "company-tsmc",
+  "name": "TSMC 公司观察",
+  "description": "以官方发布与有日期的来源观察经营变化。",
+  "enabled": true,
+  "keywords": [
+    "TSMC",
+    "台积电"
+  ],
+  "entities": [
+    "TSMC"
+  ],
+  "questions": [
+    "先进制程与封装扩产能否转化为持续增长和资本回报？"
+  ],
+  "analysis_rules": [
+    "公告属于公司陈述；来源日期不等于事件日期。",
+    "缺失的经营指标和证据保持未知，不推断股价。"
+  ],
+  "artifact_types": [
+    "timeline",
+    "summaries"
+  ]
+}

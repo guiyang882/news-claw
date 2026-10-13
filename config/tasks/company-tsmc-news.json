@@ -1,0 +1,165 @@
+{
+  "id": "company-tsmc-news",
+  "name": "TSMC 官方来源采集",
+  "description": "限速采集官方来源，发布有日期的公司证据；不推断未读正文。",
+  "scheduler_engine": "news-claw",
+  "enabled": true,
+  "schedule": "25 1-23/4 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "company-tsmc"
+  ],
+  "collector": {
+    "type": "official_company_disclosures",
+    "sources": [
+      {
+        "name": "SEC EDGAR · TSMC 披露索引",
+        "type": "sec_submissions",
+        "url": "https://data.sec.gov/submissions/CIK0001046179.json",
+        "cik": 1046179,
+        "forms": [
+          "6-K",
+          "6-K/A",
+          "20-F",
+          "20-F/A"
+        ],
+        "language": "en",
+        "source_class": "regulatory_filing_metadata",
+        "obey_robots_txt": true
+      }
+    ],
+    "access_review": {
+      "status": "public_regulator_api",
+      "authentication": "none_required",
+      "reviewed_at": "2026-10-14",
+      "basis": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces explicitly provides unauthenticated company-submissions API access. https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data documents declared User-Agent and fair access.",
+      "scope": "One company submissions index; no pagination, document downloads or XBRL requests. Retain the repository limit of at least 10 seconds and at most 4 requests per batch.",
+      "identity_basis": "Public website contact at https://growthyoung.com/contact; supplied through the task execution environment.",
+      "company_identity_evidence": "https://www.sec.gov/Archives/edgar/data/1046179/000104617926000680/tsm-revenue20261008.htm"
+    },
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "min_interval_seconds_global": 10,
+      "google_search_min_interval_seconds": 60,
+      "max_requests_per_run": 4,
+      "automatic_retry_after_denial": false,
+      "stop_on_403_429_or_access_denial": true
+    }
+  },
+  "options": {
+    "start_jitter_seconds": 180,
+    "lookback_hours": 720,
+    "max_items_per_run": 30
+  },
+  "schedule_format": "cron",
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.company_news",
+      "--execute"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 480,
+    "stop_grace_seconds": 15,
+    "lock_group": "web-fetch",
+    "env": {
+      "NEWS_CLAW_SEC_USER_AGENT": "GrowthYoungResearch/1.0 admin@growthyoung.com"
+    }
+  },
+  "task_type": "crawl",
+  "workflow": {
+    "company": "tsmc",
+    "state_root": "/mnt/quant-state/quant-web",
+    "source_urls": [
+      "https://data.sec.gov/submissions/CIK0001046179.json"
+    ],
+    "kind": "company-news-v1",
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "website_delivery": {
+      "kind": "validated_company_news",
+      "reader": "Python NewsStore → Next.js home/radar/company",
+      "after_publish": "none",
+      "frontend_build_required": false,
+      "restart_required": false
+    }
+  }
+}

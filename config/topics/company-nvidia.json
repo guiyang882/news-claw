@@ -1,0 +1,24 @@
+{
+  "id": "company-nvidia",
+  "name": "NVIDIA 公司观察",
+  "description": "以官方发布与有日期的来源观察经营变化。",
+  "enabled": true,
+  "keywords": [
+    "NVIDIA",
+    "英伟达"
+  ],
+  "entities": [
+    "NVIDIA"
+  ],
+  "questions": [
+    "AI 算力需求能否持续转化为交付、利润和现金流？"
+  ],
+  "analysis_rules": [
+    "公告属于公司陈述；来源日期不等于事件日期。",
+    "缺失的经营指标和证据保持未知，不推断股价。"
+  ],
+  "artifact_types": [
+    "timeline",
+    "summaries"
+  ]
+}

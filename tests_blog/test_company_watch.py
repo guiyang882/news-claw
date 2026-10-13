@@ -192,11 +192,33 @@ class CompanyWatchWorkflowTests(unittest.TestCase):
     def test_large_measured_usage_stops_remaining_new_company_calls(self):
         self.call(Runner())
         ledger=next((self.root/'data/runs/company-watch-budget').glob('*.json'))
-        data=json.loads(ledger.read_text());data['attempts'][0]['agy_tokens']=100000;ledger.write_text(json.dumps(data))
+        data=json.loads(ledger.read_text());data['attempts'][0]['agy_tokens']=180000;ledger.write_text(json.dumps(data))
         self.write_news('amazon');runner=Runner()
         self.assertEqual(self.call(runner,'amazon',self.now+timedelta(hours=2))['business_status'],
                          'daily_shared_budget_reached')
         self.assertEqual(runner.calls,[])
+
+    def test_all_five_companies_fit_bounded_daily_budget(self):
+        for index, company in enumerate(('google', 'amazon', 'coinbase', 'nvidia', 'tsmc')):
+            self.write_news(company)
+            result = self.call(Runner(), company, self.now + timedelta(minutes=11*index))
+            self.assertEqual(result['business_status'], 'published')
+        ledger = next((self.root/'data/runs/company-watch-budget').glob('*.json'))
+        self.assertEqual(len(json.loads(ledger.read_text())['attempts']), 5)
+
+    def test_single_dated_tsmc_filing_can_support_narrow_brief(self):
+        self.write_news('tsmc')
+        path = self.root/'site/company_news/tsmc.json'
+        data = json.loads(path.read_text()); data['events'] = data['events'][:1]
+        path.write_text(json.dumps(data))
+        self.assertEqual(self.call(Runner(), 'tsmc')['business_status'], 'published')
+
+    def test_empty_evidence_never_calls_model(self):
+        path = self.root/'site/company_news/google.json'
+        data = json.loads(path.read_text()); data['events'] = []
+        path.write_text(json.dumps(data)); runner = Runner()
+        self.assertEqual(self.call(runner)['business_status'], 'insufficient_evidence')
+        self.assertEqual(runner.calls, [])
 
     def test_invalid_generation_still_records_real_token_usage(self):
         runner=models.ModelRunner(self.config,self.root)

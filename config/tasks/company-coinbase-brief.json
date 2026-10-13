@@ -62,10 +62,10 @@
     },
     "budget": {
       "max_daily_company_attempts": 1,
-      "max_daily_shared_attempts": 3,
+      "max_daily_shared_attempts": 5,
       "minimum_company_spacing_seconds": 600,
       "reserved_tokens_per_attempt": 40000,
-      "new_company_daily_token_budget": 120000,
+      "new_company_daily_token_budget": 200000,
       "max_input_chars": 16000,
       "max_events": 8
     },
