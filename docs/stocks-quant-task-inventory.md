@@ -17,7 +17,7 @@
 
 ## SQLite 与接管结果
 
-最初接管 11 项任务，统一为 `scheduler_engine=news-claw`。当前 12 项定义、10 项启用；旧草稿与发布两项停用并保留历史。小时级 Google News RSS 于 2026-10-11 核查后暂停，随后按用户要求恢复，详见 [恢复记录](operations/2026-10-11-google-news-restoration.md)。任务类型包含 5 项 crawl、5 项 codex、1 项 publish、1 项 workflow。旧 8 个 timer 已 disabled/inactive；Go engine 常驻且开机启动；6 张表不变。
+最初接管 11 项任务，统一为 `scheduler_engine=news-claw`。当前 15 项定义、13 项启用；旧草稿与发布两项停用并保留历史。新增三个 [Gemini 主题整理与 Codex 校验](topic-summaries.md) 任务，补充每日博客材料。小时级 Google News RSS 于 2026-10-11 核查后暂停，随后按用户要求恢复，详见 [恢复记录](operations/2026-10-11-google-news-restoration.md)。任务类型包含 5 项 crawl、5 项 codex、1 项 publish、4 项 workflow。旧 8 个 timer 已 disabled/inactive；Go engine 常驻且开机启动；6 张表不变。
 
 | 旧任务 | Go 计划（北京时间） | 随机延迟 | 迁移前最后结果 |
 | --- | --- | --- | --- |

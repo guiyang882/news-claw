@@ -1,0 +1,760 @@
+{
+  "draft": {
+    "packet_sha256": "8ea661e4901730b31adeb1cc926a63712fb80c51e88ac3f51ae2f297a08b4376",
+    "reason": "仅依据原始数据包修订，未作审批结论。所收录标题和研究快照是有限的选取样本，不能代表完整行业或报道分布。媒体标题保留具名归属，发行人陈述保留来源日期、统计截止日和计划边界。",
+    "status": "ready",
+    "topics": [
+      {
+        "entities": [
+          "Hyundai",
+          "Atlas",
+          "Tesla",
+          "Optimus"
+        ],
+        "evidence_gaps": [
+          "缺乏机器人感知精度、抓取操作、动态移动与硬件可靠性的定量基准测试数据。",
+          "未提供真实物理场景部署记录、商业客户名单、运行台数及现场故障率统计。",
+          "缺乏关键厂商供应链与物料成本（BOM）的权威一手披露。",
+          "机器人构型相关证据仅包含媒体标题线索，缺乏一手正文与独立技术验证报告。",
+          "所选标题和研究快照不能代表完整行业或报道分布。"
+        ],
+        "inferences": [],
+        "observations": [
+          {
+            "boundary": "来源条目日期为 2026-10-13T04:46:28+00:00。仅有 RSS 标题，不能据此确认机器人构型、产品归属或设计原因。",
+            "claim": "The Korea Herald 的标题为“Why Hyundai’s Atlas has four fingers — and Tesla’s Optimus has five”。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/a61064ad23a4f35162d0994899fe752b129d38cbb82f4bcdefbf169ebbc38ad6.json",
+                "source_id": "doc-a61064ad23a4f35162d0994899fe752b129d38cbb82f4bcdefbf169ebbc38ad6"
+              }
+            ]
+          }
+        ],
+        "relations": [],
+        "summary": "数据包收录 The Korea Herald 关于 Atlas 与 Optimus 的标题线索，未提供机器人性能、成本或真实场景运行数据。所选材料不能代表完整行业或报道分布。",
+        "timeline": [
+          {
+            "boundary": "来源条目日期不是机器人设计变更或技术验证日期。",
+            "event": "The Korea Herald 关于 Atlas 与 Optimus 的标题条目日期。",
+            "event_date": "2026-10-13",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/a61064ad23a4f35162d0994899fe752b129d38cbb82f4bcdefbf169ebbc38ad6.json",
+                "source_id": "doc-a61064ad23a4f35162d0994899fe752b129d38cbb82f4bcdefbf169ebbc38ad6"
+              }
+            ],
+            "state": "headline_lead"
+          }
+        ],
+        "topic_id": "robotics-and-humanoids",
+        "used_source_ids": [
+          "doc-a61064ad23a4f35162d0994899fe752b129d38cbb82f4bcdefbf169ebbc38ad6"
+        ]
+      },
+      {
+        "entities": [
+          "NVIDIA",
+          "Bull",
+          "Altair-1",
+          "Omron",
+          "OnLogic",
+          "Figure AI"
+        ],
+        "evidence_gaps": [
+          "缺乏物理 AI 模型实机抓取成功率、时延与泛化能力等具体评测数据。",
+          "缺乏算力、仿真精度（Sim2Real）和硬件功耗瓶颈的定量分析。",
+          "关于 NVIDIA 投资 Figure AI、韩国承接台湾供应链等信息仅为媒体标题线索，缺乏官方投资协议与采购订单。",
+          "数据包未提供名为 Muse 的 AI 产品一手记录。",
+          "所选标题和研究快照不能代表完整行业或报道分布。"
+        ],
+        "inferences": [],
+        "observations": [
+          {
+            "boundary": "来源日期为 2026-10-13T05:00:31+00:00。这是 NVIDIA 的陈述，未独立核实；“Friday, Oct. 2”未明确给出年份，不补为 2026 年。2028 年为计划日期，不代表已投产。 所引材料为 RSS 标题或片段，只能记录来源陈述，未独立核实；具体措辞仍须经 Codex 逐项复核。",
+            "claim": "NVIDIA 缓存博客称，Bull 昂热工厂于“Friday, Oct. 2”揭幕；Bull 正将欧洲 AI 服务器生产扩展至计划于 2028 年推出的 NVIDIA Vera Rubin Ultra NVL72 系统，托盘在欧洲生产、机架在昂热工厂集成。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577.json",
+                "source_id": "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577"
+              }
+            ]
+          },
+          {
+            "boundary": "来源日期为 2026-10-13T05:00:31+00:00。保留原文“本月”，未提供具体发射日；星座规模、金额、能力和发射均为 NVIDIA 陈述，未提供独立验证或运行结果。 所引材料为 RSS 标题或片段，只能记录来源陈述，未独立核实；具体措辞仍须经 Codex 逐项复核。",
+            "claim": "NVIDIA 缓存博客称，Altair-1 是一个价值 10 亿美元、包含 50 颗卫星的星座的首颗卫星，具有星载自主能力，并于“本月”发射。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577.json",
+                "source_id": "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577"
+              }
+            ]
+          },
+          {
+            "boundary": "来源条目日期为 2026-10-13T04:49:37+00:00。仅有标题，无法确认交易形式、金额、签署或交割状态，以及对工厂 AI 部署的影响。",
+            "claim": "Cryptopolitan 的标题为“Omron’s $675M OnLogic deal moves AI from the cloud to the factory floor”。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/c19945d94c1ecf53bc522aaf4867981e12c7d31c0716ac383c5213bea9316310.json",
+                "source_id": "doc-c19945d94c1ecf53bc522aaf4867981e12c7d31c0716ac383c5213bea9316310"
+              }
+            ]
+          },
+          {
+            "boundary": "来源条目日期为 2026-10-13T05:20:52+00:00。仅有标题，无法确认投资、估值或市场预测口径；2035 年是标题中的预测年份，不是已实现结果。",
+            "claim": "Tech Times 的标题为“NVIDIA's Reported $1B Figure AI Investment Prices Startup Above Goldman Sachs' 2035 Humanoid Market”。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/2c49149801414a9c7d9688942efaad156cbbff2282681fd9808f3c2bb63fac27.json",
+                "source_id": "doc-2c49149801414a9c7d9688942efaad156cbbff2282681fd9808f3c2bb63fac27"
+              }
+            ]
+          }
+        ],
+        "relations": [],
+        "summary": "NVIDIA 缓存博客称 Bull 昂热工厂于“Friday, Oct. 2”揭幕，并介绍面向 2028 年的服务器生产计划及 Altair-1 于“本月”发射的陈述；这些材料未提供独立验证。Cryptopolitan 和 Tech Times 的交易、投资报道仅有标题。所选材料不能证明行业部署趋势，也不能代表完整行业或报道分布。",
+        "timeline": [
+          {
+            "boundary": "原文仅给出星期及月日，年份缺失；不推定年份。来源日期为 2026-10-13T05:00:31+00:00，不能替代事件日期。",
+            "event": "NVIDIA 博客称 Bull 昂热工厂于“Friday, Oct. 2”揭幕。",
+            "event_date": "",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577.json",
+                "source_id": "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "原文仅称“本月”，未给出具体发射日；来源日期为 2026-10-13T05:00:31+00:00，不将其作为发射日期。",
+            "event": "NVIDIA 博客称 Altair-1 于“本月”发射。",
+            "event_date": "",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577.json",
+                "source_id": "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "不是可确认的交易签署或交割日期。",
+            "event": "Cryptopolitan 关于 Omron 与 OnLogic 的标题条目日期。",
+            "event_date": "2026-10-13",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/c19945d94c1ecf53bc522aaf4867981e12c7d31c0716ac383c5213bea9316310.json",
+                "source_id": "doc-c19945d94c1ecf53bc522aaf4867981e12c7d31c0716ac383c5213bea9316310"
+              }
+            ],
+            "state": "headline_lead"
+          },
+          {
+            "boundary": "原日期表述为“2028”，未提供月日；属于计划，未证明已投产。来源日期为 2026-10-13T05:00:31+00:00。",
+            "event": "NVIDIA 博客介绍 Bull 面向 2028 年的 Vera Rubin Ultra NVL72 系统生产计划。",
+            "event_date": "",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577.json",
+                "source_id": "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577"
+              }
+            ],
+            "state": "announced_target"
+          }
+        ],
+        "topic_id": "physical-ai",
+        "used_source_ids": [
+          "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577",
+          "doc-c19945d94c1ecf53bc522aaf4867981e12c7d31c0716ac383c5213bea9316310",
+          "doc-2c49149801414a9c7d9688942efaad156cbbff2282681fd9808f3c2bb63fac27"
+        ]
+      },
+      {
+        "entities": [
+          "Rocket Lab",
+          "Electron",
+          "Synspective",
+          "Iridium",
+          "Neutron",
+          "SpaceX",
+          "Starlink",
+          "Starship",
+          "FAA"
+        ],
+        "evidence_gaps": [
+          "缺少 SpaceX 2026 年 Q2 之后的官方经审计财务数据与 Starlink 2026 年下半年实际入网运营容量。",
+          "缺少 Starship Flight 14 的正式 FAA 许可签发文件及实际发射窗口核验。",
+          "分析师对 SpaceX 股票与估值上涨空间的报道仅为媒体标题线索；数据包未确认可交易证券、上市状态或可靠交易数据。",
+          "缺少国际竞争方（如欧洲、中国航天机构）深空任务的最新进展对比。",
+          "所选标题和研究快照不能代表完整行业或报道分布。"
+        ],
+        "inferences": [],
+        "observations": [
+          {
+            "boundary": "沿用截至 2026-10-12 的发行人披露快照；订单积压不等于收入，指引不等于实际结果。",
+            "claim": "Rocket Lab 于 2026-08-10 披露，截至 2026-06-30，Q2 收入为 2.34 亿美元、同比增长 62%，订单积压为 23.6 亿美元、同比增长 137%；Q3 收入指引为 2.50 亿至 2.65 亿美元，GAAP 毛利率指引为 29%–31%。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/0",
+                "source_id": "rklb-q2-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/1",
+                "source_id": "rklb-q2-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/4",
+                "source_id": "rklb-q2-2026"
+              }
+            ]
+          },
+          {
+            "boundary": "任务结果来源记录日期为 2026-09-30；快照截至 2026-10-12。完成任务与未来签约任务分开；协议金额及其余商务条款未披露，结果未提供独立验证。",
+            "claim": "Rocket Lab 披露，2026-09-19 和 2026-09-25 分别完成第 96、97 次 Electron 任务，两次均为 Synspective 任务；2026-09-30 签署 20 次新 Electron 任务的多年协议，计划于 2028–2031 年执行，公司称该协议使发射订单池超过 100 次。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/3",
+                "source_id": "rklb-news-sep-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/1",
+                "source_id": "rklb-synspective-20"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/2",
+                "source_id": "rklb-synspective-20"
+              }
+            ]
+          },
+          {
+            "boundary": "快照截至 2026-10-12。融资完成不等于收购完成，交易仍待监管批准及其他交割条件。Neutron 目标沿用 2026-08-10 财务披露及 2026-09-14 产品来源记录，不代表测试、整箭集成或首飞已完成。",
+            "claim": "Rocket Lab 于 2026-09-15 称已完成约 19.44 亿美元 ATM 融资并终止 36 亿美元过桥贷款承诺，Iridium 收购目标为 2027 年中交割。快照另记录公司称 Neutron 一级储箱生产与 2026 年 Q4 运抵发射台目标一致。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/6",
+                "source_id": "rklb-iridium-finance"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/0",
+                "source_id": "rklb-q2-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/0",
+                "source_id": "rklb-neutron"
+              }
+            ]
+          },
+          {
+            "boundary": "快照截至 2026-10-12。数据仅适用于明确截止日；卫星数量不能换算为当前运营容量，设计容量及单次部署能力陈述不是已实现运营结果。",
+            "claim": "SpaceX 的 2026-06-05 披露记录，截至 2026-03-31，宽带与移动卫星合计约 9,600 颗、订阅用户约 10.3M；移动服务触达约 30 个国家的 7.4M 月度独立设备，覆盖短信与 OTT 语音。V3 单星下行容量设计值为 1 Tbps，公司称单次 Starship 最多部署 60 颗 V3。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/0",
+                "source_id": "spacex-prospectus-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/1",
+                "source_id": "spacex-prospectus-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/2",
+                "source_id": "spacex-prospectus-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/3",
+                "source_id": "spacex-prospectus-2026"
+              }
+            ]
+          },
+          {
+            "boundary": "快照截至 2026-10-12，FAA 项目页更新日期为 2026-09-02。计划不代表飞行、部署或转移已完成；环境文件不等于运行授权。快照称复核未发现可归属于 2026-10-08 之后的新许可事实，不能据此推断许可现状或审查强度。",
+            "claim": "SpaceX 的 2026-09-15 更新表示，拟自 Flight 14 起转入轨道任务，以支持 Starlink V3 等载荷部署，并测试首次轨道推进剂转移。快照转述 FAA 项目页载有环境审查文件及拟修改许可证的范围，并说明 SpaceX 仍须申请并取得实验许可和/或运营许可证。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/0",
+                "source_id": "spacex-reusability-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/3",
+                "source_id": "faa-starship-project"
+              }
+            ]
+          }
+        ],
+        "relations": [],
+        "summary": "截至 2026-10-12 的研究快照记录 Rocket Lab 的财务、Electron 任务及 Synspective 协议披露，以及 SpaceX 带截止日的 Starlink 数据。Iridium 交割、Neutron 运抵发射台及 Starship 轨道任务和推进剂转移仍属公司目标。快照转述 FAA 项目页说明环境文件不构成运行授权。所选材料不能代表完整行业或报道分布。",
+        "timeline": [
+          {
+            "boundary": "不是披露发布日期或当前网络状态；来源发布日期为 2026-06-05。",
+            "event": "SpaceX 披露的卫星、订阅用户及移动服务设备数据截止日。",
+            "event_date": "2026-03-31",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/0",
+                "source_id": "spacex-prospectus-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/1",
+                "source_id": "spacex-prospectus-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/2",
+                "source_id": "spacex-prospectus-2026"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "设计值未证明实际运营容量。",
+            "event": "SpaceX 披露 V3 单星下行容量设计值为 1 Tbps。",
+            "event_date": "2026-06-05",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/3",
+                "source_id": "spacex-prospectus-2026"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "发行人披露；订单积压不等于收入。",
+            "event": "Rocket Lab 发布 Q2 财务结果，披露截至 2026-06-30 的收入及订单积压。",
+            "event_date": "2026-08-10",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/0",
+                "source_id": "rklb-q2-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/1",
+                "source_id": "rklb-q2-2026"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "环境文件不等于运行授权，也不能据此判断执法或审查强度。",
+            "event": "快照记录 FAA 项目页更新，说明 SpaceX 仍须申请并取得实验许可和/或运营许可证。",
+            "event_date": "2026-09-02",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/3",
+                "source_id": "faa-starship-project"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "Iridium 收购仍待监管批准和其他交割条件。",
+            "event": "Rocket Lab 称完成约 19.44 亿美元 ATM 融资并终止 36 亿美元过桥贷款承诺。",
+            "event_date": "2026-09-15",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/6",
+                "source_id": "rklb-iridium-finance"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "日期为公司更新日期，未提供实际飞行或测试完成日期。",
+            "event": "SpaceX 更新提出自 Flight 14 起转入轨道任务并测试首次轨道推进剂转移的计划。",
+            "event_date": "2026-09-15",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/0",
+                "source_id": "spacex-reusability-2026"
+              }
+            ],
+            "state": "announced_target"
+          },
+          {
+            "boundary": "公司报告的任务结果，未提供独立技术验证；来源记录日期为 2026-09-30。",
+            "event": "Rocket Lab 披露完成第 96 次 Electron 任务，为 Synspective 任务。",
+            "event_date": "2026-09-19",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/3",
+                "source_id": "rklb-news-sep-2026"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "公司报告的任务结果；来源记录日期 2026-09-30 不能替代任务日期。",
+            "event": "Rocket Lab 披露完成第 97 次 Electron 任务，为 Synspective 任务。",
+            "event_date": "2026-09-25",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/3",
+                "source_id": "rklb-news-sep-2026"
+              }
+            ],
+            "state": "reported_event"
+          }
+        ],
+        "topic_id": "space-race",
+        "used_source_ids": [
+          "rklb-q2-2026",
+          "rklb-synspective-20",
+          "rklb-news-sep-2026",
+          "rklb-neutron",
+          "rklb-iridium-finance",
+          "spacex-prospectus-2026",
+          "spacex-reusability-2026",
+          "faa-starship-project"
+        ]
+      }
+    ]
+  },
+  "generated_at": "2026-10-13T13:56:39+00:00",
+  "input_fingerprint": "bc47b7fa1a633fe86051cdb0a41f4ff3e068906fb2aa61d3b2451e9601ee6fbd",
+  "recipe": "reviewed-topic-summary-v1",
+  "review": {
+    "approved": true,
+    "boundaries_preserved": true,
+    "facts_supported": true,
+    "issues": [],
+    "packet_sha256": "8ea661e4901730b31adeb1cc926a63712fb80c51e88ac3f51ae2f297a08b4376",
+    "reason": "逐项核对概述、观察、时间线及证据缺口，未发现超出数据包的事实断言。引用的 source_id/locator 配对有效且符合主题范围；来源日期、统计截止日、发行人归属、计划与完成状态及许可边界均保留。标题和片段未被用于推断行业热度、采用趋势或 SpaceX 可交易性，样本偏差与验证缺口已说明。本结论为模型复核通过，不是人工批准；哈希沿用输入值，未重新计算。",
+    "references_valid": true,
+    "summary_sha256": "570cf2f3f24aff0235b1e9a6bb0a636e342677b77b0505ad5963e32008dc0347"
+  },
+  "source_packet_path": "data/runs/30ef6189176f4c0957f3ef7dabf88943/source-packet.json",
+  "sources": [
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-51d75ad438c7653ca45a38847c9942c040cc9d8f52707300fd513a144bdd23ad",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T06:08:45+00:00",
+      "title": "Chung Euisun bets on physical AI after leading Hyundai to global top three - The Korea Herald",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiV0FVX3lxTE1xa0JJd29IRjl6UldPc2FtU0ZKU0lQSjJrMXM3T1Qxb0lMRXFtYlZhRUVYUzg2NzEyZWNYMWtXOHFWWmFWNThObGdhMjB3TFhVbTlIWXNhSQ?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-fd3db28ee16b9a55476040a85522040f37cacd4e3b5d610637a6a830d96e6ae6",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T06:03:45+00:00",
+      "title": "CRS-35 Mission - SpaceX",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTFBiQUk3UGNxTlZuMl92Qml4aU1Ob25ZRU42bEEtTnhuY0dENm1WZVRyQUhRMzFlRTUtV3JPNC02YkE0aWdnVTBWZ3JseFdLUQ?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-dbc6eec8b3c2feda73e43b5eaa47e2f56f8110180fe5c2593d4adf470ea2c44c",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T05:57:30+00:00",
+      "title": "KAIST unveils physical AI strategy to take robotics beyond humanoids - The Korea Herald",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiV0FVX3lxTE5zNzVnQ1loTU84SWhqTVBfQWFoM2ZfeFNCQzhWYnZQVmpLRmdZN05KSDcybTJGU3FSQUxaaVpzaEdSRzhRSkhvci1taE53MUdqdmNmbVZNVQ?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-82f40236313e95ff3f60bbf26e680dd236af5c56072844fc76ccebfbf331e18c",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T05:57:00+00:00",
+      "title": "Nvidia, Intel name Korea hub for physical AI and open ecosystem growth - CHOSUNBIZ - Chosunbiz",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiekFVX3lxTFBRX1JzLTRHcFZNblU3TzB6YVJsamFIZFhuNklZNnlsWHJSMVhMaklnZFRZWmpJdkRKRDJISF94cHZpd1ZHTlZLSTlhZ253VWkzX1lMSEQ3bEpYNEVteWl4QWxpa0NlWDNxMWpZbVZUOUxGczlWZS1lWktR0gGOAUFVX3lxTE41dXpPc0pYMkphaWJhWUVweWZ2X1UzSGdHcENYU1ctRDdubW1UQVJGelVFMWVJRVRvWC1DbERJME9IbUtpdnczQmdVNEQxRDBFM2pSUmpOaFZLZHl5NUMtY0haQ3ZSTjJWbnp4SF9mNmN2S2NTeFNqeTN3TWM0TzNfOUxvN1BXZ2RJblEtS2c?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-68242b46c1f1837f07501eb4f68fc32735faf9324f34545b75d641592cfa5402",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T05:46:58+00:00",
+      "title": "SpaceX plans Gulf Coast cargo hub in Louisiana - Splash247",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMieEFVX3lxTE9VQWRWdV9NTVctLWFyR1lCcjNHY0xTbGlIYkliYW9PU2FtTjViZ0s2NzJmSngtTHU2ODZ2bE8xVmhVMno0UE9oMmNRTUF2QS1ZMjBXdjYtUWROLXhQTTJtU0s3b1dOTXhCd3BWOUtHNWdRWVVlR3JKVA?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-2d073ee6fbd9dc722a8b859d28861d7dc2cf1e1308b470be7a683141882951e3",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T05:43:16+00:00",
+      "title": "Krafton's Robot Demonstrates Physical AI Capabilities, Highlighting Korea's Growth Potential - 조선일보",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxQbGZxRGQ3RV9jVjdQTVNrTThMMEpXMU9Wb0tzZ1JfMGNNMDJLNG5iZWprQXNCNnZRc0RnX3FDMk1CV1hpWGxFbkI5SmpvSGViVTlKSnFFYXFxYWJTUEtNU2ZNS3AxQ28yVExvVjF1a0xaMEo0VTl3cm9EcUNNVjBtemRFNFpkWk5i?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-5363c4714cc8a05d5e3713baf4c1ff1a791213b46d4019d3db1448a0721923e5",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T05:43:10+00:00",
+      "title": "Nvidia says South Korea could take over Taiwan supply chain role in physical AI era - 디지털투데이",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxPNG9xY3B2ZXRfMEVEamcwUEhGZGNpQVo0dUlvamMycVFtTzNxVVlZamlwSzFXVVYzVTMtamFlbU1FaXR1VzY5MVRKRTFuNzFQT1EyZTFxZHktaHRLLXczdHU2UVcxd0VTWm9YTXM2VWJfWmR0SjZmQ2kwWDVTSGQ4emFpZjctZjFjZ1p3dnhHVWdBcnRuRFNSbUktS1lySVhGTFNWSXdDc0NuMjdzRGxTbjYxSEhUWlpmNmlBLWN3?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-d0855a798c641b3196f38fcd67972cb9ff2100f6b43e0948b266d588086b2344",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T05:26:36+00:00",
+      "title": "Elon Musk, Delta Airlines and a Feud Over In-Flight Wi-Fi - The New York Times",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMihAFBVV95cUxPTHZWUk8wMXNWMnEzdDlqQjIxdHZtZ0FlQkxMcC1PUjZIQ0hZUHYtcnQ3ZEFTeE5QbXBmeExVTHZxTUdvdzN4TUNUMW5xRVRaMWNWVUk1TWlreGxpaFBBVW1FLXI5MktHSEw0UGdJZUJBbzJMb3RBdEZ5UzdmTU41eFhsaUU?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-2c49149801414a9c7d9688942efaad156cbbff2282681fd9808f3c2bb63fac27",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T05:20:52+00:00",
+      "title": "NVIDIA's Reported $1B Figure AI Investment Prices Startup Above Goldman Sachs' 2035 Humanoid Market - Tech Times",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMi5gFBVV95cUxPSnJTSE1RTElWRGlfU18wVmpQWUVvRk94LUVsTl90WnpwRFhIUEZHRUMyZUFaMi0yS3h3WGFGekctRGllZ1NDb2NhUGVIXzdMamgwdldGN0F0M2FJYVRqQkFuSWdaNXRVTzNHNUk4dGE3NTFJM25JQjRfUExqcVhCcUsyQmtnd3QtQU40ajF6V01HQ01IblBFYVkxd3l6YTZDYzhDNE1YLW1IcU1ITGFUR3VhdHcxQzNNYmJpRTdJUFEwMDJ2dDE3b0JOSDNla084U0JoWnMwOGJvQ2lNVXplenNHaXljZw?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-75c95cc9cffac9fb14554736f93dec11a1601877d05955e22c27eb36360eaeb2",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T05:13:20+00:00",
+      "title": "Is 80% Upside for SpaceX Hidden in Starship? Morgan Stanley: The 15th Test Flight Will Be a Major Catalyst - Moomoo",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxOcklvajVwSFFsUlNFbHJXZEdpNWx4ckxVREFNUEFXUlNsWm1raWhVc2MwZ2dUNF9wQnE1SklWT21aMlpRTWFWN05ad29ZSXFDV25CNVZ0SU5zWFJ6N193N0VGcmhtT0tEcTZ2VW5BR05TMDd4eS04UTc2dEFfeVZYRXhvQ1NwcFQtNGI4WlBuX0Nocmg0bFpsR0xXWnpNa0tPWjZn?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-eaa87781c8cd6b399257af0b92e7e00cb949dd7c02b34ce1d8375d5dde585577",
+      "publisher": "nvidia-robotics",
+      "source_date": "2026-10-13T05:00:31+00:00",
+      "title": "From Earth to Orbit, France’s Ecosystem Delivers Agentic Computing at Scale With NVIDIA",
+      "topic_ids": [
+        "physical-ai",
+        "robotics-and-humanoids"
+      ],
+      "url": "https://blogs.nvidia.com/blog/france-ecosystem-agentic-computing/"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-80d081f8ec8d83eb507209cc883aa9c8d83a19d4f5eb8126261e6f7053aeedda",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T04:57:52+00:00",
+      "title": "Is SpaceX Stock Cheap? 1 Wall Street Analyst Thinks So. - The Globe and Mail",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMizAFBVV95cUxOMWRyR3RWM1BoQ0pQOHpFcU1kUk01UDZfV0ZWczRKN2M4a0x5aXJ2Vmh2UkZNcnhvWXE4NG94bFYxSURJUDJUd0ZPNkJ5ZWxEVHoxckdoR2tTMDBCa2ozWDdRb01WcVFwQVRueF9ZeWI3bDFuTnlId1JFcXR5MDg1Wm1BWHMzU2dlaks4UlE0eW1xU21acjN5TFNBcGJFZjZQWG1rNTh2YjJGbjVSSlJMSURvZFJQbHo1Z2VZM0hJUDZEY1ctS2l1cHlYVW0?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-c19945d94c1ecf53bc522aaf4867981e12c7d31c0716ac383c5213bea9316310",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T04:49:37+00:00",
+      "title": "Omron’s $675M OnLogic deal moves AI from the cloud to the factory floor - Cryptopolitan",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxNeF9aUElwemlYWnlvQUp3RzNvTl9iMmU2cjdVdW9BNHNEVzRmRzBvdkZyYVhFd2dCMGRpSlk4WFhMRmxqUDM5bGNnREg1YVFTeHUyY3FOR1VNUFQtcnpyRm5xMENmQ0N0MjB6bjk5Wko2aDdNN1puZTN4bVNKWldmdlVrYXVqbThEcjlMT3dGTFJMNmZXNXlFXzlxbDJFQzNaRmc?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-a61064ad23a4f35162d0994899fe752b129d38cbb82f4bcdefbf169ebbc38ad6",
+      "publisher": "robotics",
+      "source_date": "2026-10-13T04:46:28+00:00",
+      "title": "Why Hyundai’s Atlas has four fingers — and Tesla’s Optimus has five - The Korea Herald",
+      "topic_ids": [
+        "physical-ai",
+        "robotics-and-humanoids"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiV0FVX3lxTFBfV2RaOVlqMERaNGlxOWoxb0JnTV9lLUsyWk1QOEJvT2xWTVBOZWpoUWdxY09aQ3JkYVRuRkF3LXMxZndCejA1c2JCTXdfNzh0Z0ZkZDBpMA?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-520a6debd01431db446b240a31a6a9134b5be5f9c4a3ce3845da550b80a31f77",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T04:38:52+00:00",
+      "title": "Kazakhstan Can Build on Its Strengths, Advance Digital Entrepreneurs, Says NVIDIA’s VP - The Astana Times",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxPd1E4UkJBcmQ1Skk3U1FObGFfTVM3TF9iYjRrU3RoWGdHeHRvS3BNbUMtM2NOdVdnQ0I1WkdBa3VET2xFMlV3cEJIN3pvYjR0SllBMDkzc2h5TnhaQVJoRXFGUm5vVnJDTVBrNnBHTXU5T2pYTDJNbGh0Y3hVWndmd1hycnlyWURFMmdRbTJiX3lJOTd6eXhVcmRaLVoycm55SnpPcnljMFlHRkE0TEYzWVF6YWU1N2s?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-045dab73dc7f92afd1a2b4bcbfbeb629f2ae69522a281b4794a2edc4bd549648",
+      "publisher": "physical-ai",
+      "source_date": "2026-10-13T04:30:48+00:00",
+      "title": "What’s next for physical AI: insights, macro trends and projections - EY",
+      "topic_ids": [
+        "physical-ai"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPWWJ2cmlRaGhNajVHVWx4QkFCZmtZU24weF81RUtXTHZ3UVdYa0RlRjhfaE1KY3ptQlNOOWxSSkE5SnRQS1Bfc1hwd1d3Y0ZkczRpZ0p0WThyWkd3NTlMbDF1VlRUZlF2Y3p1aDB5N2FpNE01dmo4R0FaSmQtTm9DYUQzTldRMmNCTmZrY2lmR1M2MGFNa25iMWNTYWYta3ROZnVRckFQQzU3STZPNU56UWd3?oc=5"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-q2-2026",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-08-10",
+      "source_type": "issuer_ir",
+      "title": "Second Quarter 2026 Financial Results",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-announces-second-quarter-2026-financial-results-posts"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-synspective-20",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-30",
+      "source_type": "issuer_ir",
+      "title": "Rocket Lab Secures Largest-Ever Electron Commercial Deal: 20-Launch Contract for Synspective",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-secures-largest-ever-electron-commercial-deal-20"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-news-sep-2026",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-30",
+      "source_type": "issuer_ir",
+      "title": "News",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-neutron",
+      "publisher": "Rocket Lab",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-14",
+      "source_type": "issuer_product",
+      "title": "Neutron launch vehicle",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://rocketlabcorp.com/launch/neutron/"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-iridium-finance",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-15",
+      "source_type": "issuer_ir",
+      "title": "Rocket Lab Fully Funds Iridium Acquisition, Including Completion of $1.94 Billion ATM",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-fully-funds-iridium-acquisition-including-completion"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "spacex-prospectus-2026",
+      "publisher": "SpaceX",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-06-05",
+      "source_type": "issuer_filing",
+      "title": "EU Prospectus",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://content.spacex.com/cms-assets/FINAL_Documents%20and%20Updates/SpaceX%20-%20EU%20Prospectus%20%28Approved%20by%20Bafin%29%20-%20June%205%2C%202026.pdf"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "spacex-reusability-2026",
+      "publisher": "SpaceX",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-15",
+      "source_type": "issuer_update",
+      "title": "Starship to Orbit",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.spacex.com/updates/reusability"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "spacex-starship",
+      "publisher": "SpaceX",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-14",
+      "source_type": "issuer_product",
+      "title": "Starship vehicle and capabilities",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://new.spacex.com/vehicles/starship"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "faa-boca",
+      "publisher": "FAA",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-03-10",
+      "source_type": "regulator",
+      "title": "SpaceX Starship/Super Heavy at Boca Chica environmental review",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.faa.gov/space/stakeholder_engagement/spacex_starship/environmental_review"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "faa-license",
+      "publisher": "FAA",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-14",
+      "source_type": "regulator",
+      "title": "Starship/Super Heavy license review process",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.faa.gov/space/stakeholder_engagement/spacex_starship/license_review_process"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "faa-starship-project",
+      "publisher": "FAA",
+      "snapshot_as_of": "2026-10-12",
+      "source_date": "2026-09-02",
+      "source_type": "regulator",
+      "title": "SpaceX Starship Super Heavy Project at the Boca Chica Launch Site",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.faa.gov/space/stakeholder_engagement/spacex_starship"
+    }
+  ],
+  "task_id": "physical-ai-space-gemini-summary",
+  "topic_id": "robotics-and-humanoids"
+}

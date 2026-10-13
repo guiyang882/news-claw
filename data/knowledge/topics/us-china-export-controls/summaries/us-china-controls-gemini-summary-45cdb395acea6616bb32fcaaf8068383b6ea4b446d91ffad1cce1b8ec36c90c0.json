@@ -1,0 +1,304 @@
+{
+  "draft": {
+    "packet_sha256": "c89d74c89bea25894c75ff644568ff6cd3dd77ffdea5c4d0389ecfc1cccea342",
+    "reason": "依据原始数据包保留三条归属明确的标题线索及来源时间，删除无证据支持的解释、推断和确定关系；未核实标题所述事件或政策。",
+    "status": "ready",
+    "topics": [
+      {
+        "entities": [
+          "Quartz",
+          "Thomson Reuters tax",
+          "The Brussels Times",
+          "Super Micro",
+          "Nvidia",
+          "中国",
+          "欧盟"
+        ],
+        "evidence_gaps": [
+          "缺少政府官方原始文本：未包含美国商务部（BIS）或相关监管部门出口管制规则的官方文件，无法核实是否存在新增、收紧或放宽的具体条款、生效日期及实体清单。",
+          "正文与细节缺失：所提供的来源均为RSS新闻标题摘要（headline_discovery），缺少新闻正文与司法文书细节，存在样本偏差。",
+          "企业合规与应对措施证据不足：未见涉事企业或产业链上下游在许可证申请、合规审查或供应链替代调整方面的一手事实证据。",
+          "输入条目存在主题偏离：数据包中多数条目涉及中欧贸易协商或非相关行业动态，无法支持美国对华出口管制核心问题的解答。",
+          "Section 301标题未提供排除项范围、适用国家、商品清单或准确到期日，无法确认其与本主题的具体关联。",
+          "source_date只能作为新闻线索的来源时间，无法确定认罪、政策公告、生效或谈判的实际日期。"
+        ],
+        "inferences": [],
+        "observations": [
+          {
+            "boundary": "仅记录Quartz标题中的说法；认罪事实、金额、涉案产品、适用规则及事件日期均未由正文或司法文书核实。",
+            "claim": "Quartz的RSS标题称，一名Super Micro承包商就向中国走私价值25亿美元的Nvidia AI服务器认罪。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/f48eeadbe227eab68ff5be5620f80a73bb0306e9e6471c87af4ddb59a11f6631.json",
+                "source_id": "doc-f48eeadbe227eab68ff5be5620f80a73bb0306e9e6471c87af4ddb59a11f6631"
+              }
+            ]
+          },
+          {
+            "boundary": "仅记录标题所述月份；标题未说明排除项的具体范围、适用国家、商品清单、准确到期日或延期程序，数据包未提供官方通知。",
+            "claim": "Thomson Reuters tax的RSS标题称，Section 301排除项于2026年11月到期。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/2148cb26005dfdf5d62211f084ba6593eb6feb2b1de9418f7ca340a79289f885.json",
+                "source_id": "doc-2148cb26005dfdf5d62211f084ba6593eb6feb2b1de9418f7ca340a79289f885"
+              }
+            ]
+          },
+          {
+            "boundary": "仅记录标题的议题表述；谈判内容与结果未核实，也不能据此确定美国对华管制规则发生变化。",
+            "claim": "The Brussels Times的RSS标题将关税、稀土和出口管制列为中欧贸易谈判议题。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/41e4a4ed713fdfbd032560a627c60e9dadf58ff94743ded28b0a28476c562447.json",
+                "source_id": "doc-41e4a4ed713fdfbd032560a627c60e9dadf58ff94743ded28b0a28476c562447"
+              }
+            ]
+          }
+        ],
+        "relations": [],
+        "summary": "美国对华进出口管制主题下，数据包仅提供RSS标题线索。Quartz标题称一名Super Micro承包商就向中国走私价值25亿美元的Nvidia AI服务器认罪；Thomson Reuters tax标题称Section 301排除项于2026年11月到期；The Brussels Times标题提及中欧贸易谈判中的关税、稀土和出口管制议题。数据包未提供新闻正文、司法文书或官方政策文本，无法核实上述说法，也无法确定适用规则、政策变化、受限范围或企业应对。",
+        "timeline": [
+          {
+            "boundary": "时间取自source_date，仅作为新闻线索的来源时间；不能确认为认罪日期或执法日期，标题说法尚未核实。",
+            "event": "数据包以此来源时间记录Quartz关于Super Micro承包商认罪及走私Nvidia AI服务器的标题线索。",
+            "event_date": "2026-10-12T12:47:14+00:00",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/f48eeadbe227eab68ff5be5620f80a73bb0306e9e6471c87af4ddb59a11f6631.json",
+                "source_id": "doc-f48eeadbe227eab68ff5be5620f80a73bb0306e9e6471c87af4ddb59a11f6631"
+              }
+            ],
+            "state": "headline_lead"
+          },
+          {
+            "boundary": "时间取自source_date，仅作为新闻线索的来源时间；不能确认为政策公告日期或生效日期，标题所述到期月份尚未由官方文本核实。",
+            "event": "数据包以此来源时间记录Thomson Reuters tax称Section 301排除项于2026年11月到期的标题线索。",
+            "event_date": "2026-10-12T18:47:57+00:00",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/2148cb26005dfdf5d62211f084ba6593eb6feb2b1de9418f7ca340a79289f885.json",
+                "source_id": "doc-2148cb26005dfdf5d62211f084ba6593eb6feb2b1de9418f7ca340a79289f885"
+              }
+            ],
+            "state": "headline_lead"
+          },
+          {
+            "boundary": "时间取自source_date，仅作为新闻线索的来源时间；不能确认为谈判日期或政策公告日期，谈判内容尚未核实。",
+            "event": "数据包以此来源时间记录The Brussels Times提及中欧贸易谈判中的关税、稀土和出口管制议题的标题线索。",
+            "event_date": "2026-10-12T21:20:55+00:00",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/41e4a4ed713fdfbd032560a627c60e9dadf58ff94743ded28b0a28476c562447.json",
+                "source_id": "doc-41e4a4ed713fdfbd032560a627c60e9dadf58ff94743ded28b0a28476c562447"
+              }
+            ],
+            "state": "headline_lead"
+          }
+        ],
+        "topic_id": "us-china-export-controls",
+        "used_source_ids": [
+          "doc-f48eeadbe227eab68ff5be5620f80a73bb0306e9e6471c87af4ddb59a11f6631",
+          "doc-2148cb26005dfdf5d62211f084ba6593eb6feb2b1de9418f7ca340a79289f885",
+          "doc-41e4a4ed713fdfbd032560a627c60e9dadf58ff94743ded28b0a28476c562447"
+        ]
+      }
+    ]
+  },
+  "generated_at": "2026-10-13T13:42:10+00:00",
+  "input_fingerprint": "45cdb395acea6616bb32fcaaf8068383b6ea4b446d91ffad1cce1b8ec36c90c0",
+  "recipe": "reviewed-topic-summary-v1",
+  "review": {
+    "approved": true,
+    "boundaries_preserved": true,
+    "facts_supported": true,
+    "issues": [],
+    "packet_sha256": "c89d74c89bea25894c75ff644568ff6cd3dd77ffdea5c4d0389ecfc1cccea342",
+    "reason": "模型复核通过：概述及逐项表述均限于归属明确的RSS标题线索；引用的source_id/locator配对、主题归属及来源时间与数据包一致。已保留缺少正文、官方文本及样本偏差等边界，未将来源时间当作事件或政策日期，未推断规则变化或公司影响。",
+    "references_valid": true,
+    "summary_sha256": "cfadc0790b4f6f3bba2a99bb509c2b3679ec61bea70fef37465583f3dbfe033f"
+  },
+  "source_packet_path": "data/runs/6e88190830f70772a2f9323ac2b59a0c/source-packet.json",
+  "sources": [
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-ac1b77b5ecb0c50331a40eb9140848203484e6eeab55604ad69ef789fb664f70",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T22:45:56+00:00",
+      "title": "Stelar Metals Limited (ASX:SLB) Drilling Started at Hill of Leaders Tungsten Project, NT - ABN Newswire",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxOeXQ4QjdrSlhxQ2ViZmpuRV9hOVR4c2Rpc1FzRXNRXzY1NEplMnhsSi1rbmxKSnlHdTNrLWxlX1N4WTBieUZoWkk5N0xoUFpINW02UFVsUWVHSWtoNTRwVTQwbU5zZlJFd05GV0hzWEp6ZUgyZXBwRnYydHNmZzRLandQazg4WFJPV3owV2Z1NUNSQWZLV0hNTmNmYngzeE5yWWRTUDl4OXdnZ1FVbDg1TlVpVFVYQTV1aG40U3hXZm5Mc3pOdVFzbE5LUXhMMDg4?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-41e4a4ed713fdfbd032560a627c60e9dadf58ff94743ded28b0a28476c562447",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T21:20:55+00:00",
+      "title": "EU-China trade talks grapple with tariffs, rare earths, and export controls - The Brussels Times",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMivwFBVV95cUxPd3JHME9YUnBPM3JCdFRfVDBFbUlVTkVhbm1qQjd0Wkd3VFdKd2Rsb1dWVGRnNjFLZGYzY05oT0RsWGxiclVCRlF2cTc5Z0hJMmxuQUd1b0lIdXdOa2x1QVltWUt4RDdUZkItWUF6azV3QjZZWWo3SmF2OWw0UFVsMnVfU0U3bkNHNGNjMHRkaTZhY3BoTk9GcjRydHNid0hSeXNCNE5fZ1lxVDRiMm5Ed2FVZnF6eDFOYXhzNG4tcw?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-2148cb26005dfdf5d62211f084ba6593eb6feb2b1de9418f7ca340a79289f885",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T18:47:57+00:00",
+      "title": "Section 301 exclusions expire November 2026 - Thomson Reuters tax",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiekFVX3lxTE55TFlsa1pMQVRsZHlrU0FrUEFwdnNrdGNrU19yZFZ3TXA5NVQ4UzUyR0hJTkNQTVg4eWJTY0s5X1REakk2d19zbF83dXl2MGVSX0NOYkh1UGo2NGNrR05RbHliYy05TkZVMGRITlVFMmowVGo0YWl0M2t3?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-1c89870e9e61a089a9002f0fd5f184a2efe0fccf188995c3504aa612738bed60",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T18:12:53+00:00",
+      "title": "China-EU trade deal challenges the dangerous logic of protectionism - BLiTZ - Fears None But God",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxQM3I4MTg5R21aWG4yOWxPMkFlbnB4VTNBUExTY0dEWHRtdFo2YkRkZ2hMTlR4ZXlMZTNYMHFPeTNlWjFDOFRwUjNzbG83QmQ5bEdkT1ZxUXpzcDdZbXNGQkV6MEVJeGpmRm5sVldXWXYyUnFXT3JXUUZmNHhiTmg2OWhzaDNhNlN4TFh6bU9TNE91Snhhc0VYWmlHa01STjZEcXdMRXpn?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-8e43ca01871f1d2154ccf79d338da96effa67a3c4505684cd7fc1778c89b7e1b",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T16:07:49+00:00",
+      "title": "China agrees to half hybrid exports as EU secures tariff savings - EU Perspectives",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiekFVX3lxTE9VOWFjU21NY0FoNVc1QnRKd3E1dHhOcEF0eHJNR3Z4MUxPRkRndzM5Q3V0YnZIM3hoOTBrM3pmTmNXM0VCVFpsWjdKSllGOTJPa2F3cXB6bFNlQ2pMNGNGSW5NYS1hc1lIc2RHWnpISmJYdnhKZUVnU3RR?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-fd9553d0aedf70c077fa6972d89a1548b0d0dff9b0c1e52e119fe16043a38c03",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T15:16:11+00:00",
+      "title": "A first step, but no real rebalancing in the European Union’s trade deal with China - Bruegel",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxOenpTWDYzYjQxQWk0V3dpMTZGSy1UTncxOVF1Q1hkby13QVU3YnN5eVdsc3drc3BuWENZX1NSbHpCcTFJLWxOWXR6NmVLNmVrNmV0VlRJRC1YNURYWlRVVnpDa28wUlJjMk1HYTV1WldVZ05XeC1oZXlPWXhDRWlLblZzbGNvTEZOeFg5bDJNYllPUVU4NkRKbXhlT0JVN1JpX1E?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-5f93a41bbe0677c80c34fa178edcfaccb33bc44935346813017bbcdaa0ad2692",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T14:54:18+00:00",
+      "title": "UPL shares jump 5% on speciality chemical business prospects - TradingView",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxObE80ZXdBRDBaMEdMV2xEc0JGR1ZaekJZNEd3bm01UjA0YVkzMHB4ZmdTLWctdGNJTWcyU2dKb0t6MUlRbm5CWjRjcnQ0X2pSbC1tWFh1bkVJZjQyZHNiSVMyVTJsaTNVV1NZbGFUZDRsRVU1Z283dFJ3NHdxN2hUVk5YZFpSWGFUeE81OW1vcnVFNENiNmx4Y0pweTNYWFE4cVgwMTNjczc2Z3l2VVlMNV9CamdzOUU?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-9ad38c3d513abc4c5bb55dc13381d77712a8c5bb15d338ebf1bb55b85f1a338f",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T14:02:18+00:00",
+      "title": "Global Plastic Waste Trade Falls, but OECD Exports to Developing Countries Rise - The Policy Edge",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxQa1ZYUGZuMnBSdmYxVlV1TjRheF9xQjBWdWJIOGsxbkV2REltMzlUZFV5M0Nhd3gxdzhLaWxIZzRUa0NWMzlwbkdoMTBrY3QxSUNlbnhtc09lMnJ4aWZLQWEyRWl4eVVVaEtmVnlKVGN3RllQNWpqQUtpMW5BWl85U3M1NTVhcFlrTC1Rcl84enhiTWpzMjI3bjJBd1RWUFJ2akFJekY2ekpvZw?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-f48eeadbe227eab68ff5be5620f80a73bb0306e9e6471c87af4ddb59a11f6631",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T12:47:14+00:00",
+      "title": "Super Micro contractor pleaded guilty to smuggling $2.5B in Nvidia AI servers to China - Quartz",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMihwFBVV95cUxQOTRLZFJhaUh6NGFhdFVBekhsZjVoTW15NDREWFYyZ1RXTTJhRnBycUFqejdmODNHOFNkcUtfY3ptN3hRSTZiS1RSaEthTkQzekV6WGJtWXk3OC10MENsWXNRdUJ0MTI3eENHNVI1clJfM1BGS3RrOVZRaUJfT2hvcFl1OC1xZUU?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-f34b94ad1b22e094d408122edaf6bc6d9660d984f0ae767e1c2921145aa1f5cb",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T12:10:01+00:00",
+      "title": "India Rare Earth Supply Chain Vulnerability Explained - Rare Earth Exchanges",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMihwFBVV95cUxNVGk0TU9iQTBJcmh1VWNPM0lIOU1Ob0NabkRlMmRBMG5YbXRKS2ZnaUZGMXQ0bFExX2VHNnEtQjlqSU0xOUJuMHdXQng2LVBPT0FPYy1ya1Y4MzFzUkppaXp5UzlWSUFzdVp5amQtb1haTldueVl0b2FXdUpTTWV4NXpHU1ZFUVU?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-6091c50970823983a6995c7403cdfb9daf494821439d4f4a8b89796711582fd5",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T11:06:06+00:00",
+      "title": "The EU-China trade and investment understanding: a welcome buying of time - Bruegel",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQUW1mOUdCWWI5aG1JRE9IZDhuZW9vZkxQZ2o0eHh4OTZsbTBzdERWR1dZdkxiSjkxUGxuR1pXNjh1WFJ2M2MwUF9iRXFic2V1UjJTT1NHdnA1NnNtSnZnQ0pua05ndTBzRnktM20zQkhtVXE2dXdXTGpDZEg5X0FaYVBDR2dyZWxiVFNZaWx1YzdiM0wxaFJOVHlubFpZaWxza3c?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-627dab8c5c12afbe4e2907bea764ad7b726efae07a5427bd4d15d2f6b61af969",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T09:39:00+00:00",
+      "title": "China, EU reach breakthrough consensus on Hybrid and EV trade - The News International",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxPR0JWR3RBaXpuN2ZNLWVfb0hacFVPcmp2RWpQWUVaNmE0ZEV2UlRPZF9xcWhpWjFyZ0xsNmQ2ajBySkV6OVJBSlRqWUQ4d2lRTUZ2dHBOUXJXZVFvWXVLTDRYRFRGcGtBMlJJX1FhRFBDNlpaM3V0TmRCWGJ6b1V1emdnTFVVemtGWjBOallnVzZvWEwtVjd3NjZfLVdWRVZKS01FTdIBoAFBVV95cUxQS2xUek1XZUktWV9QQlZJcU1PX2JZbTcxM1pSM2VlMldFYjl6QlptUG56cURPN0I4ejZONHA2cnQ5NDh6QUR6WEMzMmhkWDl4OFNPaXVoWnhBa3dYWXZmdzhuTkgwSXVYWmszdkE3ckk2UnkwWFFrQUFBSklNY3FVdzk0WUFzY0FwN2ZKZEJnNWdla2ROVEFEOWVOWWxpZUNs?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-265b80625abdbd9f600fb51317ee1bff0af9c00d931a4f69b8785e09e5089b03",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T09:29:53+00:00",
+      "title": "“Trump singled it out for praise”... Choi Yun-beom’s 11 trillion won move at Korea Zinc: What’s happening in the U.S.? - 매일경제",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiU0FVX3lxTE9fTEg0ODI1QklxYlVxWF81ampzVVh3dmtMWERHWllOYlVnQ2hIVGp0ZGJwYUpSYlota1dVQUw0NzhnUEpwXzluSDU0dlZoRVgtWDQw?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-6843f7dca7f8e5aee9fdded4a32f67be4b499190d312f28defee64e2bcc6cf01",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T09:14:46+00:00",
+      "title": "China and EU agree to maintain stable trade ties - safety4sea",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMifEFVX3lxTE82LTNyekwwQWR6RHRITnozMUVzMzExVzVVMngwODF5NlBRSFoxRlZ6cThBMlRrclF5MzFMSDZZa3B0OTlkb2RYb0NQZzN1X2diX1piZkNGWHRGeEVBZWxUTDFYLTFKT0d1Wl9vSTBNOTFiZUl2SW9udVZYYlQ?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-f98c3d95477454217f3ca896342fd413020ad397f0386cffd96acc8eca33e1ca",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T08:36:10+00:00",
+      "title": "Xiaomi Pad 9 Gets BIS Certification in India; Redmi Pad 3 Spotted on UAE TDRA - My Mobile India",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxOQTd3aGpHSTZxUG05aERlZEcyNS1NUVJvRkNVbndsRjVKWW5Sc015T0tUZVk1allXcW1mN3p2dm1qZm5qMGNMeDI0ZTh2bFVHdmpiTmt4SUFwUGNtR2hmaldWSjlZUVdINzNMNTdyUGE3WDVaeG9PZ2JicUlFNktNeHpFNFBEUEZXNllpMkJUeGFyeFBDS0prQ1FfUC12cnE0NDV3TzlMSW45NFk?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-66bc46df9645711aa2d083e1f3b0c9c759e03c666ddfad790eb294646d844b72",
+      "publisher": "us-china-trade-controls",
+      "source_date": "2026-10-12T08:25:07+00:00",
+      "title": "China agrees to half EU hybrid car exports - China Economic Review",
+      "topic_ids": [
+        "us-china-export-controls"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMihgFBVV95cUxPRUtPV29DNC1wcUtpQktGaE84ZzJFX1FOMFR4cEJia2ZFSEY0SzRUT2xQbWxfMmRycHQ0LVNHV1FmeEJtY2lSNkdveHpGdDNJdFROUTFDSnFGU3RxU21YSlM4TFI4NFZXeHdvaGwtckEtRm5SNld6SFdXSWItUnkwR0ZXRk96Z9IBhgFBVV95cUxPRUtPV29DNC1wcUtpQktGaE84ZzJFX1FOMFR4cEJia2ZFSEY0SzRUT2xQbWxfMmRycHQ0LVNHV1FmeEJtY2lSNkdveHpGdDNJdFROUTFDSnFGU3RxU21YSlM4TFI4NFZXeHdvaGwtckEtRm5SNld6SFdXSWItUnkwR0ZXRk96Zw?oc=5"
+    }
+  ],
+  "task_id": "us-china-controls-gemini-summary",
+  "topic_id": "us-china-export-controls"
+}

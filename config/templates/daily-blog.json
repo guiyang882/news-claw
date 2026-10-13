@@ -63,7 +63,9 @@
       "max_legacy_headlines": 18,
       "max_snapshot_age_days": 14,
       "company_pulses": "/mnt/quant-state/quant-web/company_pulses.json",
-      "news_timeline": "/mnt/quant-state/quant-web/news_timeline.json"
+      "news_timeline": "/mnt/quant-state/quant-web/news_timeline.json",
+      "max_reviewed_topic_summaries": 5,
+      "reviewed_topic_lookback_days": 2
     },
     "stages": [
       "codex_topics_and_outline",

@@ -11,6 +11,9 @@ flowchart LR
     C --> D[news_analysis.json]
     D --> E[Python 内容桥接与 Next.js 实时读取]
     F[本地缓存与研究材料] --> T[Codex 候选题与约20分钟大纲]
+    F --> K[Gemini 主题整理]
+    K --> L[Codex 校验与 knowledge 入库]
+    L --> T
     T --> G[agy Gemini 按大纲写双语草稿]
     G --> H[Codex 事实复核]
     H --> I[humanizer 修订与最终复核]
@@ -22,6 +25,7 @@ flowchart LR
 | --- | --- | --- |
 | 采集网站市场新闻 | stocks-quant-market-news-refresh | `web.news_collector` → `/mnt/quant-state/quant-web/news_timeline.json` |
 | Codex 分析并更新网站数据 | stocks-quant-market-news-analysis | `web.news_analysis` → `news_analysis.json`、历史快照和审计 |
+| Gemini 主题整理、Codex 校验 | us-china-controls-gemini-summary / ai-products-gemini-summary / physical-ai-space-gemini-summary | 本地归档 → `workflows.topic_summary` → `knowledge/topics/*/summaries/`；供博客选题使用 |
 | 候选题与长文大纲、Gemini 写稿、Codex 复核、humanizer 与发布 | daily-blog-agy-codex | 本地证据 → `workflows.daily_blog` → `blog/articles/`、`blog/manifest.json` |
 | 原 Codex 市场草稿（停用并保留） | stocks-quant-blog-compose | `blog/source-packets/YYYY-MM-DD.json` → `blog/inbox/YYYY-MM-DD.json` |
 | 原人工批准发布（停用并保留） | stocks-quant-blog-daily-publish | `web.blog_daily` → `blog/articles/`、`blog/manifest.json` |
@@ -40,6 +44,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | 每日博客 | workflow.planner、workflow.reviewer | gpt-6.1-sol | null，保留模型默认 | fast |
 | 市场新闻、科技史、公司脉冲、Optimus 复核 | workflow.codex | gpt-6.1-sol | medium | default，普通速度 |
+| Gemini 主题整理后的校验 | workflow.reviewer | gpt-6.1-sol | medium | default，普通速度 |
 
 ```json
 "codex": {
@@ -83,7 +88,7 @@ agy / Gemini 可使用 [agy 模板](../config/templates/agy.json) 处理本地�
 
 ## 平替范围与后续连接
 
-当前 12 项任务定义、10 项启用，时间调度由 Go 管理，旧 8 个 timer 停用。每日博客直接运行多阶段脚本，不调用旧博客 service；原两项博客任务停用并保留历史。小时级 Google RSS 入口已按用户要求恢复，详见 [恢复记录](operations/2026-10-11-google-news-restoration.md)。其余旧任务通过命令调用 service 适配器。systemd 目前用于托管 engine 和隔离旧任务执行。
+当前 15 项任务定义、13 项启用，时间调度由 Go 管理，旧 8 个 timer 停用。每日博客与三个 Gemini 主题整理任务直接运行工作流脚本；原两项博客任务停用并保留历史。小时级 Google RSS 入口已按用户要求恢复，详见 [恢复记录](operations/2026-10-11-google-news-restoration.md)。其余旧任务通过命令调用 service 适配器。systemd 目前用于托管 engine 和隔离旧任务执行。
 
 Go 核心没有 systemd 或网站专用分支。后续可将某项 `execution.command` 换成直接执行的脚本或其他容器适配器，配置相应恢复命令；切换前需重现该任务实际使用的权限、Codex 凭据环境、网络限制和校验规则。
 
@@ -93,7 +98,7 @@ Go 核心没有 systemd 或网站专用分支。后续可将某项 `execution.co
 
 ## 网站检查与分别维护
 
-全部 12 项存量任务与 6 类模板都声明 `workflow.website_runtime` 和 `website_delivery`。维护脚本读取前者的服务、命令、端口、检查页面及候选构建规则；后者区分本地证据、待审核稿、已发布运行时正文、快照和维护动作。Go 不会根据这些说明自动构建前端、重启服务或串联任务。
+全部 15 项任务与 7 类模板都声明 `workflow.website_runtime` 和 `website_delivery`。维护脚本读取前者的服务、命令、端口、检查页面及候选构建规则；后者区分本地证据、已校验主题知识、待审核稿、已发布运行时正文、快照和维护动作。Go 不会根据这些说明自动构建前端、重启服务或串联任务。
 
 | 变更 | 处理方式 |
 | --- | --- |

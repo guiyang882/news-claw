@@ -7,6 +7,7 @@
 | [agy.json](agy.json) | agy | 本机 agy CLI，使用已配置的模型 | 非交互提示词、模型选择、工作目录、超时 |
 | [publish.json](publish.json) | publish | 网站现有审批后发布 service 的命令适配器 | 草稿输入、网站输出、校验要求 |
 | [daily-blog.json](daily-blog.json) | workflow | workflows.daily_blog，多阶段博客工作流 | 候选选题、约20分钟大纲、Gemini写稿、Codex复核、humanizer、发布 |
+| [topic-summary.json](topic-summary.json) | workflow | workflows.topic_summary | Gemini 整理本地主题材料、Codex medium 校验、knowledge 入库 |
 | [website-maintenance.json](website-maintenance.json) | workflow | workflows.website_maintenance | Nginx / Next.js / Python 三层检查和分别维护 |
 
 模板均为完整 JSON，默认 enabled=false。初始化只读取 config/tasks/*.json，模板留在本目录时不会进入 SQLite 或被调度。文件是复制用的配置示例，没有变量替换、继承或自动渲染机制。
@@ -48,6 +49,8 @@ agy.json 沿用同一 Go 命令协议、SQLite task_runs、日志、超时和互
 直接 CLI 的 JSON 输出被 engine 收入 data/runs/<run_id>/worker.log；task_runs.status 依据退出码记录执行成败。JSON 响应本身不会自动成为 NEWS_CLAW_RESULT_PATH 的 result.json、knowledge 产物或网站草稿。如果需要结构校验、业务状态和正式产物，使用包装脚本解析响应、校验内容，再写 result.json 和对应产物文件。CLI 按用户要求使用 full 权限，发布仍须通过内容校验；网站发布继续由相应 publish 任务处理。
 
 ## 共同字段
+
+需要 Gemini 输出可用的正式知识产物时，使用 [topic-summary.json](topic-summary.json)。writer/reviewer 模型参数、材料范围、频率、full 权限和调用上限均在 JSON 中配置，默认 Gemini 3.8 Flash High → GPT-6.1 Sol medium/default。执行脚本解析响应、核对证据与哈希、执行 Codex 校验并登记 artifacts；失败不覆盖旧知识。模板仍默认关闭。详见 [主题整理流程](../../docs/topic-summaries.md)。
 
 - 调度：id、task_type、scheduler_engine、enabled、schedule_format、schedule、timezone。
 - 执行：execution.command、working_dir、timeout_seconds、lock_group；需要时添加 env、user、stop_grace_seconds 和 recovery_command。

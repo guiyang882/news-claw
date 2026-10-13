@@ -112,7 +112,7 @@ def validate_shape(value, schema):
             validate_shape(child, schema["items"])
 
 
-def collect_packet(config, root, db, day):
+def collect_packet(config, root, db, day, *, include_media=True):
     """Read cached evidence only; headlines are explicitly discovery, never primary facts."""
     sources = {}
     evidence = []
@@ -135,9 +135,12 @@ def collect_packet(config, root, db, day):
 
     with closing(sqlite3.connect(Path(db).as_uri() + "?mode=ro", uri=True)) as connection:
         connection.row_factory = sqlite3.Row
-        rows = connection.execute("""SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=?
+        placeholders = ",".join("?" for _ in config["topic_ids"])
+        rows = connection.execute(f"""SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=?
+            AND EXISTS (SELECT 1 FROM json_each(documents.topic_links_json) link
+              WHERE json_extract(link.value,'$.topic_id') IN ({placeholders}))
             ORDER BY COALESCE(published_at,fetched_at) DESC LIMIT ?""",
-            (cutoff.isoformat(), inputs["max_documents"]))
+            (cutoff.isoformat(), *config["topic_ids"], inputs["max_documents"]))
         for row in rows:
             topics = {link["topic_id"] for link in json.loads(row["topic_links_json"])}
             if not topics.intersection(config["topic_ids"]):
@@ -150,7 +153,7 @@ def collect_packet(config, root, db, day):
             if expected_hash != row["content_hash"]:
                 raise ValueError("Normalized document hash differs from SQLite")
             source = json.loads(row["source_json"])
-            sid = "doc-" + row["id"][:20]
+            sid = "doc-" + row["id"]
             add({"id": sid, "publisher": source.get("name", "Collected source"),
                  "title": row["title"], "url": row["canonical_url"], "source_date": row["published_at"],
                  "evidence_level": "cached_webpage" if record["record_type"] == "webpage" else "headline_discovery"},
@@ -192,9 +195,20 @@ def collect_packet(config, root, db, day):
             if sum(s.startswith("news-") for s in sources) >= inputs["max_legacy_headlines"]:
                 break
     # Repeated references share a source, and repeated records need not inflate prompts.
+    reviewed = []
+    if inputs.get("max_reviewed_topic_summaries", 0):
+        from .topic_summary import reviewed_context
+        reviewed, prior_sources, prior_evidence = reviewed_context(
+            root, db, day, config["topic_ids"], max_summaries=inputs["max_reviewed_topic_summaries"],
+            lookback_days=inputs["reviewed_topic_lookback_days"])
+        prior_by_id = {source["id"]: source for source in prior_sources}
+        for item in prior_evidence:
+            for sid in item["source_ids"]:
+                add(prior_by_id[sid], item)
     evidence = list({digest(item): item for item in evidence}.values())
     return {"version": 1, "day": day.isoformat(), "sources": list(sources.values()), "evidence": evidence,
-            "approved_media": presentation.load_media(config, root),
+            "reviewed_topic_summaries": reviewed,
+            "approved_media": presentation.load_media(config, root) if include_media else [],
             "policy": "Local cached material only. Preserve source dates, issuer attribution, uncertainty and headline-only limitations. No new web requests."}
 
 
@@ -218,8 +232,10 @@ class ModelRunner:
 
     def __call__(self, stage, prompt, schema, directory):
         global _model_process
-        if len(self.calls) >= self.settings["network_policy"]["max_cli_invocations_per_day"]:
-            raise ValueError("Daily model invocation limit reached")
+        limits = self.settings["network_policy"]
+        limit = limits.get("max_cli_invocations_per_run", limits.get("max_cli_invocations_per_day", 0))
+        if len(self.calls) >= limit:
+            raise ValueError("Model invocation limit reached")
         provider = "agy" if stage == "draft" else "codex"
         settings = self.settings["writer" if provider == "agy" else "planner" if stage == "plan" else "reviewer"]
         policy = self.root / "data/runs/blog-provider-policy"
@@ -301,7 +317,12 @@ class ModelRunner:
                     result = read_json(directory / "response.json")
                 validate_shape(result, read_json(schema))
                 atomic_json(directory / "response.json", result)
-                self.calls.append({"stage": stage, "provider": provider, "model": settings["model"], "finished_at": now()})
+                call = {"stage": stage, "provider": provider, "model": settings["model"], "finished_at": now()}
+                if provider == "agy":
+                    usage = envelope.get("usage", {})
+                    call["usage"] = {key: value for key, value in (usage.items() if isinstance(usage, dict) else [])
+                                     if type(value) is int and value >= 0}
+                self.calls.append(call)
                 return result
             finally:
                 terminate_model()
@@ -453,6 +474,8 @@ def selected_packet(packet, plan):
     scoped["evidence"] = [item for item in scoped["evidence"] if ids.intersection(item["source_ids"])]
     for item in scoped["evidence"]:
         item["source_ids"] = [sid for sid in item["source_ids"] if sid in ids]
+    # Summaries guide topic selection. Writing/review stages use the original evidence.
+    scoped.pop("reviewed_topic_summaries", None)
     return scoped
 
 
@@ -543,6 +566,7 @@ def planning_prompt(packet, history, settings, skill):
             "大纲必须依次展开读者利害与核心问题、证据或案例、机制分析、最强反论证与证伪条件、判断的影响和未决问题。"
             "各章给出具体论点、证据边界、中英标题和两种语言的篇幅预算。所有章节必须能追溯到所选来源；"
             "机制、假设和场景均标明条件，不能把缺少原文的历史快照或RSS标题说成刚核实的事实。"
+            "reviewed_topic_summaries仅供选题参考，不能把模型整理结果当成原始来源；所有论点仍须引用packet中的原始证据。"
             f"目标是每种语言约{settings['reading']['target_minutes']}分钟的实质阅读，不是通过重复、空泛背景或反复重述凑篇幅。"
             "遵守下列research-blog-editor skill以及输入的reading和planning配置，只返回规定JSON。"
             "规划适合本题的对照表与概念关系图，避免装饰性或暗示未证实事件顺序的图表。"

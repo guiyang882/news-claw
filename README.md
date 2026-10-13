@@ -8,7 +8,9 @@ news-claw 用于持续追踪新闻与事件：定时采集线索，积累主题�
 
 ```mermaid
 flowchart LR
-    A[采集与归档] --> B[候选选题与大纲]
+    A[采集与归档] --> S[Gemini 主题整理]
+    S --> V[Codex 校验与知识积累]
+    V --> B[候选选题与大纲]
     B --> C[Gemini 写稿]
     C --> D[Codex 复核与修订]
     D --> E[网站发布]
@@ -25,6 +27,8 @@ flowchart LR
 | 机器人、物理 AI 与商业航天 | Tesla、Rocket Lab、SpaceX 等公司的技术与产业进展如何？ |
 
 当前通过 Google News RSS 追踪主题新闻，并接入 Federal Register、Google AI 博客、OpenAI、Hacker News、NASA 与 NVIDIA 的 RSS 或 API。产品反馈的代表性与政策影响需要进一步整理；长文写作需要正文或研究材料支撑。采集器支持 RSS、Atom 和网页，可继续添加来源。
+
+三个主题分别安排 Gemini 整理任务，再由 Codex 校验来源、时间线与推理边界。通过校验的材料进入主题知识库，供每日博客选题使用；没有新证据时跳过重复调用。
 
 ## 任务如何组织
 
@@ -52,7 +56,7 @@ bin/news-claw tasks
 
 ## 添加与调整任务
 
-从 [任务模板](config/templates/README.md) 开始，已有采集、Codex、agy / Gemini、发布和每日博客五类模板：
+从 [任务模板](config/templates/README.md) 开始，已有采集、Codex、agy / Gemini、发布、每日博客、主题整理和网站维护模板：
 
 ```bash
 cp config/templates/crawl.json config/tasks/my-topic-daily.json
@@ -74,6 +78,7 @@ bin/news-claw serve --workers 2
 | 新增任务、调整时间与模型参数 | [任务模板](config/templates/README.md) · [任务配置](config/tasks/README.md) |
 | 队列、限流、恢复与运行命令 | [调度与采集](docs/engine.md) |
 | 候选选题、大纲、写稿与复核 | [每日博客工作流](docs/daily-blog.md) |
+| Gemini 整理、Codex 校验与知识积累 | [主题整理流程](docs/topic-summaries.md) |
 | 网站输入输出与发布接入 | [网站工作流](docs/website-workflow.md) |
 | 常驻服务与模型运行环境 | [部署说明](deployment/README.md) |
 | 数据结构与主题材料归档 | [SQLite](data/db/README.md) · [主题知识](data/knowledge/README.md) |

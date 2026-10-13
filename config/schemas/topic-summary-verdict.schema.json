@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approved",
+    "facts_supported",
+    "references_valid",
+    "boundaries_preserved",
+    "summary_sha256",
+    "packet_sha256",
+    "issues",
+    "reason"
+  ],
+  "properties": {
+    "approved": {
+      "type": "boolean"
+    },
+    "facts_supported": {
+      "type": "boolean"
+    },
+    "references_valid": {
+      "type": "boolean"
+    },
+    "boundaries_preserved": {
+      "type": "boolean"
+    },
+    "summary_sha256": {
+      "type": "string"
+    },
+    "packet_sha256": {
+      "type": "string"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 0,
+      "maxItems": 12
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}
