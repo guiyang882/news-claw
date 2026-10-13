@@ -18,6 +18,8 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
+from collectors.sec_submissions import parse_submissions
+
 import scrapy
 from scrapy import signals
 from scrapy.crawler import CrawlerProcess
@@ -250,7 +252,7 @@ class NewsSpider(scrapy.Spider):
         digest = hashlib.sha256(response.body).hexdigest()
         slug = re.sub(r"[^a-zA-Z0-9_-]", "-", source.get("name", source_key(response.url)))[:100]
         date = datetime.now(timezone.utc).strftime("%Y/%m/%d")
-        extension = "json" if source["type"] == "federal_register" else "xml" if source["type"] in {"rss", "atom"} else "html"
+        extension = "json" if source["type"] in {"federal_register", "sec_submissions"} else "xml" if source["type"] in {"rss", "atom"} else "html"
         raw = Path(f"data/raw/webpages/{slug}/{date}/{digest}.{extension}")
         meta = Path(f"data/raw/metadata/{slug}/{date}/{digest}.json")
         target = self.root / raw
@@ -271,6 +273,20 @@ class NewsSpider(scrapy.Spider):
     def parse_source(self, response):
         source = response.meta["source"]
         archived = self.archive(response, source)
+        if source["type"] == "sec_submissions":
+            try:
+                entries = parse_submissions(json.loads(response.text), source['cik'], source['forms'])
+                for entry in entries:
+                    self.items_seen += 1
+                    if datetime.fromisoformat(entry['published_at']) < self.cutoff:
+                        continue
+                    if self.items_emitted >= self.max_items:
+                        break
+                    self.items_emitted += 1
+                    yield {**archived, **entry}
+            except (KeyError, TypeError, ValueError) as error:
+                self.fail(f"invalid SEC submissions response {response.url}: {error}")
+            return
         if source["type"] == "federal_register":
             try:
                 result = json.loads(response.text)
@@ -378,8 +394,15 @@ def validate(task):
     if not sources:
         raise ValueError("collector.sources must contain an RSS, Atom, page or Federal Register entry")
     for source in sources:
-        if source.get("type") not in {"rss", "atom", "page", "federal_register"} or urlparse(source.get("url", "")).scheme not in {"http", "https"}:
+        if source.get("type") not in {"rss", "atom", "page", "federal_register", "sec_submissions"} or urlparse(source.get("url", "")).scheme not in {"http", "https"}:
             raise ValueError(f"invalid source: {source}")
+        if source['type'] == 'sec_submissions':
+            cik = source.get('cik')
+            if (type(cik) is not int or cik <= 0 or source['url'] != f'https://data.sec.gov/submissions/CIK{cik:010d}.json'
+                    or source.get('obey_robots_txt', True) is not True):
+                raise ValueError('SEC source requires its exact public API URL and robots compliance')
+            if not isinstance(source.get('forms'), list) or not source['forms'] or any(not isinstance(f, str) or not f for f in source['forms']):
+                raise ValueError('SEC source needs an explicit form allowlist')
         obey_robots = source.get("obey_robots_txt", True)
         if not isinstance(obey_robots, bool):
             raise ValueError("source.obey_robots_txt must be a boolean")
@@ -435,8 +458,15 @@ def main():
         if not connection.execute("SELECT 1 FROM task_runs WHERE id=? AND task_id=? AND status='running'", (run_id, args.task)).fetchone():
             parser.error("launch through the Go engine so the run has an owner and audit record")
     os.environ["NEWS_CLAW_DB"] = str(db)
+    identity = "news-claw/0.1 (+https://github.com/guiyang882/news-claw)"
+    if any(source['type'] == 'sec_submissions' for source in task['collector']['sources']):
+        identity = os.environ.get('NEWS_CLAW_SEC_USER_AGENT', '').strip()
+        if (not re.search(r'[^\s@]+@[^\s@]+\.[^\s@]+', identity) or len(identity) > 200
+                or '\r' in identity or '\n' in identity):
+            parser.error('NEWS_CLAW_SEC_USER_AGENT must identify the application and contact email')
     process = CrawlerProcess(settings={
-        "USER_AGENT": "news-claw/0.1 (+https://github.com/guiyang882/news-claw)",
+        "USER_AGENT": identity,
+        "TELNETCONSOLE_ENABLED": False,
         "ROBOTSTXT_OBEY": True, "CONCURRENT_REQUESTS": 2, "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
         "DOWNLOAD_TIMEOUT": 45, "DOWNLOAD_MAXSIZE": 5 * 1024 * 1024,
         "RETRY_ENABLED": False, "COOKIES_ENABLED": False,

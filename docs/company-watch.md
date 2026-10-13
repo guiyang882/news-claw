@@ -10,13 +10,17 @@
 | --- | --- | --- | --- |
 | Google / Alphabet | `https://blog.google/rss/` | 每四小时 :15 | 每天 10:27 |
 | Amazon | `https://aws.amazon.com/blogs/aws/feed/` | 每四小时 :35 | 每天 14:27 |
-| Coinbase | `https://www.coinbase.com/blog/feed.xml` | **暂停**；原计划每四小时 :55 | 每天 18:27，材料不足则跳过 |
+| Coinbase | SEC 公司披露 API（CIK 0001679788） | 每四小时 :55；原博客暂停 | 每天 18:27，材料不足则跳过 |
 
-Google 首页公布 RSS 链接；AWS 官方博客公布订阅入口。Coinbase 投资者关系首页 `https://investor.coinbase.com/home/default.aspx` 中引用其博客 feed。2026-10-13 首次 Coinbase RSS 请求返回 403，已关闭 `company-coinbase-news` 并保留访问拒绝熔断。恢复需要提供方授权和人工来源复核；不得清除熔断后探测、忽略 robots 或切换地址规避拒绝。
+Google 首页公布 RSS 链接；AWS 官方博客公布订阅入口。Coinbase 投资者关系首页 `https://investor.coinbase.com/home/default.aspx` 中引用其博客 feed。2026-10-13 首次 Coinbase RSS 请求返回 403，该博客地址继续保留访问拒绝熔断并列入 `paused_sources`，不再请求。现有响应记录只证明 HTTP 403，无法确定具体拦截规则或是否封禁 IP。该博客恢复需要提供方授权和人工来源复核。
+
+`company-coinbase-news` 改为 SEC 独立官方渠道：`https://data.sec.gov/submissions/CIK0001679788.json`。[SEC 文档](https://www.sec.gov/search-filings/edgar-application-programming-interfaces) 明确公开此免鉴权接口；按[访问规范](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data)用执行环境中的 `NEWS_CLAW_SEC_USER_AGENT` 声明应用和网站公开联系邮箱。每轮只读取一份公司索引，不翻页、不下载申报正文，仍遵守 robots、四次请求上限和至少十秒间隔。保留 8-K、10-Q、10-K 等明确配置的文件类型，排除高频内部人持股表；CIK、数组长度、时间、文件路径必须通过校验。
+
+SEC 条目以 `sec_filing` 入库，页面标为“SEC filing · metadata only”，区分申报日期、报告期和 SEC 接收时间。它只能证明披露文件已提交，不能代替正文或推断业绩，不覆盖全部产品新闻。没有足够的新材料时不调用模型。
 
 当前 Google 来源是产品与公司公告，不等同于 Alphabet 完整财务披露；Amazon 来源覆盖 AWS，不代表零售、广告等全部业务。来源是发行方陈述，整理不等于独立事实验证。
 
-每个采集批次最多 4 次请求（包括 robots），使用原采集器的共享锁、缓存、条件请求、全局至少 10 秒间隔和拒绝熔断。Google 请求间隔至少 60 秒。新采集入口默认只预览；实际执行要求 Go 调度器运行身份、公开免鉴权 RSS 的来源复核记录和明确请求上限。
+每个采集批次最多 4 次请求（包括 robots），使用原采集器的共享锁、缓存、条件请求、全局至少 10 秒间隔和拒绝熔断。Google 请求间隔至少 60 秒。新采集入口默认只预览；实际执行要求 Go 调度器运行身份、公开免鉴权 RSS 或监管 API 的来源复核记录和明确请求上限。
 
 ## 模型预算与发布
 
@@ -41,3 +45,5 @@ Google 首页公布 RSS 链接；AWS 官方博客公布订阅入口。Coinbase �
 实际 Gemini 试跑 `d1242ddf3a97d96e4ad71d437f88ce19` 生成一次，记录 15,428 token。本地数字字段校验修正后，复用了已存草稿进行唯一一次 Codex 复核；复核指出产品预购范围和 AI 分类等证据外延问题，首次未发布简报。后续修订沿用原 Gemini 草稿及相同来源，由 Codex 修订并重新核对证据哈希，不新增 Gemini 调用。
 
 同日 Codex 修订和再次复核已通过（`approved=true`、无待解决问题），Google 简报已原子发布并在公司专题与市场脉冲 API 验证可见。两次新增调用均为 Codex，Gemini 用量保持 15,428 token。工作流回归覆盖一次修订后发布、再次拒绝后停止及旧发布保留。
+
+2026-10-13 SEC 替代渠道试跑 `d00fa852a7f80eb3a361bf848f413d75` 成功：共两次请求（robots 与公司索引），无 robots 例外，发布近 30 日内一条 8-K 披露索引。没有下载文件正文或再次请求 Coinbase 被拒地址。

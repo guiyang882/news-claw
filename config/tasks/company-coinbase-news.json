@@ -1,38 +1,47 @@
 {
   "id": "company-coinbase-news",
-  "name": "Coinbase 官方新闻采集",
-  "description": "已暂停：2026-10-13 官方 RSS 返回 HTTP 403。保留拒绝熔断，不自动重试；取得提供方授权并完成来源复核后才能恢复。",
+  "name": "Coinbase SEC 官方披露采集",
+  "description": "通过 SEC 官方开放接口获取 Coinbase 财报与重大事项的披露索引；仅展示文件元数据，不推断未读取的正文。原博客 403 来源继续暂停。",
   "scheduler_engine": "news-claw",
-  "enabled": false,
+  "enabled": true,
   "schedule": "55 */4 * * *",
   "timezone": "Asia/Shanghai",
   "topic_ids": [
     "company-coinbase"
   ],
   "collector": {
-    "type": "official_company_rss",
+    "type": "official_company_disclosures",
     "sources": [
       {
-        "name": "Coinbase 官方博客",
-        "type": "rss",
-        "url": "https://www.coinbase.com/blog/feed.xml",
+        "name": "SEC EDGAR · Coinbase 披露索引",
+        "type": "sec_submissions",
+        "url": "https://data.sec.gov/submissions/CIK0001679788.json",
+        "cik": 1679788,
+        "forms": [
+          "8-K",
+          "8-K/A",
+          "10-Q",
+          "10-Q/A",
+          "10-K",
+          "10-K/A",
+          "S-3",
+          "S-3ASR",
+          "424B5",
+          "DEF 14A"
+        ],
         "language": "en",
-        "source_class": "official_company_announcements",
+        "source_class": "regulatory_filing_metadata",
         "obey_robots_txt": true
       }
     ],
     "access_review": {
-      "status": "paused_access_denied",
+      "status": "public_regulator_api",
       "authentication": "none_required",
       "reviewed_at": "2026-10-13",
-      "basis": "https://investor.coinbase.com/home/default.aspx embeds the public blog feed.xml URL (source-review/coinbase-home.json).",
-      "scope": "Title/link discovery with short attributed summaries; no article crawling, no account login, robots enforced.",
-      "denial": {
-        "date": "2026-10-13",
-        "http_status": 403,
-        "run_id": "1fe4050cdd7b3dd45961f57cfa5bcd46",
-        "reset_policy": "Requires provider authorization and explicit operator review; no automatic retry."
-      }
+      "basis": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces explicitly provides unauthenticated company-submissions API access. https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data documents declared User-Agent and fair access.",
+      "scope": "One company submissions index; no pagination, document downloads or XBRL requests. Retain the repository limit of at least 10 seconds and at most 4 requests per batch.",
+      "identity_basis": "Public website contact at https://growthyoung.com/contact; supplied through the task execution environment.",
+      "company_identity_evidence": "https://www.sec.gov/Archives/edgar/data/1679788/000167978826000087/coin-20260730.htm"
     },
     "request_policy": {
       "max_concurrent_requests_per_host": 1,
@@ -42,7 +51,19 @@
       "max_requests_per_run": 4,
       "automatic_retry_after_denial": false,
       "stop_on_403_429_or_access_denial": true
-    }
+    },
+    "paused_sources": [
+      {
+        "name": "Coinbase 官方博客",
+        "type": "rss",
+        "url": "https://www.coinbase.com/blog/feed.xml",
+        "language": "en",
+        "source_class": "official_company_announcements",
+        "obey_robots_txt": true,
+        "reason": "HTTP 403 on 2026-10-13; persistent circuit retained; do not retry.",
+        "run_id": "1fe4050cdd7b3dd45961f57cfa5bcd46"
+      }
+    ]
   },
   "options": {
     "start_jitter_seconds": 180,
@@ -60,14 +81,17 @@
     "working_dir": ".",
     "timeout_seconds": 480,
     "stop_grace_seconds": 15,
-    "lock_group": "web-fetch"
+    "lock_group": "web-fetch",
+    "env": {
+      "NEWS_CLAW_SEC_USER_AGENT": "GrowthYoungResearch/1.0 admin@growthyoung.com"
+    }
   },
   "task_type": "crawl",
   "workflow": {
     "company": "coinbase",
     "state_root": "/mnt/quant-state/quant-web",
     "source_urls": [
-      "https://www.coinbase.com/blog/feed.xml"
+      "https://data.sec.gov/submissions/CIK0001679788.json"
     ],
     "kind": "company-news-v1",
     "website_repo": "/mnt/quant/strategies/stocks-quant",

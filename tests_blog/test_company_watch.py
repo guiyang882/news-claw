@@ -107,6 +107,14 @@ class CompanyWatchWorkflowTests(unittest.TestCase):
         result=cached_news(self.config,self.root,db,now=self.now+timedelta(minutes=1))
         self.assertEqual(len(result['events']),1)
         self.assertEqual(result['events'][0]['company'],'google')
+        with sqlite3.connect(db) as connection:
+            for i in range(2):
+                path=normalized/f'{i}.json';record=json.loads(path.read_text());record['record_type']='sec_filing'
+                path.write_text(json.dumps(record))
+                digest=hashlib.sha256(json.dumps(record,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+                connection.execute('UPDATE documents SET content_hash=? WHERE id=?',(digest,str(i)))
+        result=cached_news(self.config,self.root,db,now=self.now+timedelta(minutes=1))
+        self.assertEqual(result['events'][0]['tags'],['SEC filing · metadata only'])
         (normalized/'0.json').write_text('{}')
         with self.assertRaisesRegex(ValueError,'hash changed'):
             cached_news(self.config,self.root,db,now=self.now+timedelta(minutes=1))

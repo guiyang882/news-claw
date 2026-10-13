@@ -36,7 +36,7 @@
     "company": "coinbase",
     "state_root": "/mnt/quant-state/quant-web",
     "source_urls": [
-      "https://www.coinbase.com/blog/feed.xml"
+      "https://data.sec.gov/submissions/CIK0001679788.json"
     ],
     "kind": "company-brief-v1",
     "writer": {

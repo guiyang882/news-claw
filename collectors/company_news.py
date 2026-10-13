@@ -19,8 +19,8 @@ def main():
         parser.error('Launch through the Go engine')
     task = json.loads(Path(path).read_text())
     review = task['collector'].get('access_review', {})
-    if review.get('status') != 'public_publisher_feed' or review.get('authentication') != 'none_required':
-        parser.error('An approved public feed access review is required')
+    if review.get('status') not in {'public_publisher_feed', 'public_regulator_api'} or review.get('authentication') != 'none_required':
+        parser.error('An approved public feed or regulator API access review is required')
     limit = task['collector']['request_policy'].get('max_requests_per_run', 0)
     if not 1 <= limit <= 6:
         parser.error('An explicit request limit of 1 to 6 is required')
