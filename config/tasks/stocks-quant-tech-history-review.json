@@ -82,6 +82,94 @@
       "reasoning_effort": "medium",
       "service_tier": "default",
       "permissions": "full"
+    },
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "outputs": [
+      "/mnt/quant-state/quant-web/tech_history.json"
+    ],
+    "website_delivery": {
+      "kind": "validated_runtime_snapshot",
+      "reader": "Next.js via authenticated local Python content bridge",
+      "after_publish": "none",
+      "frontend_build_required": false,
+      "restart_required": false
     }
   }
 }

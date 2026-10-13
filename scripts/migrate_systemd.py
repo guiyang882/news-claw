@@ -61,32 +61,32 @@ def prepare_config(task, job, observed, zone):
     task["task_type"] = "publish" if unit == "quant-blog-daily" else (
         "crawl" if unit in {"quant-news-refresh", "quant-market-temperature"} else "codex")
     if unit == "quant-blog-compose":
-        task["workflow"] = {
+        task.setdefault("workflow", {}).update({
             "website_repo": "/mnt/quant/strategies/stocks-quant",
             "stage": "draft",
             "inputs": ["/mnt/quant-state/quant-web/blog/source-packets/YYYY-MM-DD.json"],
             "outputs": ["/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"],
             "input_requirement": "existing web.blog_compose.validate_packet must pass; empty input skips",
             "next_task_id": "stocks-quant-blog-daily-publish",
-        }
+        })
     elif unit == "quant-blog-daily":
-        task["workflow"] = {
+        task.setdefault("workflow", {}).update({
             "website_repo": "/mnt/quant/strategies/stocks-quant",
             "stage": "publish",
             "inputs": ["/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"],
             "outputs": ["/mnt/quant-state/quant-web/blog/articles"],
             "input_requirement": "existing draft validation and hash-bound editor approval must pass",
             "after_task_id": "stocks-quant-blog-compose",
-        }
+        })
     elif unit == "quant-news-analysis":
-        task["workflow"] = {
+        task.setdefault("workflow", {}).update({
             "website_repo": "/mnt/quant/strategies/stocks-quant",
             "stage": "analyze_and_update_dataset",
             "inputs": ["/mnt/quant-state/quant-web/news_timeline.json"],
             "outputs": ["/mnt/quant-state/quant-web/news_analysis.json"],
             "input_requirement": "existing news-analysis schema and source fingerprint validation must pass",
             "after_task_id": "stocks-quant-market-news-refresh",
-        }
+        })
     task["options"].pop("do_not_start_from_news_claw", None)
     task["options"].update(migration_state="go_scheduled_legacy_service", start_jitter_seconds=jitter)
     task["collector"].update(execution_owner="news-claw_via_legacy_service", external_timer_active=False,

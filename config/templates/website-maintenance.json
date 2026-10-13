@@ -1,7 +1,7 @@
 {
   "id": "example-website-maintenance",
-  "name": "Nginx 网站检查与维护模板",
-  "description": "通过本机 HTTP/HTTPS 检查 Nginx 与 Gunicorn；仅在代码或配置变更时显式选择对应热重载动作。",
+  "name": "Nginx / Next.js / Python 网站检查与维护模板",
+  "description": "检查 Nginx、Next.js 前端和 Python 内容服务；分别维护前端、内容/API 服务和入口。前端代码部署遵守独立候选构建、验证和原子切换规则。",
   "task_type": "workflow",
   "scheduler_engine": "news-claw",
   "enabled": false,
@@ -27,16 +27,23 @@
   },
   "workflow": {
     "website_runtime": {
+      "stack": "nginx-nextjs-python",
       "proxy": "nginx",
-      "application_service": "quant-web.service",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
       "proxy_service": "nginx.service",
       "content_update_action": "none",
-      "application_reload_command": [
+      "content_reload_command": [
         "systemctl",
         "kill",
         "--kill-whom=main",
         "--signal=HUP",
         "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
       ],
       "proxy_validate_command": [
         "/usr/sbin/nginx",
@@ -47,14 +54,60 @@
         "reload",
         "nginx.service"
       ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
       "health": {
         "host": "growthyoung.com",
-        "application_port": 8000,
+        "content_port": 8000,
+        "frontend_port": 3000,
         "https_port": 443,
-        "path": "/healthz",
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
         "timeout_seconds": 10
       },
-      "command_timeout_seconds": 30
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_delivery": {
+      "kind": "maintenance_only",
+      "content_publication": false,
+      "frontend_code_deployment": "follow_candidate_build_runbook"
     }
   }
 }

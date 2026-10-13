@@ -75,7 +75,7 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 
 发布与原发布器使用相同 publish.lock，检查当天运行时文章和 slug 冲突，先保存内容与复核证明，再原子替换 manifest.json。新文件按网站目录所属账号设置 owner 和 0640 权限，网站进程可以读取。无需修改网站主题、重启网站或每轮部署代码。
 
-网站入口现为 Nginx，后端仍为 `quant-web.service` 中的 Gunicorn。`workflow.website_runtime` 明确内容发布不重启服务；需要加载应用代码或 Nginx 配置时，使用[分层维护命令](website-workflow.md#nginx-网站检查与重载)。
+网站公开页面由 Nginx 转发至 `quant-next-web.service` 中的 Next.js，Python 内容/API 服务继续运行于 `quant-web.service`。`workflow.website_runtime` 和 `website_delivery` 明确博客发布只更新运行时正文与清单，Next.js 每次请求通过本机认证桥接读取新内容，无需重启或构建。内容服务、前端代码和 Nginx 配置变更使用各自的[维护与发布流程](website-workflow.md#网站检查与分别维护)。
 
 ## 状态与迭代
 
@@ -169,4 +169,4 @@ Mermaid 只接受限定长度的流程图，不允许交互链接和配置指令
 
 `make init` 后通过 Go `enqueue` 显式入队，配置快照保存后恢复原执行命令并再次 `make init`。修订命令要求正在运行的 Go 手动任务记录；这次用户请求独立限定一次 Codex 最终复核，不重新调用 Gemini，不清除每日防重记录或供应方熔断。复核失败就停止。
 
-复核通过后先写入不可变正文与新证明，再锁定并原子替换已有文章。等待复核期间若旧文章已变化则拒绝覆盖。旧元数据与证明保存到运行时 `revisions/`，旧地址作为 `aliases` 提供 301 跳转（包括英文参数与 Markdown 地址）；首页、RSS 与 sitemap 使用新规范地址。文章总数不增加。
+复核通过后先写入不可变正文与新证明，再锁定并原子替换已有文章。等待复核期间若旧文章已变化则拒绝覆盖。旧元数据与证明保存到运行时 `revisions/`，旧地址保存在 `aliases`：Next.js 网页使用 308，Python 的 Markdown 兼容路由使用指向公开完整地址的 301，均保留英文参数；首页、RSS 与 sitemap 使用新规范地址。文章总数不增加。

@@ -1,6 +1,8 @@
 # 服务部署与模型权限
 
-Go engine 管理时间计划与 task_runs；news-claw.service 托管常驻进程。旧网站 service 保留执行入口，每日博客直接运行 workflows.daily_blog。
+Go engine 管理时间计划与 task_runs；news-claw.service 托管常驻进程。旧网站 service 保留执行入口，每日博客直接运行 workflows.daily_blog。 常规任务调优运行 make init；初次迁移脚本不用于重载网站或重新启用已停用的博客流程。
+
+网站已迁移到 Nginx → Next.js（quant-next-web，3000）→ Python 内容/API 服务（quant-web，8000）。旧采集 service 是内容任务的执行入口，不能作为整个网站的重启入口。内容发布仍只原子更新本地状态；前端构建、内容服务重载与入口重载按 [网站协议](../docs/website-workflow.md#网站检查与分别维护) 分别处理。网站源码与完整构建切换说明位于 stocks-quant 的 `deployment/NEXTJS.md`；不在运行中的前端目录直接构建，不将内部桥接凭据写入任务配置或日志。
 
 ## 本机已部署的 full 权限
 

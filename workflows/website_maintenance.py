@@ -1,4 +1,4 @@
-"""Check or explicitly reload the website's Nginx and Gunicorn layers."""
+"""Maintain the Nginx, Next.js frontend and Python content service separately."""
 
 import argparse
 import http.client
@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import socket
 import subprocess
+import time
 
 
 class LocalHTTPS(http.client.HTTPSConnection):
@@ -22,24 +23,29 @@ class LocalHTTPS(http.client.HTTPSConnection):
 
 def settings(config):
     value = config["workflow"]["website_runtime"]
-    if value["proxy"] != "nginx" or value["content_update_action"] != "none":
-        raise ValueError("Nginx content publication must not restart services")
-    for key in ("application_service", "proxy_service"):
+    if value.get("stack") != "nginx-nextjs-python" or value["proxy"] != "nginx" or value["content_update_action"] != "none":
+        raise ValueError("Task must describe the current Nginx / Next.js / Python stack without content-triggered restarts")
+    if value["frontend_deployment"]["build_in_running_directory"] is not False:
+        raise ValueError("Frontend candidates must be built outside the running frontend directory")
+    for key in ("frontend_service", "content_service", "proxy_service"):
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.@-]*\.service", value[key]):
             raise ValueError("Invalid website service name")
-    for key in ("application_reload_command", "proxy_validate_command", "proxy_reload_command"):
+    for key in ("content_reload_command", "frontend_restart_command", "proxy_validate_command", "proxy_reload_command"):
         command = value[key]
         if not isinstance(command, list) or not command or any(not isinstance(arg, str) or not arg for arg in command):
             raise ValueError("Maintenance commands must be argument arrays")
     health = value["health"]
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}", health["host"]):
         raise ValueError("Invalid HTTPS health hostname")
-    if not health["path"].startswith("/") or any(char in health["path"] for char in "\r\n"):
-        raise ValueError("Invalid health path")
-    for key in ("application_port", "https_port"):
+    for key in ("content_path", "frontend_path"):
+        if not health[key].startswith("/") or any(char in health[key] for char in "\r\n"):
+            raise ValueError("Invalid health path")
+    if not isinstance(health["frontend_body_marker"], str) or not health["frontend_body_marker"].strip():
+        raise ValueError("Frontend checks need an expected rendered page marker")
+    for key in ("content_port", "frontend_port", "https_port"):
         if type(health[key]) is not int or not 1 <= health[key] <= 65535:
             raise ValueError("Invalid local health port")
-    for value_, maximum in ((health["timeout_seconds"], 30), (value["command_timeout_seconds"], 120)):
+    for value_, maximum in ((health["timeout_seconds"], 30), (value["command_timeout_seconds"], 120), (value["readiness_wait_seconds"], 60)):
         if type(value_) is not int or not 1 <= value_ <= maximum:
             raise ValueError("Invalid maintenance timeout")
     return value
@@ -55,18 +61,23 @@ def command(argv, timeout):
 def health_probe(config):
     health = config["health"]
     results = {}
-    for layer in ("application", "nginx"):
-        connection = (http.client.HTTPConnection("127.0.0.1", health["application_port"], timeout=health["timeout_seconds"])
-                      if layer == "application" else LocalHTTPS(health["host"], health["https_port"], timeout=health["timeout_seconds"]))
+    for layer in ("content", "frontend", "nginx"):
+        connection = (LocalHTTPS(health["host"], health["https_port"], timeout=health["timeout_seconds"])
+                      if layer == "nginx" else http.client.HTTPConnection("127.0.0.1", health[layer + "_port"], timeout=health["timeout_seconds"]))
         try:
-            connection.request("GET", health["path"], headers={"Host": health["host"]})
+            path = health["content_path"] if layer == "content" else health["frontend_path"]
+            connection.request("GET", path, headers={"Host": health["host"], "User-Agent": "NewsClawMaintenance/1.0"})
             response = connection.getresponse()
-            body = response.read(16385)
-            if response.status != 200 or len(body) > 16384:
+            maximum = 16384 if layer == "content" else 2_000_000
+            body = response.read(maximum + 1)
+            if response.status != 200 or len(body) > maximum:
                 raise RuntimeError(f"{layer} health check failed: HTTP {response.status}")
-            payload = json.loads(body)
-            if not isinstance(payload, dict) or payload.get("status") != "ok":
-                raise RuntimeError(f"{layer} returned an invalid health result")
+            if layer == "content":
+                payload = json.loads(body)
+                if not isinstance(payload, dict) or payload.get("status") != "ok":
+                    raise RuntimeError(f"{layer} returned an invalid health result")
+            elif b'<html' not in body.lower() or b'/_next/' not in body or health["frontend_body_marker"].encode() not in body:
+                raise RuntimeError(f"{layer} did not render the expected Next.js page and content bridge")
             server = response.getheader("Server", "")
             if layer == "nginx" and "nginx" not in server.lower():
                 raise RuntimeError("HTTPS listener is not the configured Nginx ingress")
@@ -76,33 +87,46 @@ def health_probe(config):
     return results
 
 
+def wait_until_ready(value, probe):
+    """Bounded local readiness polling after a process restart/reload."""
+    deadline = time.monotonic() + value["readiness_wait_seconds"]
+    while True:
+        try:
+            return probe(value)
+        except (OSError, RuntimeError, ValueError, http.client.HTTPException):
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(1)
+
+
 def run(config, action, *, execute=False, invoke=command, probe=health_probe):
     value = settings(config)
     commands = {
         "check": [],
-        "reload-application": [value["application_reload_command"]],
+        "reload-content": [value["content_reload_command"]],
+        "restart-frontend": [value["frontend_restart_command"]],
         "reload-proxy": [value["proxy_reload_command"]],
     }
     if action not in commands:
-        raise ValueError("Unknown website maintenance action")
+        raise ValueError("Choose reload-content, restart-frontend or reload-proxy; reload-application is obsolete")
     if action != "check" and not execute:
         return {"success": True, "business_status": "preview", "action": action,
                 "commands": [value["proxy_validate_command"], *commands[action]]}
     timeout = value["command_timeout_seconds"]
-    invoke(["systemctl", "is-active", "--quiet", value["application_service"], value["proxy_service"]], timeout)
+    invoke(["systemctl", "is-active", "--quiet", value["content_service"], value["frontend_service"], value["proxy_service"]], timeout)
     invoke(value["proxy_validate_command"], timeout)
     before = probe(value)
     for argv in commands[action]:
         invoke(argv, timeout)
-    after = probe(value) if commands[action] else before
-    return {"success": True, "business_status": "healthy" if action == "check" else "reloaded",
+    after = wait_until_ready(value, probe) if commands[action] else before
+    return {"success": True, "business_status": "healthy" if action == "check" else "restarted" if action == "restart-frontend" else "reloaded",
             "action": action, "checks": after}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task-config", type=Path, default=os.environ.get("NEWS_CLAW_TASK_CONFIG_PATH"))
-    parser.add_argument("--action", choices=("check", "reload-application", "reload-proxy"), default="check")
+    parser.add_argument("--action", choices=("check", "reload-content", "restart-frontend", "reload-proxy"), default="check")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     if args.task_config is None:

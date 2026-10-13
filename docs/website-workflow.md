@@ -9,7 +9,7 @@ flowchart LR
     A[市场新闻 RSS] --> B[news_timeline.json]
     B --> C[Codex 分析与校验]
     C --> D[news_analysis.json]
-    D --> E[网站读取更新]
+    D --> E[Python 内容桥接与 Next.js 实时读取]
     F[本地缓存与研究材料] --> T[Codex 候选题与约20分钟大纲]
     T --> G[agy Gemini 按大纲写双语草稿]
     G --> H[Codex 事实复核]
@@ -28,7 +28,7 @@ flowchart LR
 
 网站依照现有运行路径读取数据和文章，无需每轮修改主题代码或重新部署网站。供应链、公司脉冲、科技史和 OFR 任务也保留原网站数据输出路径。
 
-当前生产链路为 Cloudflare → Nginx（80/443）→ Gunicorn（`quant-web.service`，127.0.0.1:8000）→ Flask。Nginx 接替 Caddy 的入口职责；应用和内容任务仍保留各自的执行入口。
+当前生产链路为 Cloudflare → Nginx（80/443）→ Next.js（`quant-next-web.service`，127.0.0.1:3000）→ Python 内容/API 服务（`quant-web.service`，127.0.0.1:8000）。首页、博客、雷达和公司专题由 Next.js 原生渲染；Python 保留结构化内容、校验和兼容功能。Next.js 用受控环境中的共享凭据访问本机 `/internal/frontend/*`，公开入口禁止这些内部路径。
 
 每日博客使用用户授权的模型复核发布方式，两个版本均在最终哈希绑定的复核通过后发布，记录为 model_review；详见 [每日博客](daily-blog.md)。原市场资料包和人工批准校验器保留，原批准文件仍需由人工提供，不能生成假批准。
 
@@ -91,16 +91,18 @@ Go 核心没有 systemd 或网站专用分支。后续可将某项 `execution.co
 
 任务先保持文件接口和脚本输入校验。需要自动串联时再增加以成功产物和输入指纹为依据的触发机制，不能仅凭上游到过计划时间就发布。
 
-## Nginx 网站检查与重载
+## 网站检查与分别维护
 
-每日博客、原批准发布任务及其模板增加 `workflow.website_runtime`。这份配置供 `workflows.website_maintenance` 读取，包含 Nginx / 应用服务、显式命令数组、本机端口、域名和超时；博客发布器本身继续只原子更新正文与清单，不执行服务命令。
+全部 12 项存量任务与 6 类模板都声明 `workflow.website_runtime` 和 `website_delivery`。维护脚本读取前者的服务、命令、端口、检查页面及候选构建规则；后者区分本地证据、待审核稿、已发布运行时正文、快照和维护动作。Go 不会根据这些说明自动构建前端、重启服务或串联任务。
 
-| 变更 | 动作 | 命令与校验 |
-| --- | --- | --- |
-| 博客、新闻及其他运行时 JSON | `content_update_action: none` | 无需重启或重载 |
-| Flask / Python 代码、启动时读取的报告 | `reload-application` | HUP 仅发给 Gunicorn 主进程；新 worker 启动，旧 worker 正常退出 |
-| Nginx 入口配置 | `reload-proxy` | `nginx -t` 成功后执行 `systemctl reload nginx.service` |
-| 仅核对网站状态 | `check` | 服务运行状态、Nginx 配置、本机 HTTP 和 HTTPS 健康接口 |
+| 变更 | 处理方式 |
+| --- | --- |
+| 三类主题采集 | 保存 raw / normalized / documents，作为每日博客输入，不直接发布网页 |
+| 审核通过的博客和运行时 JSON | 原子写入既有状态路径，经 Python 校验后由 Next.js 每次请求读取；不构建、不重启 |
+| Python 内容/API 代码或启动时读取的报告 | `reload-content`，向 quant-web 的 Gunicorn 主进程发送 HUP |
+| Next.js 已安装构建或服务配置重启 | `restart-frontend`，仅重启 quant-next-web；不进行构建或候选安装 |
+| Next.js 页面/组件代码部署 | 独立候选构建和 smoke，保留旧 chunks，再停止前端、原子切换 .next、检查权限、启动和验证 |
+| Nginx 配置 | `reload-proxy`，先 nginx -t，再 systemctl reload nginx.service |
 
 ```bash
 python3 -m workflows.website_maintenance \
@@ -108,13 +110,21 @@ python3 -m workflows.website_maintenance \
 
 python3 -m workflows.website_maintenance \
   --task-config config/tasks/daily-blog-agy-codex.json \
-  --action reload-application --execute
+  --action reload-content --execute
+
+python3 -m workflows.website_maintenance \
+  --task-config config/tasks/daily-blog-agy-codex.json \
+  --action restart-frontend --execute
 
 python3 -m workflows.website_maintenance \
   --task-config config/tasks/daily-blog-agy-codex.json \
   --action reload-proxy --execute
 ```
 
-重载动作缺少 `--execute` 时只输出计划。执行前检查两层服务、Nginx 配置和健康接口，执行后再次检查；任何一步失败立即停止，返回失败结果，不重试或自动回退 Caddy。HTTPS 连接固定使用回环地址，同时保留真实域名的 SNI 与证书校验。当前服务已停止或健康失败时，应先排查并按网站部署手册恢复，再执行热重载。
+旧 `reload-application` 已停用，避免把 Python 内容服务误当成整个网站。变更动作缺少 `--execute` 时只输出计划；执行前要求三层服务、配置和页面正常，执行后限定等待就绪。只检查 Python `/healthz` 不足以判断前端可用：检查还须验证 3000 的真实博客 SSR 和本机 HTTPS 的同一页面，包括前端资源标识与博客目录内容。
 
-从 Go 队列执行时读取本轮 `NEWS_CLAW_TASK_CONFIG_PATH`，并把业务结果写入 `NEWS_CLAW_RESULT_PATH`，继续使用已有 `task_runs`。可复用 [网站维护模板](../config/templates/website-maintenance.json)，默认关闭、动作为只检查；没有新增每天强制重启网站的计划。Certbot 的证书续期和续期后 Nginx 重载仍由网站已安装的 `certbot.timer` 与 deploy hook 管理。
+HTTPS 连接固定使用回环地址并保留真实域名 SNI 和证书校验；检查不访问外部数据源，也不读取或打印桥接 token。重启后的就绪等待仅针对本机服务，最多按 `readiness_wait_seconds` 限定等待；失败记录结果并停止，不自动切换到 Caddy 或循环重启服务。当前服务已停止或健康失败时，应先按网站部署手册排查恢复。
+
+前端部署遵守 `website_runtime.frontend_deployment`：候选路径由操作者指定，示例 build / smoke 参数不是 Go 的变量替换或自动执行命令。禁止在运行中的 `web/frontend/.next` 直接构建，保留上一版静态资源并检查 quant-web 用户读取权限及缓存写权限。完整步骤见网站仓库 `/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md`。Python 已删除原生页面的旧 HTML 实现，回退须恢复匹配的完整代码版本；不能仅把 Nginx 上游改回 8000，否则会形成重定向循环。
+
+维护命令从 Go 队列执行时读取本轮 `NEWS_CLAW_TASK_CONFIG_PATH` 并输出 `NEWS_CLAW_RESULT_PATH`，继续使用既有 task_runs。维护模板默认关闭，只检查；没有新增定时重启任务。Certbot 续期与证书更新后的 Nginx 重载继续由网站的既有 timer 和 deploy hook 管理。

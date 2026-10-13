@@ -320,14 +320,23 @@ class DailyBlogTests(unittest.TestCase):
         self.assertEqual(proof["final_review"]["article_sha256"], blog.digest(proof["draft"]))
         with closing(sqlite3.connect(self.db)) as connection:
             self.assertIsNotNone(connection.execute("SELECT 1 FROM artifacts WHERE id='daily-blog-2026-10-10'").fetchone())
-        with patch.dict(os.environ, {"QUANT_BLOG_RUNTIME_DIR": str(self.site)}):
+        bridge_token = "offline-fixture-frontend-bridge-token"
+        with patch.dict(os.environ, {"QUANT_BLOG_RUNTIME_DIR": str(self.site), "QUANT_FRONTEND_TOKEN": bridge_token}):
             from web.app import create_app
             report = self.root / "report.json"
             report.write_text(json.dumps({"schema_version": 1, "strategies": []}))
             app = create_app(report, self.root / "stats.sqlite3", self.root / "feedback.sqlite3")
             client = app.test_client()
-            for path in ("/blog/offline-topic-outline-2026-10-10", "/blog/offline-topic-outline-2026-10-10?lang=en",
-                         "/blog/offline-topic-outline-2026-10-10.md", "/blog", "/blog/feed.xml", "/blog-sitemap.xml"):
+            for language in ("zh", "en"):
+                path = "/internal/frontend/articles/offline-topic-outline-2026-10-10?lang=" + language
+                response = client.get(path, headers={"Authorization": "Bearer " + bridge_token})
+                self.assertEqual(response.status_code, 200, path)
+                self.assertIn("Offline", response.get_json()["data"]["content_html"])
+                self.assertNotIn("automation", response.get_json()["data"])
+            self.assertEqual(client.get("/internal/frontend/site").status_code, 401)
+            response = client.get("/internal/frontend/site", headers={"Authorization": "Bearer " + bridge_token})
+            self.assertIn("offline-topic-outline-2026-10-10", [item["slug"] for item in response.get_json()["data"]["articles"]])
+            for path in ("/blog/offline-topic-outline-2026-10-10.md", "/blog/feed.xml", "/blog-sitemap.xml"):
                 response = client.get(path)
                 self.assertEqual(response.status_code, 200, path)
                 self.assertIn(b"offline-topic-outline-2026-10-10" if path.endswith("xml") else b"Offline" if ".md" in path else b"", response.data)
