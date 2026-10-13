@@ -20,7 +20,7 @@ Google 首页公布 RSS 链接；AWS 官方博客公布订阅入口。Coinbase �
 
 ## 模型预算与发布
 
-- agy 使用 `gemini-3.8-flash-low`（Gemini 3.8 Flash 的低推理档位），每次最多生成一次；Codex 使用 `gpt-6.1-sol` 复核一次。复核不通过保留旧发布，不自动修稿或重试。
+- agy 使用 `gemini-3.8-flash-low`（Gemini 3.8 Flash 的低推理档位），每次最多生成一次；Codex 使用 `gpt-6.1-sol` 首次复核。存在明确修订意见时，复用原草稿进行一次 Codex 修订，再次复核通过才发布。每轮最多四次模型调用（Gemini 一次、Codex 三次）；再次未通过则保留旧发布，不重复生成或继续循环。
 - 每家公司每天最多一次尝试；三家合计最多三次，至少间隔一小时。正常计划彼此相隔四小时；现有其他工作流继续共用 `model-cli` 锁和模型提供方熔断。
 - 每次最多 8 条近七日来源、16,000 字符输入；每个列表最多两项。三家公司每日预算为 120,000 token，每次预留至少 40,000，CLI 报告实际用量更高时按高值记账。失败和中断也消耗预留；相同证据不重复调用。
 - 这是新增任务的保守本地预算，不是账户余额查询或提供方的硬输出限额，不能保证整个 agy 账户永不耗尽。提供方限额拒绝会打开共享熔断。
@@ -38,4 +38,6 @@ Google 首页公布 RSS 链接；AWS 官方博客公布订阅入口。Coinbase �
 
 离线回归：`.venv/bin/python -m unittest discover -s tests -q` 与网站环境执行 `PYTHONPATH=. /mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m unittest discover -s tests_blog -q`。网站的 `tests/test_web_company_watch.py` 验证独立来源、证据哈希、失败隔离和简报时效。
 
-实际 Gemini 试跑 `d1242ddf3a97d96e4ad71d437f88ce19` 生成一次，记录 15,428 token。本地数字字段校验修正后，复用了已存草稿进行唯一一次 Codex 复核；复核指出产品预购范围和 AI 分类等证据外延问题，因此未发布简报、未重复生成。原始来源照常展示，后续新证据按既定计划处理。
+实际 Gemini 试跑 `d1242ddf3a97d96e4ad71d437f88ce19` 生成一次，记录 15,428 token。本地数字字段校验修正后，复用了已存草稿进行唯一一次 Codex 复核；复核指出产品预购范围和 AI 分类等证据外延问题，首次未发布简报。后续修订沿用原 Gemini 草稿及相同来源，由 Codex 修订并重新核对证据哈希，不新增 Gemini 调用。
+
+同日 Codex 修订和再次复核已通过（`approved=true`、无待解决问题），Google 简报已原子发布并在公司专题与市场脉冲 API 验证可见。两次新增调用均为 Codex，Gemini 用量保持 15,428 token。工作流回归覆盖一次修订后发布、再次拒绝后停止及旧发布保留。

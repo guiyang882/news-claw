@@ -30,10 +30,32 @@ class Runner:
                 'analysis_sha256':packet['analysis_sha256']}
 
 
+class RepairRunner(Runner):
+    def __init__(self, reject_again=False):
+        super().__init__();self.stages=[];self.reject_again=reject_again
+
+    def __call__(self, stage, prompt, schema, directory):
+        self.stages.append(stage)
+        if stage=='revise':
+            self.calls.append({'provider':'codex','usage':{'total_tokens':1000}})
+            packet=json.loads(prompt.split('Input: ',1)[1])
+            analysis=packet['analysis']
+            for language in ('zh','en'):
+                analysis[language]['summary']='The issuer announced a product; the supplied excerpt does not establish adoption.'
+            return analysis
+        result=super().__call__(stage,prompt,schema,directory)
+        if stage=='review' or (stage=='review_revised' and self.reject_again):
+            result.update(approved=False,issues=['Narrow the claim to the supplied excerpt.'])
+        return result
+
+
 class CompanyWatchWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)
+        schemas=self.root/'config/schemas';schemas.mkdir(parents=True)
+        for name in ('company-brief.schema.json','company-brief-review.schema.json'):
+            (schemas/name).write_bytes((ROOT/'config/schemas'/name).read_bytes())
         self.now=datetime.now(timezone.utc)-timedelta(hours=4)
         self.config=json.loads((ROOT/'config/tasks/company-google-brief.json').read_text())
         self.config['workflow']['state_root']=str(self.root/'site')
@@ -111,6 +133,23 @@ class CompanyWatchWorkflowTests(unittest.TestCase):
         retry=Runner();self.assertEqual(self.call(retry,now=self.now+timedelta(days=1))['business_status'],
                                       'unchanged_or_previously_attempted')
         self.assertEqual(retry.calls,[])
+
+    def test_codex_repairs_then_reviews_without_repeating_gemini(self):
+        runner=RepairRunner();result=self.call(runner)
+        self.assertEqual(result['business_status'],'published')
+        self.assertEqual(runner.stages,['draft','review','revise','review_revised'])
+        self.assertEqual(sum(c['provider']=='agy' for c in runner.calls),1)
+        payload=json.loads((self.root/'site/company_briefs/google.json').read_text())
+        self.assertTrue(payload['review']['approved'])
+        self.assertEqual(payload['review']['analysis_sha256'],content_digest(payload['analysis']))
+        self.assertEqual(payload['editor_model'],self.config['workflow']['reviewer']['model'])
+
+    def test_second_rejection_stops_after_one_repair_and_preserves_old_brief(self):
+        self.call(Runner());path=self.root/'site/company_briefs/google.json';before=path.read_bytes()
+        self.write_news('google','updated');runner=RepairRunner(reject_again=True)
+        result=self.call(runner,now=self.now+timedelta(days=1))
+        self.assertFalse(result['success']);self.assertEqual(len(runner.calls),4)
+        self.assertEqual(path.read_bytes(),before)
 
     def test_large_measured_usage_stops_remaining_new_company_calls(self):
         self.call(Runner())
