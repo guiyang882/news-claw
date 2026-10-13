@@ -79,6 +79,7 @@ bin/news-claw serve --workers 2
 | 队列、限流、恢复与运行命令 | [调度与采集](docs/engine.md) |
 | 候选选题、大纲、写稿与复核 | [每日博客工作流](docs/daily-blog.md) |
 | Gemini 整理、Codex 校验与知识积累 | [主题整理流程](docs/topic-summaries.md) |
+| Google、Amazon、Coinbase 来源与错峰简报 | [公司追踪流程](docs/company-watch.md) |
 | 网站输入输出与发布接入 | [网站工作流](docs/website-workflow.md) |
 | 常驻服务与模型运行环境 | [部署说明](deployment/README.md) |
 | 数据结构与主题材料归档 | [SQLite](data/db/README.md) · [主题知识](data/knowledge/README.md) |

@@ -1,0 +1,159 @@
+{
+  "id": "company-coinbase-news",
+  "name": "Coinbase 官方新闻采集",
+  "description": "已暂停：2026-10-13 官方 RSS 返回 HTTP 403。保留拒绝熔断，不自动重试；取得提供方授权并完成来源复核后才能恢复。",
+  "scheduler_engine": "news-claw",
+  "enabled": false,
+  "schedule": "55 */4 * * *",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "company-coinbase"
+  ],
+  "collector": {
+    "type": "official_company_rss",
+    "sources": [
+      {
+        "name": "Coinbase 官方博客",
+        "type": "rss",
+        "url": "https://www.coinbase.com/blog/feed.xml",
+        "language": "en",
+        "source_class": "official_company_announcements",
+        "obey_robots_txt": true
+      }
+    ],
+    "access_review": {
+      "status": "paused_access_denied",
+      "authentication": "none_required",
+      "reviewed_at": "2026-10-13",
+      "basis": "https://investor.coinbase.com/home/default.aspx embeds the public blog feed.xml URL (source-review/coinbase-home.json).",
+      "scope": "Title/link discovery with short attributed summaries; no article crawling, no account login, robots enforced.",
+      "denial": {
+        "date": "2026-10-13",
+        "http_status": 403,
+        "run_id": "1fe4050cdd7b3dd45961f57cfa5bcd46",
+        "reset_policy": "Requires provider authorization and explicit operator review; no automatic retry."
+      }
+    },
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "min_interval_seconds_global": 10,
+      "google_search_min_interval_seconds": 60,
+      "max_requests_per_run": 4,
+      "automatic_retry_after_denial": false,
+      "stop_on_403_429_or_access_denial": true
+    }
+  },
+  "options": {
+    "start_jitter_seconds": 180,
+    "lookback_hours": 720,
+    "max_items_per_run": 30
+  },
+  "schedule_format": "cron",
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.company_news",
+      "--execute"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 480,
+    "stop_grace_seconds": 15,
+    "lock_group": "web-fetch"
+  },
+  "task_type": "crawl",
+  "workflow": {
+    "company": "coinbase",
+    "state_root": "/mnt/quant-state/quant-web",
+    "source_urls": [
+      "https://www.coinbase.com/blog/feed.xml"
+    ],
+    "kind": "company-news-v1",
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "website_delivery": {
+      "kind": "validated_company_news",
+      "reader": "Python NewsStore → Next.js home/radar/company",
+      "after_publish": "none",
+      "frontend_build_required": false,
+      "restart_required": false
+    }
+  }
+}

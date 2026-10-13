@@ -92,13 +92,16 @@ def public_url(url):
 
 
 def validate_shape(value, schema):
-    types = {"object": dict, "array": list, "string": str, "boolean": bool, "integer": int}
-    if type(value) is not types[schema["type"]]:
+    types = {"object": (dict,), "array": (list,), "string": (str,), "boolean": (bool,),
+             "integer": (int,), "number": (int, float)}
+    if type(value) not in types[schema["type"]]:
         raise ValueError("Model response has the wrong JSON type")
     if "enum" in schema and value not in schema["enum"]:
         raise ValueError("Model response has an invalid enum")
-    if type(value) is int and not schema.get("minimum", value) <= value <= schema.get("maximum", value):
-        raise ValueError("Model response has an invalid integer range")
+    if type(value) in (int, float) and not schema.get("minimum", value) <= value <= schema.get("maximum", value):
+        raise ValueError("Model response has an invalid numeric range")
+    if isinstance(value, str) and not schema.get("minLength", 0) <= len(value) <= schema.get("maxLength", len(value)):
+        raise ValueError("Model response has an invalid string length")
     if isinstance(value, dict):
         properties = schema["properties"]
         if set(schema.get("required", [])) - value.keys() or set(value) - properties.keys():
@@ -315,14 +318,16 @@ class ModelRunner:
                         if item.get("type") in {"command_execution", "web_search", "mcp_tool_call"}:
                             raise ValueError("A text-only blog stage attempted a tool action")
                     result = read_json(directory / "response.json")
-                validate_shape(result, read_json(schema))
-                atomic_json(directory / "response.json", result)
                 call = {"stage": stage, "provider": provider, "model": settings["model"], "finished_at": now()}
                 if provider == "agy":
                     usage = envelope.get("usage", {})
                     call["usage"] = {key: value for key, value in (usage.items() if isinstance(usage, dict) else [])
                                      if type(value) is int and value >= 0}
                 self.calls.append(call)
+                # A returned generation consumes its measured usage even when its
+                # structure fails local validation; never hide it from budgets.
+                validate_shape(result, read_json(schema))
+                atomic_json(directory / "response.json", result)
                 return result
             finally:
                 terminate_model()
