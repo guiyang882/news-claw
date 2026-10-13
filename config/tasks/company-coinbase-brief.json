@@ -63,7 +63,7 @@
     "budget": {
       "max_daily_company_attempts": 1,
       "max_daily_shared_attempts": 3,
-      "minimum_company_spacing_seconds": 3600,
+      "minimum_company_spacing_seconds": 600,
       "reserved_tokens_per_attempt": 40000,
       "new_company_daily_token_budget": 120000,
       "max_input_chars": 16000,
@@ -153,6 +153,22 @@
       "after_publish": "none",
       "frontend_build_required": false,
       "restart_required": false
-    }
+    },
+    "cached_news_sources": [
+      {
+        "url": "https://news.google.com/rss/search?q=%22Gemini%22+agent+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "name": "Google News · gemini-agent（本地缓存）",
+        "title_terms": [
+          "Coinbase"
+        ]
+      },
+      {
+        "url": "https://news.google.com/rss/search?q=%28ChatGPT+OR+GPT%29+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "name": "Google News · gpt-feedback（本地缓存）",
+        "title_terms": [
+          "Coinbase"
+        ]
+      }
+    ]
   }
 }

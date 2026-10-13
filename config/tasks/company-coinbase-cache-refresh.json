@@ -1,0 +1,141 @@
+{
+  "scheduler_engine": "news-claw",
+  "task_type": "workflow",
+  "enabled": true,
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "cron",
+  "topic_ids": [
+    "company-coinbase"
+  ],
+  "id": "company-coinbase-cache-refresh",
+  "name": "Coinbase：复用本地新闻缓存",
+  "description": "只读已校验缓存，精确匹配 Coinbase 标题，合并 SEC 披露与具名媒体线索；不联网、不调用模型。",
+  "schedule": "17 * * * *",
+  "options": {
+    "start_jitter_seconds": 60
+  },
+  "execution": {
+    "command": [
+      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      "-m",
+      "workflows.company_watch",
+      "--publish-only",
+      "--execute"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 120,
+    "stop_grace_seconds": 15,
+    "lock_group": "company-watch-cache",
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  },
+  "workflow": {
+    "company": "coinbase",
+    "state_root": "/mnt/quant-state/quant-web",
+    "source_urls": [
+      "https://data.sec.gov/submissions/CIK0001679788.json"
+    ],
+    "cached_news_sources": [
+      {
+        "url": "https://news.google.com/rss/search?q=%22Gemini%22+agent+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "name": "Google News · gemini-agent（本地缓存）",
+        "title_terms": [
+          "Coinbase"
+        ]
+      },
+      {
+        "url": "https://news.google.com/rss/search?q=%28ChatGPT+OR+GPT%29+%28review+OR+feedback+OR+users%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen",
+        "name": "Google News · gpt-feedback（本地缓存）",
+        "title_terms": [
+          "Coinbase"
+        ]
+      }
+    ],
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "website_delivery": {
+      "kind": "validated_company_news",
+      "reader": "Python NewsStore → Next.js home/radar/company",
+      "after_publish": "none",
+      "frontend_build_required": false,
+      "restart_required": false
+    }
+  }
+}

@@ -130,6 +130,36 @@ class CompanyWatchWorkflowTests(unittest.TestCase):
         self.assertEqual(self.call(runner,'amazon')['business_status'],'staggered_budget_cooldown')
         self.assertEqual(self.call(Runner(),'amazon',self.now+timedelta(hours=2))['business_status'],'published')
 
+    def test_ten_minute_stagger_retains_daily_and_token_caps(self):
+        self.assertEqual(self.config['workflow']['budget']['minimum_company_spacing_seconds'],600)
+        self.call(Runner());self.write_news('amazon')
+        runner=Runner()
+        self.assertEqual(self.call(runner,'amazon',self.now+timedelta(minutes=9))['business_status'],'staggered_budget_cooldown')
+        self.assertEqual(runner.calls,[])
+        self.assertEqual(self.call(runner,'amazon',self.now+timedelta(minutes=10))['business_status'],'published')
+
+    def test_cached_media_requires_explicit_feed_and_company_title_match(self):
+        config=deepcopy(self.config);config['workflow']['company']='coinbase'
+        config['workflow']['cached_news_sources']=[{'url':'https://example.com/feed','name':'Cached media','title_terms':['Coinbase']}]
+        db=self.root/'cache.sqlite3';normalized=self.root/'data/normalized';normalized.mkdir(parents=True)
+        cases=[('Coinbase launches a product','https://example.com/feed'),
+               ('Google launches a product','https://example.com/feed'),
+               ('NotCoinbase launches a product','https://example.com/feed'),
+               ('Coinbase launches a product','https://unapproved.example/feed')]
+        with sqlite3.connect(db) as connection:
+            connection.execute('CREATE TABLE documents(id TEXT,published_at TEXT,fetched_at TEXT,source_json TEXT,normalized_path TEXT,content_hash TEXT)')
+            for i,(title,url) in enumerate(cases):
+                record={'title':title,'published_at':self.now.isoformat(),'record_type':'feed_entry','text':title,'canonical_url':f'https://example.com/article/{i}'}
+                path=normalized/f'{i}.json';path.write_text(json.dumps(record))
+                digest=hashlib.sha256(json.dumps(record,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+                connection.execute('INSERT INTO documents VALUES(?,?,?,?,?,?)',(str(i),self.now.isoformat(),self.now.isoformat(),json.dumps({'name':'News','url':url}),str(path.relative_to(self.root)),digest))
+        result=cached_news(config,self.root,db,now=self.now+timedelta(minutes=1))
+        self.assertEqual(len(result['events']),1)
+        self.assertEqual(result['events'][0]['company'],'coinbase')
+        self.assertEqual(result['events'][0]['tags'],['Media headline · cached, unverified'])
+        self.assertEqual(result['sources'][0]['name'],'Cached media')
+        self.assertEqual(result['events'][0]['observed_at'],self.now.isoformat())
+
     def test_failure_consumes_budget_and_preserves_published_snapshot(self):
         self.assertEqual(self.call(Runner())['business_status'],'published')
         path=self.root/'site/company_briefs/google.json';before=path.read_bytes()
