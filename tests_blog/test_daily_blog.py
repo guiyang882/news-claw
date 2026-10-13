@@ -336,10 +336,11 @@ class DailyBlogTests(unittest.TestCase):
             self.assertEqual(client.get("/internal/frontend/site").status_code, 401)
             response = client.get("/internal/frontend/site", headers={"Authorization": "Bearer " + bridge_token})
             self.assertIn("offline-topic-outline-2026-10-10", [item["slug"] for item in response.get_json()["data"]["articles"]])
-            for path in ("/blog/offline-topic-outline-2026-10-10.md", "/blog/feed.xml", "/blog-sitemap.xml"):
+            self.assertEqual(client.get("/blog/offline-topic-outline-2026-10-10.md").status_code, 404)
+            for path in ("/blog/feed.xml", "/blog-sitemap.xml"):
                 response = client.get(path)
                 self.assertEqual(response.status_code, 200, path)
-                self.assertIn(b"offline-topic-outline-2026-10-10" if path.endswith("xml") else b"Offline" if ".md" in path else b"", response.data)
+                self.assertIn(b"offline-topic-outline-2026-10-10", response.data)
         count = len(self.calls)
         self.assertEqual(self.run_blog()["business_status"], "already_published")
         self.assertEqual(len(self.calls), count)
