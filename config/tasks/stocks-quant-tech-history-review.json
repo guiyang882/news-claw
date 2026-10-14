@@ -3,7 +3,7 @@
   "name": "每周科技史故事研究",
   "description": "每周使用内置缓存搜索索引，为未来 30 天科技史纪念日准备有来源证据的中英文故事候选。",
   "scheduler_engine": "news-claw",
-  "enabled": true,
+  "enabled": false,
   "schedule": "20 4 * * 1",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",

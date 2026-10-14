@@ -2,7 +2,7 @@
   "id": "technology-history-stories",
   "name": "科技史故事资料",
   "description": "历史科技事件的日期、原始证据与中英文故事素材，供网站离线故事库使用。",
-  "enabled": true,
+  "enabled": false,
   "keywords": ["technology history", "science history", "engineering history", "anniversary"],
   "questions": [
     "事件日期是否有允许来源的直接证据？",

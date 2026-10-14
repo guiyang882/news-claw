@@ -62,3 +62,14 @@ systemctl show news-claw.service --property=ProtectHome --property=ProtectSystem
 每日博客使用 stocks-quant/web/.venv 的既有网站依赖。make test-blog 在临时目录验证选题与大纲先于写稿、大纲来源与预算、正文约二十分钟的阅读量、一次纠错与再复核、拒绝时停止、事实与引用校验、哈希、防重复、knowledge 索引和网站双语页面、Feed、Sitemap。供应方状态及实际模型响应由受控试跑另行验证。
 
 频率、模型与输入配置见 [每日博客](../docs/daily-blog.md)。原始材料、各模型响应与诊断日志保存在忽略目录 data/runs/；Git 保存配置、代码、SQLite 索引和精选 knowledge。
+
+## 科技史任务暂停（2026-10-14）
+
+网站已无对应科技史内容入口，按运营者要求暂停 `stocks-quant-tech-history-review`
+及其资料主题 `technology-history-stories`；两份配置的 `enabled` 均为 `false`。
+运行 `make init` 同步后，Go engine 下次轮询会清除下一次执行时间并取消尚未执行的排队任务。
+旧 `quant-tech-history-review.timer` 保持 disabled / inactive，不重新启用。
+
+历史素材、已发布快照、失败记录和来源拒绝熔断保留；本次暂停不表示来源访问已恢复。
+其他新闻采集、公司研究与每日博客任务保持原状态。未来恢复前须重新确认网站用途和来源访问条件，
+再启用任务与主题配置并运行 `make init`；仍由 news-claw 调度，无需启动旧 timer。
