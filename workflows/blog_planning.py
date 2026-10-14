@@ -18,9 +18,10 @@ def reading_metrics(body, language, policy):
 
 
 def length_requirements(policy):
+    # Match reading_metrics: minutes are rounded up, including the lower bound.
     target = policy["target_minutes"]
     tolerance = policy["tolerance_minutes"]
-    return {language: {"target": target * rate, "minimum": (target - tolerance) * rate,
+    return {language: {"target": target * rate, "minimum": (target - tolerance - 1) * rate + 1,
                        "maximum": (target + tolerance) * rate}
             for language, rate in (("zh", policy["zh_units_per_minute"]),
                                    ("en", policy["en_words_per_minute"]))}

@@ -1,0 +1,47 @@
+{
+  "approval_kind": "model_review",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/when-starship-launch-capacity-become-usable-starlink-service-2026-10-13/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/when-starship-launch-capacity-become-usable-starlink-service-2026-10-13/zh.md"
+  },
+  "article_sha256": "7df9edf5b8ff58635b8142b32a09ccb6d4e141aa29147b5cc8b7fcd121a22cd1",
+  "day": "2026-10-13",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "从公司宣布的 Starship 与 V3 技术目标，到用户实际可用的 Starlink 服务，中间有哪些必须分别核验的条件？",
+    "section_count": 7,
+    "selected_candidate_id": "spacex-capacity",
+    "target_reading_minutes": 20,
+    "title": "Starship 的大运力，何时才会变成 Starlink 的可用服务？"
+  },
+  "editorial_plan_sha256": "ae08084792f95ec6a0682fc2b6c8231a45fc9e42dbcca21c671ea56594b842a9",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "9c64ec5707c10f99f07901e20f90e6726f3d5c7302ba587b64a3c7b205ac0535",
+  "publication_kind": "original",
+  "reading_estimates": {
+    "en": {
+      "minutes": 17,
+      "rate": 200,
+      "units": 3226
+    },
+    "zh": {
+      "minutes": 17,
+      "rate": 300,
+      "units": 5052
+    }
+  },
+  "slug": "when-starship-launch-capacity-become-usable-starlink-service-2026-10-13",
+  "source_urls": [
+    "https://content.spacex.com/cms-assets/FINAL_Documents%20and%20Updates/SpaceX%20-%20EU%20Prospectus%20%28Approved%20by%20Bafin%29%20-%20June%205%2C%202026.pdf",
+    "https://www.spacex.com/updates/reusability",
+    "https://www.faa.gov/space/stakeholder_engagement/spacex_starship/license_review_process",
+    "https://www.faa.gov/space/stakeholder_engagement/spacex_starship/environmental_review",
+    "https://www.faa.gov/space/stakeholder_engagement/spacex_starship"
+  ],
+  "summary": "标记截至 2026 年 10 月 12 日的本地研究快照，保留了 SpaceX 带日期的经营数字、V3 设计目标和 Starship 任务计划。把这些计划与可用 Starlink 供给连接起来，需要分别核验授权、部署、入网及市场服务证据。用户与投资者的思想实验说明了每类记录能回答什么，以及服务适用性或经济结果为何仍可能未定。",
+  "summary_en": "The local research snapshot marked October 12, 2026 retains dated SpaceX operating figures, V3 design targets and Starship mission plans. Connecting those plans with usable Starlink supply requires separate authorization, deployment, commissioning and market-service evidence. Hypothetical user and investor decisions show what each record could establish, and where service applicability or economics would remain unresolved.",
+  "title": "Starship 的运力何时能成为可用的 Starlink 服务？",
+  "title_en": "When does Starship’s launch capacity become usable Starlink service?",
+  "url": "https://growthyoung.com/blog/when-starship-launch-capacity-become-usable-starlink-service-2026-10-13",
+  "version": 1
+}

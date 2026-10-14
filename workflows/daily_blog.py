@@ -6,7 +6,7 @@ import argparse
 from contextlib import contextmanager
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import fcntl
 import hashlib
 import json
@@ -372,6 +372,12 @@ def build_draft(result, packet, config, day, *, plan, humanized=False):
         if not 1 <= len(item["keywords"]) <= 12 or any(not 1 <= len(word.strip()) <= 60 for word in item["keywords"]):
             raise ValueError("Invalid article keywords")
         body = presentation.with_hero(item["body_markdown"], media, language)
+        recovered_at = config["workflow"].get("recovery_updated_at")
+        if recovered_at and recovered_at != day.isoformat():
+            notice = (f"归档日期：{day.isoformat()}；补发于 {recovered_at}。本文使用原归档日保存的资料，资料中的经营截止日保持不变。"
+                      if language == "zh" else
+                      f"Archive date: {day.isoformat()}; published on {recovered_at}. This article uses the material saved for the archive date and retains its original reporting cutoffs.")
+            body = notice + "\n\n" + body
         item["body_markdown"] = body
         if len(body) > 90_000 or len(re.findall(r"(?m)^##\s+", body)) < config["workflow"]["planning"]["min_sections"]:
             raise ValueError("Article is too short or lacks sections")
@@ -390,7 +396,7 @@ def build_draft(result, packet, config, day, *, plan, humanized=False):
         if humanized and presentation_settings.get("references", "source_based_appendix") != "none":
             item["body_markdown"] = presentation.with_references(body, [sources[sid] for sid in ids], language)
     metadata = {**article["zh"], "en": article["en"], "slug": presentation.topic_slug(plan, day, config["workflow"].get("presentation")),
-                "published_at": day.isoformat(), "updated_at": day.isoformat(), "author": AUTHOR,
+                "published_at": day.isoformat(), "updated_at": config["workflow"].get("recovery_updated_at", day.isoformat()), "author": AUTHOR,
                 "tags": article["tags"], "presentation": {"style": "research", "media_ids": [asset["id"] for asset in media]}}
     metadata["en"]["author"] = AUTHOR_EN
     return {"version": 1, "article": metadata, "sources": [sources[sid] for sid in ids], "media": media,
@@ -633,21 +639,39 @@ class RecoveryStages:
 
     def __init__(self, runner, saved, corrected):
         self.runner = runner
-        stages = {"plan": "00-codex-plan", "draft": "01-agy-draft"}
-        if (saved / "01-length-repair/response.json").is_file():
-            stages["repair_length"] = "01-length-repair"
-        stages.update(review="02-codex-review", revise="02b-codex-correction")
-        for stage, path in (("review_revised", "02c-codex-re-review"), ("humanize", "03-codex-humanizer"),
-                            ("final_review", "04-codex-final-review")):
-            if (saved / path / "response.json").is_file():
-                stages[stage] = path
-        remaining = 2 if "final_review" in stages else 3
-        if len(stages) + remaining > runner.settings["network_policy"]["max_cli_invocations_per_day"]:
+        completed = []
+        seen = set()
+        previous = saved
+        while previous is not None:
+            if previous.name in seen:
+                raise ValueError("Recovery history contains a cycle")
+            seen.add(previous.name)
+            if not previous.is_dir():
+                raise ValueError("Recovery history is missing a run directory")
+            completed.extend({"stage": path.parent.name, "reused_from": str(previous)}
+                for path in sorted(previous.glob("*/response.json"))
+                if not (path.parent / "reused-stage.json").exists())
+            audit = previous / "recovery-audit.json"
+            ancestor = read_json(audit).get("recovered_from") if audit.is_file() else None
+            if ancestor and not re.fullmatch(r"[a-f0-9]{32}", ancestor):
+                raise ValueError("Invalid recovery ancestor")
+            previous = saved.parent / ancestor if ancestor else None
+        edited = saved / "03-codex-humanizer/response.json"
+        # An unchanged, already humanized checkpoint can resume at final review.
+        # Its initial verdict is still checked against the exact reconstructed hash.
+        resume_final = (edited.is_file() and read_json(edited) == corrected
+                        and (saved / "reviewed-draft.json").is_file()
+                        and (saved / "02-codex-review/response.json").is_file()
+                        and read_json(saved / "02-codex-review/response.json").get("approved") is True)
+        remaining = 1 if resume_final else 3
+        if len(completed) + remaining > runner.settings["network_policy"]["max_cli_invocations_per_day"]:
             raise ValueError("Daily model invocation limit cannot accommodate the remaining recovery stages")
-        self.saved = {stage: read_json(saved / path / "response.json") for stage, path in stages.items()}
-        self.saved["revise"] = corrected
-        # A manual continuation shares the original day's invocation budget.
-        runner.calls.extend(stages)
+        self.saved = {"plan": read_json(saved / "00-codex-plan/response.json"), "draft": corrected}
+        if resume_final:
+            self.saved.update(draft=read_json(saved / "01-agy-draft/response.json"),
+                              review=read_json(saved / "02-codex-review/response.json"),
+                              humanize=corrected)
+        runner.calls.extend(completed)
 
     @property
     def calls(self):
@@ -682,10 +706,10 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             raise ValueError("Recovery needs an existing run ID")
         saved = root / "data/runs" / recovery["run_id"]
         error = read_json(saved / "result.json").get("error")
-        if error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
+        length_failure = (isinstance(error, str) and re.match(r"^(zh|en) article does not meet the approximate reading time target:", error)
+                          and (saved / "03-codex-humanizer/response.json").is_file())
+        if not length_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
             raise ValueError("Recovery only supports a saved editorial validation failure")
-        if error == "Codex rejected the article; publication stopped" and not (saved / "04-codex-final-review/response.json").is_file():
-            raise ValueError("Recovery needs the saved final review and humanizer stages")
         filename = recovery.get("draft_filename", "")
         if not filename or Path(filename).name != filename or filename in {".", ".."}:
             raise ValueError("Recovery draft must be a file in the failed run directory")
@@ -695,6 +719,11 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             raise ValueError("Recovery publication day does not match the saved packet")
         editorial.validate_plan(plan, packet, settings, packet_sha256=digest(packet))
         corrected = read_json(saved / filename)
+        config = deepcopy(config)
+        settings = config["workflow"]
+        settings["recovery_updated_at"] = datetime.now(ZoneInfo(config["timezone"])).date().isoformat()
+        if day.isoformat() > settings["recovery_updated_at"]:
+            raise ValueError("Cannot recover a future publication day")
         build_draft(corrected, packet, config, day, plan=plan)
     else:
         packet = collect_packet(config, root, db, day)
@@ -863,7 +892,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 last = runner("final_review_revised", review_prompt(final, packet, original=original, skill=skill),
                               SCHEMAS / "daily-blog-verdict.schema.json", directory / "04c-codex-final-re-review")
             require_verdict(last, final, packet, final=True)
-            if model_runner is None and datetime.now(ZoneInfo(config["timezone"])).date() != day:
+            if model_runner is None and not recovery and datetime.now(ZoneInfo(config["timezone"])).date() != day:
                 raise ValueError("Publication day expired while preparing the article")
             outcome = publish(final, packet, first, last, original, skill_hash, site, day,
                               os.environ.get("NEWS_CLAW_RUN_ID", "manual"))
@@ -914,9 +943,13 @@ def main():
             if not row[1] or row[2] != "news-claw" or not active:
                 parser.error("Launch this enabled task through the Go engine")
             recovery = config["workflow"].get("manual_recovery")
-            today = datetime.now(ZoneInfo(config["timezone"])).date().isoformat()
-            if recovery and recovery.get("day") == today:
-                if json.loads(active[0]).get("trigger") != "manual" or not connection.execute(
+            if recovery and json.loads(active[0]).get("trigger") != "manual":
+                # A queued operator recovery must never turn a later cron run into a backfill.
+                config = deepcopy(config)
+                config["workflow"].pop("manual_recovery")
+                recovery = None
+            if recovery:
+                if not connection.execute(
                         "SELECT 1 FROM task_runs WHERE id=? AND task_id=? AND status='failed'",
                         (recovery.get("run_id"), args.task)).fetchone():
                     parser.error("Recovery requires a manually queued run and a failed run of this task")
@@ -924,7 +957,9 @@ def main():
     signal.signal(signal.SIGTERM, terminate_model)
     signal.signal(signal.SIGINT, terminate_model)
     try:
-        result = run(config, root, db, directory, execute=not args.check)
+        recovery = config["workflow"].get("manual_recovery") if not args.check else None
+        recovery_day = date.fromisoformat(recovery["day"]) if recovery else None
+        result = run(config, root, db, directory, execute=not args.check, day=recovery_day)
     except Exception as error:
         result = {"success": False, "business_status": "failed", "error": str(error), "finished_at": now()}
         plan_path = directory / "blog-outline.json"

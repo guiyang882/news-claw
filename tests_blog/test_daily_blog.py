@@ -180,13 +180,99 @@ class DailyBlogTests(unittest.TestCase):
         result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
         self.assertEqual(result["business_status"], "published")
         self.assertEqual(result["recovered_from"], "a" * 32)
-        self.assertEqual(self.calls, ["review_revised", "humanize", "final_review"])
+        self.assertEqual(self.calls, ["review", "humanize", "final_review"])
         self.assertEqual(len(result["model_calls"]), 7)
         self.assertEqual(blog.read_json(saved / "result.json")["success"], False)
         self.assertEqual(blog.read_json(self.directory / "recovery-audit.json")["previous_attempt"]["status"], "failed")
         again = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
         self.assertEqual(again["business_status"], "already_published")
         self.assertEqual(len(self.calls), 3)
+
+    def test_rejected_early_review_can_be_backfilled_with_fresh_verdicts(self):
+        saved, live = self.recovery_fixture()
+        blog.atomic_json(saved / "result.json", {"success": False, "error": "Codex rejected the article; publication stopped"})
+        rejected = blog.read_json(saved / "02-codex-review/response.json")
+        blog.atomic_json(saved / "02c-codex-re-review/response.json", rejected)
+        packet_bytes = (saved / "source-packet.json").read_bytes()
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(self.calls, ["review", "humanize", "final_review"])
+        self.assertEqual(len(result["model_calls"]), 8)
+        self.assertEqual((saved / "source-packet.json").read_bytes(), packet_bytes)
+        article = blog.read_json(self.site / "manifest.json")["articles"][0]
+        self.assertEqual(article["published_at"], DAY.isoformat())
+        self.assertGreater(article["updated_at"], article["published_at"])
+        final = blog.read_json(self.directory / "final-draft.json")
+        self.assertIn("补发于", final["article"]["body_markdown"])
+        self.assertIn("published on", final["article"]["en"]["body_markdown"])
+
+    def test_recovery_still_stops_on_a_new_review_rejection(self):
+        saved, live = self.recovery_fixture()
+        self.config["workflow"]["max_draft_revisions"] = 0
+        self.responses["review"] = lambda value: value.update(approved=False, issues=["Still unsupported"])
+        with self.assertRaisesRegex(ValueError, "Codex rejected"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_cli_only_backfills_an_explicit_manual_run(self):
+        self.recovery_fixture()
+        for trigger in ("manual", "cron"):
+            with self.subTest(trigger=trigger):
+                connection = Mock()
+                rows = [(json.dumps(self.config), True, "news-claw"),
+                        (json.dumps({"trigger": trigger}),), ("failed-run",)]
+                connection.execute.side_effect = [Mock(fetchone=Mock(return_value=row)) for row in rows]
+                env = {"NEWS_CLAW_ROOT": str(self.root), "NEWS_CLAW_DB": str(self.db),
+                       "NEWS_CLAW_RUN_ID": "b" * 32, "NEWS_CLAW_TASK_ID": "daily-blog-agy-codex",
+                       "NEWS_CLAW_TASK_CONFIG_PATH": "", "NEWS_CLAW_RESULT_PATH": ""}
+                with patch.dict(os.environ, env), patch.object(sys, "argv", ["daily_blog"]), \
+                     patch.object(blog.sqlite3, "connect", return_value=connection), \
+                     patch.object(blog, "run", return_value={"success": True}) as run:
+                    self.assertEqual(blog.main(), 0)
+                self.assertEqual(run.call_args.kwargs["day"], DAY if trigger == "manual" else None)
+                self.assertEqual("manual_recovery" in run.call_args.args[0]["workflow"], trigger == "manual")
+
+    def test_reading_lower_bound_matches_displayed_minutes(self):
+        policy = self.config["workflow"]["reading"]
+        limits = blog.editorial.length_requirements(policy)
+        for language, text in (("zh", "字"), ("en", "word ")):
+            minimum = limits[language]["minimum"]
+            metric = blog.editorial.reading_metrics(text * minimum, language, policy)
+            below = blog.editorial.reading_metrics(text * (minimum - 1), language, policy)
+            self.assertEqual(metric["minutes"], policy["target_minutes"] - policy["tolerance_minutes"])
+            self.assertEqual(below["minutes"], metric["minutes"] - 1)
+
+    def test_unchanged_humanized_checkpoint_only_needs_final_review(self):
+        saved, live = self.recovery_fixture()
+        packet = blog.read_json(saved / "source-packet.json")
+        plan = blog.read_json(saved / "blog-outline.json")
+        config = deepcopy(self.config)
+        config["workflow"]["recovery_updated_at"] = blog.datetime.now(blog.ZoneInfo(config["timezone"])).date().isoformat()
+        original = blog.build_draft(self.draft(), packet, config, DAY, plan=plan)
+        review = blog.read_json(saved / "02-codex-review/response.json")
+        review.update(approved=True, citations_valid=True, issues=[], article_sha256=blog.digest(original))
+        blog.atomic_json(saved / "02-codex-review/response.json", review)
+        blog.atomic_json(saved / "reviewed-draft.json", original)
+        blog.atomic_json(saved / "03-codex-humanizer/response.json", self.draft())
+        blog.atomic_json(saved / "result.json", {"error": "zh article does not meet the approximate reading time target: 5052 units; required 5100–6900"})
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, ["final_review"])
+        self.assertEqual(len(result["model_calls"]), 6)
+        self.assertEqual(result["business_status"], "published")
+
+    def test_recovery_budget_counts_ancestors_but_not_replayed_responses(self):
+        saved, live = self.recovery_fixture()
+        child = saved.parent / ("b" * 32)
+        blog.atomic_json(child / "recovery-audit.json", {"recovered_from": saved.name})
+        for stage in ("00-codex-plan", "01-agy-draft"):
+            blog.atomic_json(child / stage / "response.json", blog.read_json(saved / stage / "response.json"))
+            blog.atomic_json(child / stage / "reused-stage.json", {"model_called": False})
+        blog.atomic_json(child / "02-codex-review/response.json", {})
+        stages = blog.RecoveryStages(live, child, self.draft())
+        self.assertEqual(len(stages.calls), 5)
+        self.config["workflow"]["network_policy"]["max_cli_invocations_per_day"] = 7
+        with self.assertRaisesRegex(ValueError, "invocation limit"):
+            blog.RecoveryStages(live, child, self.draft())
 
     def test_recovery_cannot_exceed_the_original_daily_budget(self):
         saved, live = self.recovery_fixture()
