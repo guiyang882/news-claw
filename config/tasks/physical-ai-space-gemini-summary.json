@@ -37,7 +37,7 @@
     "kind": "reviewed-topic-summary-v1",
     "writer": {
       "executable": "/root/.local/bin/agy",
-      "model": "gemini-3.8-flash-high",
+      "model": "gemini-3.8-flash-low",
       "timeout_seconds": 900,
       "permissions": "full"
     },

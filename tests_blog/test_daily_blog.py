@@ -433,6 +433,10 @@ class DailyBlogTests(unittest.TestCase):
         result = self.run_blog()
         self.assertEqual(result["business_status"], "insufficient_evidence")
         self.assertEqual(result["stage"], "planning")
+        self.assertFalse(result["success"])
+        self.assertTrue(result["needs_attention"])
+        self.assertIn("not published", result["error"])
+        self.assertFalse(self.run_blog()["success"])
         self.assertTrue((self.directory / "topic-candidates.json").is_file())
         self.assertEqual(self.calls, ["plan"])
 
@@ -654,6 +658,53 @@ class DailyBlogTests(unittest.TestCase):
         with patch("subprocess.Popen", side_effect=AssertionError("Blocked provider cannot be called")):
             with self.assertRaisesRegex(PermissionError, "circuit is open"):
                 runner("draft", "test", blog.SCHEMAS / "daily-blog-draft.schema.json", self.directory)
+
+    def test_truncated_writer_is_counted_and_partial_output_is_never_accepted(self):
+        self.config["workflow"]["network_policy"]["max_cli_invocations_per_day"] = 1
+        runner = blog.ModelRunner(self.config, self.root)
+        schema = self.root / "empty-schema.json"
+        schema.write_text('{"type":"object","properties":{},"required":[]}')
+        stage = self.root / "data/runs" / ("f" * 32) / "01-agy-summary"
+        def start(command, **kwargs):
+            envelope = {"status": "ERROR", "error": "Response cut off: output token limit",
+                        "structured_output": {}, "usage": {"total_tokens": 152015}}
+            kwargs["stdout"].write(json.dumps(envelope).encode())
+            kwargs["stdout"].flush()
+            return Mock(returncode=0, poll=lambda: 0)
+        with patch.object(blog.subprocess, "Popen", side_effect=start) as process:
+            with self.assertRaisesRegex(ValueError, "truncated"):
+                runner("draft", "Offline fixture", schema, stage)
+        self.assertEqual(runner.calls[0]["usage"]["total_tokens"], 152015)
+        self.assertEqual(runner.calls[0]["status"], "failed")
+        self.assertFalse((stage / "response.json").exists())
+        self.assertEqual(len(blog.previous_model_calls(stage.parent)), 1)
+        # A subsequent valid response for the same recorded stage must not double count it.
+        blog.atomic_json(stage / "response.json", {})
+        self.assertEqual(len(blog.previous_model_calls(stage.parent)), 1)
+        with self.assertRaisesRegex(ValueError, "invocation limit"):
+            runner("draft", "No retry", schema, stage)
+
+    def test_nonzero_writer_exit_retains_usage(self):
+        runner = blog.ModelRunner(self.config, self.root)
+        schema = self.root / "empty-schema.json"
+        schema.write_text('{"type":"object","properties":{},"required":[]}')
+        def start(command, **kwargs):
+            kwargs["stdout"].write(json.dumps({"status": "ERROR", "usage": {"total_tokens": 42}}).encode())
+            kwargs["stdout"].flush()
+            return Mock(returncode=1, poll=lambda: 1)
+        with patch.object(blog.subprocess, "Popen", side_effect=start):
+            with self.assertRaisesRegex(RuntimeError, "exited with status 1"):
+                runner("draft", "Offline fixture", schema, self.directory)
+        self.assertEqual(runner.calls[0]["usage"]["total_tokens"], 42)
+        self.assertEqual(runner.calls[0]["status"], "failed")
+
+    def test_schema_validator_accepts_numbers_but_not_booleans(self):
+        numeric = {"type": "number", "minimum": 0, "maximum": 100}
+        for value in (0, 53, 53.5):
+            blog.validate_shape(value, numeric)
+        for value in (True, "53", 101):
+            with self.assertRaises(ValueError):
+                blog.validate_shape(value, numeric)
 
     def test_codex_uses_task_speed_and_reasoning_even_when_ignoring_user_config(self):
         schema = self.root / "command-schema.json"

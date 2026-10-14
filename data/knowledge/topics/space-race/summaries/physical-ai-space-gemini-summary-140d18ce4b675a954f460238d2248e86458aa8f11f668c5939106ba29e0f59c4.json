@@ -1,0 +1,511 @@
+{
+  "draft": {
+    "packet_sha256": "ba2adc5a507f2a4318e88911ca6fe7eb6d5f1969ad56c91591fca601d2f8f325",
+    "reason": "航天主题依据截至2026-10-14的发行人及监管研究快照作有归属、带日期的摘要；原包未提供原始正文或新增独立核验。机器人主题仅有Yahoo Finance RSS标题，物理AI缺乏直接证据。RSS标题不能确认实际任务、产量、部署规模或行业趋势。",
+    "status": "ready",
+    "topics": [
+      {
+        "entities": [
+          "MES Inc."
+        ],
+        "evidence_gaps": [
+          "缺乏感知、操作、移动、可靠性的技术进展、基准及真实部署的规模、客户验证和运行指标。",
+          "缺乏供应链细节与商业化财务数据；未验证该标题是否来自商业通稿。",
+          "缺乏100,000台表述的统计范围、时间口径及原始依据。"
+        ],
+        "inferences": [],
+        "observations": [
+          {
+            "boundary": "这是标题内容的归属记录；原包没有正文、MES Inc.原始声明或产量统计依据，不能确认产量及制造转变。",
+            "claim": "2026-10-13T13:30:00+00:00的Yahoo Finance RSS标题使用“产出趋向100,000台”的表述，并称MES Inc.讨论从坯料切削加工转向批量生产。",
+            "kind": "headline_lead",
+            "source_refs": [
+              {
+                "locator": "data/normalized/documents/048017c128036a34f10f14da8370a4972377377e9ccae2eebefb7b6558a97331.json",
+                "source_id": "doc-048017c128036a34f10f14da8370a4972377377e9ccae2eebefb7b6558a97331"
+              }
+            ]
+          }
+        ],
+        "relations": [],
+        "summary": "原包仅有一条Yahoo Finance RSS标题，提及MES Inc.与人形机器人制造议题；产量、制造方式变化和真实部署均缺乏核验。",
+        "timeline": [],
+        "topic_id": "robotics-and-humanoids",
+        "used_source_ids": [
+          "doc-048017c128036a34f10f14da8370a4972377377e9ccae2eebefb7b6558a97331"
+        ]
+      },
+      {
+        "entities": [],
+        "evidence_gaps": [
+          "缺乏模型实验、基准、真实部署，以及数据、算力、仿真、硬件瓶颈的证据；也缺乏与传统控制及生成式AI结合方式的直接证据。"
+        ],
+        "inferences": [],
+        "observations": [],
+        "relations": [],
+        "summary": "原包关联的制造议题标题未提供物理AI或具身智能能力的直接证据。",
+        "timeline": [],
+        "topic_id": "physical-ai",
+        "used_source_ids": []
+      },
+      {
+        "entities": [
+          "Rocket Lab",
+          "Synspective",
+          "SpaceX",
+          "FAA"
+        ],
+        "evidence_gaps": [
+          "原包未提供研究快照对应的原始正文或新增独立核验；10月RSS缺乏官方任务确认，样本代表性不明，不能确认发射结果、天象归因、发射频次或行业趋势。",
+          "缺乏Starbase后续许可及获批频次、SpaceX当前网络容量、V3实际部署、Flight 14飞行结果，以及Neutron硬件测试和整箭集成证据；不能量化提速或推定延期年份。",
+          "原包Rocket Lab快照称Iridium收购仍待监管批准及其他交割条件，2027年中为公司交割目标；融资不等于收购完成，实际交割与整合影响待验。"
+        ],
+        "inferences": [],
+        "observations": [
+          {
+            "boundary": "依据截至2026-10-14的研究快照，未取得原始正文或独立核验；订单积压不等于收入，合同金额、选择权与收入确认须分开。",
+            "claim": "据原包所录Rocket Lab于2026-08-10发布的Q2财报披露，截至2026-06-30，Q2收入为2.34亿美元，订单积压为23.6亿美元。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/0",
+                "source_id": "rklb-q2-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/1",
+                "source_id": "rklb-q2-2026"
+              }
+            ]
+          },
+          {
+            "boundary": "依据截至2026-10-14的研究快照，未取得原始正文或独立核验；不能推算当前卫星、用户或已投入运营的网络容量。",
+            "claim": "据原包所录SpaceX于2026-06-05发布的招股说明书披露，截至2026-03-31，Starlink宽带与移动卫星合计约9,600颗，订阅用户约1,030万。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/0",
+                "source_id": "spacex-prospectus-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/metrics/1",
+                "source_id": "spacex-prospectus-2026"
+              }
+            ]
+          },
+          {
+            "boundary": "环境文件不等于运行授权。快照未发现可归属于2026-10-08之后的新许可事实，不足以断言FAA没有颁发新增许可。",
+            "claim": "原包FAA研究快照记载，项目页更新日期为2026-09-02，页面载有环境审查完成文件及拟修改许可证的范围，并说明SpaceX仍须申请并取得实验许可和/或运营许可证。",
+            "kind": "reported_fact",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/3",
+                "source_id": "faa-boca"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/3",
+                "source_id": "faa-license"
+              },
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/3",
+                "source_id": "faa-starship-project"
+              }
+            ]
+          }
+        ],
+        "relations": [],
+        "summary": "Rocket Lab研究快照记录了Q2财务、9月Electron任务及Synspective签约披露。SpaceX卫星和用户数据截至2026-03-31，Flight 14相关内容属于公司计划。FAA快照明确环境文件不能替代运行授权。",
+        "timeline": [
+          {
+            "boundary": "日期为公司更新日期，相关内容是计划，不能标记为已完成飞行、部署或推进剂转移。",
+            "event": "据原包所录公司更新，SpaceX拟自Flight 14起开展轨道任务、支持Starlink V3等载荷部署，并测试首次轨道推进剂转移。",
+            "event_date": "2026-09-15",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/spacex/milestones/0",
+                "source_id": "spacex-reusability-2026"
+              }
+            ],
+            "state": "announced_target"
+          },
+          {
+            "boundary": "event_date对应第97次任务；结果属于公司披露，未取得独立核验，也不能计入2026-09-30签署的新增20次协议执行。",
+            "event": "据原包Rocket Lab研究快照，公司披露于2026-09-19和2026-09-25分别完成第96和97次Electron任务，两次均为Synspective任务。",
+            "event_date": "2026-09-25",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/metrics/3",
+                "source_id": "rklb-news-sep-2026"
+              },
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/2",
+                "source_id": "rklb-news-sep-2026"
+              }
+            ],
+            "state": "reported_event"
+          },
+          {
+            "boundary": "签约与执行分开；金额及其余商务条款未披露，计划任务不能计作已完成发射或已确认收入。",
+            "event": "据原包所录Rocket Lab披露，公司与Synspective签署新增20次Electron任务的多年协议，任务计划于2028–2031年执行。",
+            "event_date": "2026-09-30",
+            "source_refs": [
+              {
+                "locator": "company_pulses.json/companies/rocket_lab/milestones/1",
+                "source_id": "rklb-synspective-20"
+              }
+            ],
+            "state": "reported_event"
+          }
+        ],
+        "topic_id": "space-race",
+        "used_source_ids": [
+          "rklb-q2-2026",
+          "spacex-prospectus-2026",
+          "faa-boca",
+          "faa-license",
+          "faa-starship-project",
+          "spacex-reusability-2026",
+          "rklb-news-sep-2026",
+          "rklb-synspective-20"
+        ]
+      }
+    ]
+  },
+  "generated_at": "2026-10-14T02:07:34+00:00",
+  "input_fingerprint": "140d18ce4b675a954f460238d2248e86458aa8f11f668c5939106ba29e0f59c4",
+  "recipe": "reviewed-topic-summary-v1",
+  "review": {
+    "approved": true,
+    "boundaries_preserved": true,
+    "facts_supported": true,
+    "issues": [],
+    "packet_sha256": "ba2adc5a507f2a4318e88911ca6fe7eb6d5f1969ad56c91591fca601d2f8f325",
+    "reason": "摘要与所给证据一致，引用的source_id与locator配对有效且符合主题范围；保留来源日期、公司归属、历史数据截止日及计划与完成状态的区别，并明确正文缺失、样本局限和独立核验不足。本结论为模型审查。",
+    "references_valid": true,
+    "summary_sha256": "f708a376ceec98ca9013f953fdcbd00aa11f3daf0a194637f1ab968777ca2a68"
+  },
+  "source_packet_path": "data/runs/108e4c13769a33724aaeca69c57c7aac/source-packet.json",
+  "sources": [
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-4dfc30416b55877eee3267e7816b584d0d7d04bdd4ea6b58a1c4c0f1880c5e97",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T14:15:00+00:00",
+      "title": "Did you see a flash of light in Tennessee? It was a SpaceX rocket. Watch - Knoxville News Sentinel",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMi2wFBVV95cUxOMVZWS0hKanRPaThSdVhSZW10ZXJMVE5pRHNrUlk1UFJzOTBoWVFQZzVmWkFjVzBmTW5uQ2tFSHB5WEVyWm02N1ZHZ0R1cmRiekV3aDhnT0ZiQXNsX1NoQWxySlhPaTBjZlBNXzZOcEpQT2Q3RXNTeUM1bDRTci1xNF9XZUpySURxdXlpQ192Q28yVWdPdXBjaUxtUzd4SmZnbUNfeDhUb1cwNnZfNkVIbks2R0szQUI0NnYwUDZ6c2FBQTFPbzJlSGQwOGh4RE15VXZadkhwU0pucm8?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-054de881da2601d3f1daf7ae050c2aab28c9854d2be6647e42079fdf1f67c51d",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T14:08:56+00:00",
+      "title": "SpaceX launches NASA science and cargo to the International Space Station - Spaceflight Now",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQS1lTcjQ0alBPSUxLV2ZaS09ya0VldHBrSmVKNWxJNEFRV0x1WHVtQW1uY0NINExmeWUzamVwenJuRExKYzlkbkJNX0VvSFdWazZ0Z2dsM3ZwYVBsdXRpZVhhdkZSdVFjWHBrelpvY1BvMGVqNHd1VU12RmU2U2JzSjBLSWI1Tnl5WklIWS1IRUtYdEd2eUNUWG9hVnFSSEtKc09PLTRXdDRMWTNRNmUwS2dn?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-e9499560ccd0fbdbc4a1be1ba45833c6674f6a4c23c15461e5efeffc64e6df32",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T14:07:04+00:00",
+      "title": "Did you see it? SpaceX launch lights up sky over Central Virginia - WSET",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMi2gFBVV95cUxOWDJrMHdWMFk1Ml9Gd2FMdk9QZFFKSlRZc01DcmhoM3A4Q1hZdGtueTBkR3BLNm9WOFZ0dDR0c1pyM0dNb250bDRnZnQ2Z0NueWEzQUhKT1RRbzAtWXpTZWlwX005QkxZcms0TFJKSF9CUFI0UnJBTDVvNlNDN19qYVNPdVNCRmg1YTRycHNCNE5rMU4xQXFUSmlXUDUwN3FGRkViMkhzangwMzNqUVNnS3lqMlRfb2dsa1RxYURYWEFTcW5pWGl5TThCNVRLUDhNNHNoUjd2SjJVUQ?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-6b40435fc60ea34954f5f75239a6b2dfaa81f2a00d40532845c6f031d88a811f",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T14:06:38+00:00",
+      "title": "Did you spot the ‘space jellyfish’ cloud in the sky this morning? - The Washington Post",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxQeW9XNWVtTW9oOWpYcXBITjlYamlqa3M2YzBuS1JuejUwcFlqY1FtUzAtb0hHb1FSY01BRU1HdENEWURvM2tablZIWWh1dUhQbHVRSTV3bVc0S25xVnNhM1Q3WmthTFIycnJWWTc0OGwzRHFfUUNWNlN0TXhaSGxDUGJZbmdZamRMMVE0YmVXc1BxeldQM2gyZldOWmhUbDdqMHk1QmhVTmFkaHc?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-b8915c646ae41cd8e51ce19edcfb9b82664e1d5a1cef46791433290b024142f9",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T14:01:39+00:00",
+      "title": "Spectacular jellyfish effect lights up dawn SpaceX launch. Video - Florida Today",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMizwFBVV95cUxQWllVdXA5enNRMV9lbGs3LU5taDF6bVR1VG5tX25DMXRrY3pPazNfbVZaVEFES0U1NUJQazVIdGREZ2tBMDFJdWFCVG5QWFpKU2d3SklnaF9Cd1A4QUFydHUxczZYV3VfLXdyWG5BNzAzNFJIXzFyYnhrTHpNSkxIYXBDVG1FUFNhSURZSGFsZkdHdl94VkZ6bXNjNFJfangyQURwcWFZcnJoRDAxN2JMTkRvamp2d2JDZERIZVJUcm9kVmhpdDNaOWNyNjZOR28?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-53d35b1dd29a159671470439ace16f8c657642c1bc27e5163463a939f7973ce5",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:45:13+00:00",
+      "title": "SpaceX launch creates 'space jellyfish' in the Florida sky - FOX 35 Orlando",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxPS0VQOWU3NTFyQy1jUzRWeEY3NGEySTU3TTZiR1dpeFdia3hZTEFnZEdYeU9ZTTBLZVhhQWNSM0hsUnBVU05DZnZmZEt2clMxaEVjeFdxQ1pfZ3lHdGM3eXpiVmNhTWxsaTgwOEpSX0prdTZrU01oRWtiR01uYWNseXFGZEg4TlZZSTZn?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-6acca55f2d6e56e7bd1eee1ca217fdde6666e2a419b3a36d1e1021f1e5eaefab",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:42:42+00:00",
+      "title": "PHOTOS: SpaceX Falcon 9 launch lights up western North Carolina sky - WLOS",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxPUDc4U2dvQ3Nybm1tV21FcURwMjBfdDdnOHVWaW9vdEJQcWtrTGtxWmM3Vi1OOV9wVzlhaDJiS0RiNFlXY3NyVE44N2xYa052X0VkNUpQYmRLQ1N4YVNiZFE3TGIxYTZqX1B5OXNBWk9RVGRTcE1VVGhsbFJ0OHc5YmFOX2d3cVRwRUVvbnJDLWZ2d1B2UGRtNXExRTBoZnZN?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-e2277d57a2299ff497a006590845d7d9f6063b504f6d75622799eb0fa0f490b3",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:40:36+00:00",
+      "title": "PHOTOS: SpaceX spacecraft launch visible in central Indiana skies - Fox 59",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxQMWZmbGNYc3lRY0VRbG01d2h2WmUzSndkbzkxN3F3Uk5iNFRLZWhmemVjSmFIVThWRUhTVGJySHNOUEQ5b2FhS3ZaVl9ZdlZERUhzWGpyZXdsaWs0Q1pWb25UNU42b2JBcklTVzhtODVzNG9LTmZydXZHTEY5OVZpVGNPY0tyQ3pM0gGOAUFVX3lxTFBNbWxORE1YWmdfcUtTa19NMFduNlpGa1pwdG9OcTNRUlRFUnhaUjNUSS1TMXJBREIxSS1NdVp3Mldxb2JrNEhiWmZRdDc2MU0zOWdJNWQ5Rk93X0k0S3hjT3dDMVc4b0M5cHd6YUhQeWFGR1c5RndXUG5rQWNhODh5cnZ1azVUYllSbWlHVGc?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-7d6998e83ed59372b8b63ac92109e057033af42083d8df0b1fa17ab204752adf",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:30:20+00:00",
+      "title": "Did you see it? SpaceX launch creates glowing jellyfish cloud in the sky - mypanhandle.com",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxNVXVOcFk3MjZqeEotX2FpNTgxY3BieUhTeGQyX2JrbTIySHM3Q1VNNlZmenVqNWpDbUJoQ0h5dGgtRjcwZHNYdzh2Qjc3T1NYUVFkaGlrVl84ZTAwRU93c1lHS29VTWJMZUx3eFJJZmJCNTczUmZfVFRkQzRSYXZHM19oRFlQRGZWS1AyN19teTlTZUNDYWlDc2I4SVhyUFZKM3drSHFaT1fSAa4BQVVfeXFMTUZIRURCRThtVjlZb19qTjZSZGF6b0MxTjNhbkhNbV9oSmIwaVVpTk5CVU80b2JTWWJEM1hXS0xZdHlnV29IUzRyMTNoenFYTmhJc0VUOF9vOHJNeHQ1NG1Sa096RHVtblUxUWtGR01uTHNOakczWkVfS1oxMjNzM3JuUjZCWDZvTEppal9mNm5JR25oTjFJc2djTkVPMGIwN0pyREJ5N1dhX18yZ0pn?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-048017c128036a34f10f14da8370a4972377377e9ccae2eebefb7b6558a97331",
+      "publisher": "robotics",
+      "source_date": "2026-10-13T13:30:00+00:00",
+      "title": "As Humanoid Robot Output Climbs Toward 100,000 Units, MES Inc. Outlines the Manufacturing Shift From Billet Machining to Volume Production - Yahoo Finance",
+      "topic_ids": [
+        "physical-ai",
+        "robotics-and-humanoids"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxQQVpzd0ZEWTBWRzJKdkZZdzI4Rk81c2dINl9Oa2dUTmVQZDRUOWU4Nk5Tc25PeHRDTFlpYXh4Z3REUEFOUG5lVy1oWTJmeGdiM1FkVURJM2wzdGxpSUZGYlNBLUVRazl0THJvN1NsODhPWlM5VDlLdEVjQjJocFNKV1FDZHN6bVFBZHpqY0lhVVRSczRCWTJKT0NlYm8?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-0d1beefbb47369ff5a2c783196e4217053969abc3641ba1d7856b9ae0b707f13",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:26:00+00:00",
+      "title": "AST SpaceMobile Stock Price Target Slashed in Half. The SpaceX Curse. - Barron's",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxQWl9keXlUTF96YzdxOUZqOVdYVzBiODd2REJIaVBoR1FkREZuN2xkb1QyZXlEN0xxazZyVENTZ1FLc2VRTEZaUVRpZjMtQ0x5dHNHcFJhYklyaTR5VDdQUmlzZTFVYnFYeUdkWDg0WUdFeThHZ0F3RmZmbHFvRTUzN3ln?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-c0768d990a569feb6fd8c9ea0e525997ac034d57a7c765752e6ac79accb7aaf8",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:23:36+00:00",
+      "title": "AI sets date when SpaceX stock will hit $5 trillion market cap - Finbold",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMiigFBVV95cUxQdHIzTVNyaDBpc1YxNm1EZjBuem9ob2staEpuNGxldmkxRDRjX05NNGVlcnBIdDFpWFlFQ29CWnFTSzBUeTF5cFlXUHo0ckFXUWk5RlQ0eWM0dlJwc3dVdEh1VjA0c25jXzlfTXJoR3BBYXhWSmdNZzVnUDF3NU9Gd3N1eVh6RlRQMnc?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-d9ab04b1695418980a79c62802920a581401fcf842633e619e56257df48406e4",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:22:00+00:00",
+      "title": "Falcon 9 rocket creates a luminous \"space jellyfish\" off Tybee Island - Savannah Morning News",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMi1gFBVV95cUxPSTdZbUt3UG5EWTdNakIyWWVhSEtnMHp2akNIbkViSndKREpGRElWSzJDTXlLNW84UERRSVVyQUJta0F3TVZQMGQxeXhybVVxOWpMWmVIUnRIMDB4YVVsX0RQcGs0cWpYOGRwd3hEa0stNlE1cnVwaUIwX3RfYnZwMkZyT1g4VTE1akp5SXlvZ2NoZDMxR1NDcy1xYVRIT0ppWHp1ZEJQSXhtbnZtTkZiVmdPWEpidlZSTUlPelhwc25VbUxzUW1ieVM3S3M5alNOVVF4T2pB?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-a30920d750bc6655265a81b9c97a60d877c663dc26ccbcc683bbfae7da0b493f",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:19:00+00:00",
+      "title": "'All eyes in the sky': SpaceX rocket launch creates jellyfish-like cloud over Florida - WPBF",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMikAFBVV95cUxQRElXZkRzeFFkNVg3cWdTRXFfaVNucXFSbE00MWxadXhDb0R5THpKdWpPeFlfbTFydTdSNjJPdWVnQU8xLXB6QU13NkdjRG8xQTBlZk1JZEdCVkVuQ2FnV3Q0VUpKeDJlWUdtUWxITjltcXRYYUJNejVwb3FFQmNJTVYtUnVSbFM1QThtSUhzeEs?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-9f3f64ab2a8e0ef91adbae5cb9886da4780bc098d9d795f093d40c8012cefd9b",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:16:31+00:00",
+      "title": "Did you see it? SpaceX launch seen from Lexington - FOX 56 News",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxQeGpfNWhSTnhuZVA0RzlVbHI5M2hUcWZ6WVI3RlpMQ1BiV0puQV83WWhmZUVVbjM0anQ5Wk9JVDRBUmc3VW9DcC1OeTFXZVBGV2hpVHN2LXY3ZVBZQUVRem13ei0wRldMWWQ1eXhMSWtzVC13YVZkMHJpRzFHUlBVVXpPWjVZb0xCa1RDR09zUHVpQ3B2dm5B0gGcAUFVX3lxTE9GUmNaOWFXeWV4d185Wm94emdhWVV5dzcxRl9CT09LYmtpaE1VOG81TlY0bHdtLWRVOTdleWR2aEVKNktBRG96Mk55QUFidVJwQ3lrbExlSjRmb3BKWG9Qc0ZJMV9FT1BvWGNLeExRUExrSXREanZsbFp2YlpOZkpoeEJ1TmdBejhLc3NqTFBHbDJKMVpsck1qNUFHNw?oc=5"
+    },
+    {
+      "evidence_level": "headline_discovery",
+      "id": "doc-c75af0a79ad9fd26a7f571f80c26fc848c71ec5f02c850d0be05d625eb6347b6",
+      "publisher": "space-race",
+      "source_date": "2026-10-13T13:15:58+00:00",
+      "title": "SpaceX rocket launch brings sonic booms and cosmic jellyfish to Florida skies - Chicago Tribune",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9vS3lDRmNxZ081VTNaUkhnMWFCMmJGb19CMVg1c1ZOaFVCRE5ESGZuUXJHdXIyZHlkZUw0WWhWMHZKS191ZDdraDdPZzRjWmR3aHk3ekhRb0lNUUxDeUVCZjhidzRlalJnd1o4VkgwOTI?oc=5"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-q2-2026",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-08-10",
+      "source_type": "issuer_ir",
+      "title": "Second Quarter 2026 Financial Results",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-announces-second-quarter-2026-financial-results-posts"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-synspective-20",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-30",
+      "source_type": "issuer_ir",
+      "title": "Rocket Lab Secures Largest-Ever Electron Commercial Deal: 20-Launch Contract for Synspective",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-secures-largest-ever-electron-commercial-deal-20"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-news-sep-2026",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-30",
+      "source_type": "issuer_ir",
+      "title": "News",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-neutron",
+      "publisher": "Rocket Lab",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-14",
+      "source_type": "issuer_product",
+      "title": "Neutron launch vehicle",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://rocketlabcorp.com/launch/neutron/"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "rklb-iridium-finance",
+      "publisher": "Rocket Lab Investor Relations",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-15",
+      "source_type": "issuer_ir",
+      "title": "Rocket Lab Fully Funds Iridium Acquisition, Including Completion of $1.94 Billion ATM",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://investors.rocketlabcorp.com/news-releases/news-release-details/rocket-lab-fully-funds-iridium-acquisition-including-completion"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "spacex-prospectus-2026",
+      "publisher": "SpaceX",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-06-05",
+      "source_type": "issuer_filing",
+      "title": "EU Prospectus",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://content.spacex.com/cms-assets/FINAL_Documents%20and%20Updates/SpaceX%20-%20EU%20Prospectus%20%28Approved%20by%20Bafin%29%20-%20June%205%2C%202026.pdf"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "spacex-reusability-2026",
+      "publisher": "SpaceX",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-15",
+      "source_type": "issuer_update",
+      "title": "Starship to Orbit",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.spacex.com/updates/reusability"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "spacex-starship",
+      "publisher": "SpaceX",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-14",
+      "source_type": "issuer_product",
+      "title": "Starship vehicle and capabilities",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://new.spacex.com/vehicles/starship"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "faa-boca",
+      "publisher": "FAA",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-03-10",
+      "source_type": "regulator",
+      "title": "SpaceX Starship/Super Heavy at Boca Chica environmental review",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.faa.gov/space/stakeholder_engagement/spacex_starship/environmental_review"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "faa-license",
+      "publisher": "FAA",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-14",
+      "source_type": "regulator",
+      "title": "Starship/Super Heavy license review process",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.faa.gov/space/stakeholder_engagement/spacex_starship/license_review_process"
+    },
+    {
+      "evidence_level": "existing_research_snapshot",
+      "id": "faa-starship-project",
+      "publisher": "FAA",
+      "snapshot_as_of": "2026-10-14",
+      "source_date": "2026-09-02",
+      "source_type": "regulator",
+      "title": "SpaceX Starship Super Heavy Project at the Boca Chica Launch Site",
+      "topic_ids": [
+        "space-race"
+      ],
+      "url": "https://www.faa.gov/space/stakeholder_engagement/spacex_starship"
+    }
+  ],
+  "task_id": "physical-ai-space-gemini-summary",
+  "topic_id": "space-race"
+}

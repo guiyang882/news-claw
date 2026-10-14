@@ -96,6 +96,26 @@ class TopicSummaryTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db)) as connection:
             return connection.execute("SELECT count(*) FROM artifacts").fetchone()[0]
 
+    def test_pruned_summary_removes_only_unused_valid_source_declarations(self):
+        packet = self.packet()
+        raw = self.draft(packet)
+        raw["topics"][0]["observations"].pop()
+        prepared = summary.prepare_summary(raw, packet)
+        self.assertEqual(len(prepared["topics"][0]["used_source_ids"]), 1)
+        self.assertEqual(len(raw["topics"][0]["used_source_ids"]), 2)
+        bad = deepcopy(raw)
+        bad["topics"][0]["used_source_ids"].append("unknown")
+        with self.assertRaisesRegex(ValueError, "source list differs"):
+            summary.prepare_summary(bad, packet)
+        bad = deepcopy(raw)
+        bad["topics"][0]["used_source_ids"] = []
+        with self.assertRaisesRegex(ValueError, "source list differs"):
+            summary.prepare_summary(bad, packet)
+        bad = deepcopy(raw)
+        bad["topics"][0]["observations"][0]["source_refs"][0]["locator"] = "invented"
+        with self.assertRaisesRegex(ValueError, "unknown or out-of-scope"):
+            summary.prepare_summary(bad, packet)
+
     def test_topic_filter_precedes_limit_and_excludes_future_records(self):
         for i in range(6):
             self.add_document("unrelated" + str(i), "space-race", "2026-10-13")

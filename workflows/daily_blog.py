@@ -291,9 +291,15 @@ class ModelRunner:
         with locked(policy / (provider + ".lock")), stdout.open("wb") as out, stderr.open("wb") as err:
             if blocked.exists():
                 raise PermissionError(f"{provider} provider circuit is open")
+            call = None
+            envelope = {}
             try:
                 _model_process = subprocess.Popen(command, cwd=directory, stdin=subprocess.PIPE,
                     stdout=out, stderr=err, start_new_session=True, pass_fds=inherited)
+                call = {"stage": stage, "provider": provider, "model": settings["model"],
+                        "started_at": now(), "status": "started"}
+                self.calls.append(call)
+                atomic_json(directory / "call.json", call)
                 try:
                     _model_process.communicate(input=prompt.encode() if provider == "codex" else b"", timeout=timeout + 15)
                 except subprocess.TimeoutExpired:
@@ -312,6 +318,9 @@ class ModelRunner:
                         atomic_json(blocked, {"provider": provider, "stage": stage, "blocked_at": now(), "reason": "provider access or quota denial"})
                         raise PermissionError(f"{provider} provider denied access; circuit opened")
                     if envelope.get("status") != "SUCCESS" or not isinstance(envelope.get("structured_output"), dict):
+                        reason = str(envelope.get("error", "")).lower()
+                        if "output token limit" in reason or "cut off" in reason:
+                            raise ValueError("agy output was truncated by its token limit; no partial summary accepted")
                         raise ValueError("agy did not return a successful structured response")
                     result = envelope["structured_output"]
                 else:
@@ -326,18 +335,27 @@ class ModelRunner:
                         if item.get("type") in {"command_execution", "web_search", "mcp_tool_call"}:
                             raise ValueError("A text-only blog stage attempted a tool action")
                     result = read_json(directory / "response.json")
-                call = {"stage": stage, "provider": provider, "model": settings["model"], "finished_at": now()}
-                if provider == "agy":
-                    usage = envelope.get("usage", {})
-                    call["usage"] = {key: value for key, value in (usage.items() if isinstance(usage, dict) else [])
-                                     if type(value) is int and value >= 0}
-                self.calls.append(call)
-                # A returned generation consumes its measured usage even when its
-                # structure fails local validation; never hide it from budgets.
                 validate_shape(result, read_json(schema))
                 atomic_json(directory / "response.json", result)
+                call["status"] = "succeeded"
                 return result
             finally:
+                if call is not None:
+                    call["finished_at"] = now()
+                    if call["status"] == "started":
+                        call["status"] = "failed"
+                    if provider == "agy":
+                        # Nonzero exits may still report billable usage in an ERROR envelope.
+                        if not envelope:
+                            try:
+                                candidate = read_json(stdout)
+                                envelope = candidate if isinstance(candidate, dict) else {}
+                            except (ValueError, OSError):
+                                pass
+                        usage = envelope.get("usage", {})
+                        call["usage"] = {key: value for key, value in (usage.items() if isinstance(usage, dict) else [])
+                                         if type(value) is int and value >= 0}
+                    atomic_json(directory / "call.json", call)
                 terminate_model()
                 _model_process = None
                 self.previous_finished = time.monotonic()
@@ -652,9 +670,10 @@ def previous_model_calls(saved):
         seen.add(previous.name)
         if not previous.is_dir():
             raise ValueError("Recovery history is missing a run directory")
-        completed.extend({"stage": path.parent.name, "reused_from": str(previous)}
-            for path in sorted(previous.glob("*/response.json"))
-            if not (path.parent / "reused-stage.json").exists())
+        completed.extend({"stage": path.name, "reused_from": str(previous)}
+            for path in sorted({path.parent for pattern in ("*/response.json", "*/call.json")
+                                for path in previous.glob(pattern)})
+            if not (path / "reused-stage.json").exists())
         audit = previous / "recovery-audit.json"
         ancestor = read_json(audit).get("recovered_from") if audit.is_file() else None
         if ancestor and not re.fullmatch(r"[a-f0-9]{32}", ancestor):
@@ -741,6 +760,11 @@ class RecoveryStages:
         return value
 
 
+def missing_publication(day, **details):
+    return {"success": False, "business_status": "insufficient_evidence", "day": day.isoformat(),
+            "error": "Daily article not published: insufficient verified evidence", "needs_attention": True, **details}
+
+
 def run(config, root, db, directory, *, execute=False, model_runner=None, day=None):
     settings = config["workflow"]
     sys.path.insert(0, settings["website_repo"])
@@ -800,7 +824,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             raise ValueError("Replanning requires changed source evidence")
     atomic_json(directory / "source-packet.json", packet)
     if len({source["url"] for source in packet["sources"]}) < 2:
-        return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat()}
+        return missing_publication(day)
     skill_path = Path(settings["humanizer_skill"])
     skill = skill_path.read_text(encoding="utf-8")
     skill_hash = hashlib.sha256(skill.encode()).hexdigest()
@@ -836,7 +860,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     "recovered_from": recovery["run_id"], "packet_sha256": digest(packet),
                     "corrected_draft_sha256": digest(corrected), "requested_at": now()})
             else:
-                failed = previous["status"] in {"started", "failed"}
+                failed = previous["status"] in {"started", "failed", "insufficient_evidence"}
                 return {"success": not failed, "business_status": "previous_attempt_failed" if failed else "already_attempted", "day": day.isoformat()}
         elif recovery or replan:
             raise ValueError("Recovery requires the original daily attempt marker")
@@ -864,8 +888,8 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 "selected_candidate_id": plan["selected_candidate_id"], "selection_reason": plan["selection_reason"]})
             if plan["status"] != "ready":
                 atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
-                return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), "stage": "planning",
-                        "candidate_topics_path": str(directory / "topic-candidates.json")}
+                return missing_publication(day, stage="planning", reason=plan["reason"],
+                                           candidate_topics_path=str(directory / "topic-candidates.json"))
             atomic_json(directory / "blog-outline.json", plan)
             atomic_bytes(directory / "blog-outline.md", editorial.render_outline(plan, packet).encode())
             scoped_packet = selected_packet(packet, plan)
@@ -892,13 +916,13 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             generated = runner("draft", prompt, schema, directory / "01-agy-draft")
             if generated["status"] != "ready":
                 atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
-                return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
+                return missing_publication(day, **outline_result)
             repair_budget = {"remaining": settings.get("max_length_repairs", 0)}
             generated, original = prepare_draft(generated, packet, config, day, plan, runner, directory,
                                                 repair_budget, "01")
             if original is None:
                 atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
-                return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
+                return missing_publication(day, **outline_result)
             atomic_json(directory / "original-draft.json", original)
             first = runner("review", review_prompt(original, packet), SCHEMAS / "daily-blog-verdict.schema.json", directory / "02-codex-review")
             if first["article_sha256"] != digest(original) or first["packet_sha256"] != digest(packet):
@@ -921,7 +945,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 generated = runner("revise", correction, schema, directory / "02b-codex-correction")
                 if generated["status"] != "ready":
                     atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
-                    return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
+                    return missing_publication(day, **outline_result)
                 # Correction changes prose and claims; keep the already validated topic metadata.
                 generated = deepcopy(generated)
                 generated["article"]["tags"] = original_tags
@@ -929,7 +953,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                                                     repair_budget, "02b")
                 if original is None:
                     atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
-                    return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
+                    return missing_publication(day, **outline_result)
                 atomic_json(directory / "corrected-draft.json", original)
                 first = runner("review_revised", review_prompt(original, packet), SCHEMAS / "daily-blog-verdict.schema.json", directory / "02c-codex-re-review")
             require_verdict(first, original, packet)
@@ -974,7 +998,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 revised = runner("revise_final", prompt, schema, directory / "04b-codex-final-correction")
                 if revised["status"] != "ready":
                     atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
-                    return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
+                    return missing_publication(day, **outline_result)
                 for key in ("used_source_ids", "tags"):
                     if revised["article"][key] != edited["article"][key]:
                         raise ValueError("Final correction changed source or topic metadata")
@@ -1042,7 +1066,7 @@ def main():
                 config["workflow"].pop("manual_replan")
                 replan = None
             if replan:
-                prior = connection.execute("SELECT metadata_json FROM task_runs WHERE id=? AND task_id=? AND status='succeeded'",
+                prior = connection.execute("SELECT metadata_json FROM task_runs WHERE id=? AND task_id=? AND status IN ('succeeded','failed')",
                                            (replan.get("run_id"), args.task)).fetchone()
                 if not prior or json.loads(prior[0]).get("result", {}).get("business_status") != "insufficient_evidence":
                     parser.error("Replanning requires a manual run after insufficient evidence")
