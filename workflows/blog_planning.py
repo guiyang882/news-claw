@@ -31,6 +31,24 @@ def selected_candidate(plan):
     return next(item for item in plan["candidates"] if item["id"] == plan["selected_candidate_id"])
 
 
+def canonicalize_locators(plan, packet):
+    """Normalize an exact document locator plus a model's paragraph annotation.
+
+    Only an existing source/locator pair is accepted; unknown paths still fail.
+    The unmodified model response remains in the stage's response.json audit.
+    """
+    from copy import deepcopy
+    plan = deepcopy(plan)
+    pairs = {(sid, item["locator"]) for item in packet["evidence"] for sid in item["source_ids"]}
+    for section in plan.get("outline", {}).get("sections", []):
+        for reference in section["evidence_refs"]:
+            locator = reference["locator"]
+            base, separator, _ = locator.partition("；text：")
+            if separator and (reference["source_id"], base) in pairs:
+                reference["locator"] = base
+    return plan
+
+
 def validate_plan(plan, packet, settings, *, packet_sha256):
     if plan["packet_sha256"] != packet_sha256:
         raise ValueError("Editorial plan is not bound to the source packet")

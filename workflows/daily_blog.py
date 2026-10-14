@@ -139,14 +139,22 @@ def collect_packet(config, root, db, day, *, include_media=True):
     with closing(sqlite3.connect(Path(db).as_uri() + "?mode=ro", uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         placeholders = ",".join("?" for _ in config["topic_ids"])
-        rows = connection.execute(f"""SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=?
+        rows = list(connection.execute(f"""SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=?
             AND EXISTS (SELECT 1 FROM json_each(documents.topic_links_json) link
               WHERE json_extract(link.value,'$.topic_id') IN ({placeholders}))
             ORDER BY COALESCE(published_at,fetched_at) DESC LIMIT ?""",
-            (cutoff.isoformat(), *config["topic_ids"], inputs["max_documents"]))
+            (cutoff.isoformat(), *config["topic_ids"], inputs["max_documents"])))
+        primary_urls = inputs.get("primary_source_urls", [])
+        if len(primary_urls) > 6:
+            raise ValueError("Primary evidence needs at most six public source URLs")
+        for url in primary_urls:
+            public_url(url)
+            primary = connection.execute("SELECT * FROM documents WHERE canonical_url=? ORDER BY fetched_at DESC LIMIT 1", (url,)).fetchone()
+            if primary and primary["id"] not in {row["id"] for row in rows}:
+                rows.append(primary)
         for row in rows:
             topics = {link["topic_id"] for link in json.loads(row["topic_links_json"])}
-            if not topics.intersection(config["topic_ids"]):
+            if not topics.intersection(config["topic_ids"]) and row["canonical_url"] not in primary_urls:
                 continue
             path = (root / (row["normalized_path"] or "")).resolve()
             if not path.is_relative_to((root / "data/normalized").resolve()) or not path.is_file():
@@ -161,7 +169,7 @@ def collect_packet(config, root, db, day, *, include_media=True):
                  "title": row["title"], "url": row["canonical_url"], "source_date": row["published_at"],
                  "evidence_level": "cached_webpage" if record["record_type"] == "webpage" else "headline_discovery"},
                 {"source_ids": [sid], "locator": str(path.relative_to(root)),
-                 "title": row["title"], "text": record["text"][:inputs["max_text_chars"]],
+                 "title": row["title"], "text": record["text"][:min(24000, inputs.get("primary_max_text_chars", 16000)) if row["canonical_url"] in primary_urls else inputs["max_text_chars"]],
                  "record_type": record["record_type"], "fetched_at": row["fetched_at"],
                  "boundary": "RSS titles and snippets are unverified leads; a cached page is attributed to its publisher, not independently verified."})
 
@@ -634,28 +642,68 @@ def prepare_draft(generated, packet, config, day, plan, runner, directory, repai
         return repaired, build_draft(repaired, packet, config, day, plan=plan)
 
 
+def previous_model_calls(saved):
+    completed = []
+    seen = set()
+    previous = saved
+    while previous is not None:
+        if previous.name in seen:
+            raise ValueError("Recovery history contains a cycle")
+        seen.add(previous.name)
+        if not previous.is_dir():
+            raise ValueError("Recovery history is missing a run directory")
+        completed.extend({"stage": path.parent.name, "reused_from": str(previous)}
+            for path in sorted(previous.glob("*/response.json"))
+            if not (path.parent / "reused-stage.json").exists())
+        audit = previous / "recovery-audit.json"
+        ancestor = read_json(audit).get("recovered_from") if audit.is_file() else None
+        if ancestor and not re.fullmatch(r"[a-f0-9]{32}", ancestor):
+            raise ValueError("Invalid recovery ancestor")
+        previous = saved.parent / ancestor if ancestor else None
+    return completed
+
+
+def load_manual_humanizer(saved, recovery, corrected, skill_hash):
+    """Bind operator-applied editing to exact input/output and the installed skill.
+
+    This is provenance, never approval: both independent model verdicts remain required.
+    """
+    filename = recovery.get("humanizer_audit_filename")
+    if not filename:
+        return None, None
+    if Path(filename).name != filename or filename in {".", ".."}:
+        raise ValueError("Manual humanizer audit must be in the failed run directory")
+    audit = read_json(saved / filename)
+    source = saved / audit.get("original_filename", "")
+    if not source.resolve().is_relative_to(saved.resolve()) or not source.is_file():
+        raise ValueError("Manual humanizer original must be inside the failed run")
+    original = read_json(source)
+    if (audit.get("mode") != "operator_applied_skill" or not audit.get("editor")
+            or not audit.get("changes") or audit.get("humanizer_skill_sha256") != skill_hash
+            or audit.get("original_draft_sha256") != digest(original)
+            or audit.get("edited_draft_sha256") != digest(corrected)):
+        raise ValueError("Manual humanizer provenance does not match the exact drafts and skill")
+    for key in ("used_source_ids", "tags", "fact_checks"):
+        if original["article"][key] != corrected["article"][key]:
+            raise ValueError("Manual humanizer changed source or fact-check metadata")
+    if any(original["article"][lang] == corrected["article"][lang] for lang in ("zh", "en")):
+        raise ValueError("Manual humanizer must edit both languages")
+    return audit, original
+
+
 class RecoveryStages:
     """Reuse saved successful calls; continue with fresh independent reviews."""
 
-    def __init__(self, runner, saved, corrected):
+    def __init__(self, runner, saved, corrected, plan=None, manual_humanizer=None):
+        self.manual_humanizer = manual_humanizer
         self.runner = runner
-        completed = []
-        seen = set()
-        previous = saved
-        while previous is not None:
-            if previous.name in seen:
-                raise ValueError("Recovery history contains a cycle")
-            seen.add(previous.name)
-            if not previous.is_dir():
-                raise ValueError("Recovery history is missing a run directory")
-            completed.extend({"stage": path.parent.name, "reused_from": str(previous)}
-                for path in sorted(previous.glob("*/response.json"))
-                if not (path.parent / "reused-stage.json").exists())
-            audit = previous / "recovery-audit.json"
-            ancestor = read_json(audit).get("recovered_from") if audit.is_file() else None
-            if ancestor and not re.fullmatch(r"[a-f0-9]{32}", ancestor):
-                raise ValueError("Invalid recovery ancestor")
-            previous = saved.parent / ancestor if ancestor else None
+        completed = previous_model_calls(saved)
+        if corrected is None:
+            if plan is None or len(completed) + 4 > runner.settings["network_policy"]["max_cli_invocations_per_day"]:
+                raise ValueError("Daily model invocation limit cannot accommodate plan continuation")
+            self.saved = {"plan": plan}
+            runner.calls.extend(completed)
+            return
         edited = saved / "03-codex-humanizer/response.json"
         # An unchanged, already humanized checkpoint can resume at final review.
         # Its initial verdict is still checked against the exact reconstructed hash.
@@ -663,11 +711,13 @@ class RecoveryStages:
                         and (saved / "reviewed-draft.json").is_file()
                         and (saved / "02-codex-review/response.json").is_file()
                         and read_json(saved / "02-codex-review/response.json").get("approved") is True)
-        remaining = 1 if resume_final else 3
+        remaining = 2 if manual_humanizer else (1 if resume_final else 3)
         if len(completed) + remaining > runner.settings["network_policy"]["max_cli_invocations_per_day"]:
             raise ValueError("Daily model invocation limit cannot accommodate the remaining recovery stages")
         self.saved = {"plan": read_json(saved / "00-codex-plan/response.json"), "draft": corrected}
-        if resume_final:
+        if manual_humanizer:
+            self.saved["humanize"] = corrected
+        elif resume_final:
             self.saved.update(draft=read_json(saved / "01-agy-draft/response.json"),
                               review=read_json(saved / "02-codex-review/response.json"),
                               humanize=corrected)
@@ -683,7 +733,10 @@ class RecoveryStages:
         value = deepcopy(self.saved.pop(stage))
         validate_shape(value, read_json(schema))
         atomic_json(directory / "response.json", value)
-        atomic_json(directory / "reused-stage.json", {"stage": stage, "model_called": False})
+        atomic_json(directory / "reused-stage.json", {"stage": stage, "model_called": False,
+            "provenance": "operator_applied_skill" if stage == "humanize" and self.manual_humanizer else "saved_response"})
+        if stage == "humanize" and self.manual_humanizer:
+            atomic_json(directory / "operator-edit.json", self.manual_humanizer)
         print(json.dumps({"stage": stage, "reused_saved_response": True}), flush=True)
         return value
 
@@ -700,7 +753,12 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         return {"success": True, "business_status": "already_published", "day": day.isoformat()}
     recovery = settings.get("manual_recovery")
     recovery = recovery if recovery and recovery.get("day") == day.isoformat() else None
+    replan = settings.get("manual_replan")
+    replan = replan if replan and replan.get("day") == day.isoformat() else None
+    if recovery and replan:
+        raise ValueError("Choose either editorial recovery or evidence-based replanning")
     saved = corrected = None
+    replan_saved = None
     if recovery:
         if not re.fullmatch(r"[a-f0-9]{32}", recovery.get("run_id", "")):
             raise ValueError("Recovery needs an existing run ID")
@@ -708,25 +766,38 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         error = read_json(saved / "result.json").get("error")
         length_failure = (isinstance(error, str) and re.match(r"^(zh|en) article does not meet the approximate reading time target:", error)
                           and (saved / "03-codex-humanizer/response.json").is_file())
-        if not length_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
+        plan_repair = recovery.get("resume_stage") == "plan" and error == "Outline evidence locator does not exist in the source packet"
+        if not length_failure and not plan_repair and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
             raise ValueError("Recovery only supports a saved editorial validation failure")
         filename = recovery.get("draft_filename", "")
-        if not filename or Path(filename).name != filename or filename in {".", ".."}:
+        if not plan_repair and (not filename or Path(filename).name != filename or filename in {".", ".."}):
             raise ValueError("Recovery draft must be a file in the failed run directory")
         packet = read_json(saved / "source-packet.json")
-        plan = read_json(saved / "blog-outline.json")
+        plan = (editorial.canonicalize_locators(read_json(saved / "00-codex-plan/response.json"), packet)
+                if plan_repair else read_json(saved / "blog-outline.json"))
         if packet["day"] != day.isoformat():
             raise ValueError("Recovery publication day does not match the saved packet")
         editorial.validate_plan(plan, packet, settings, packet_sha256=digest(packet))
-        corrected = read_json(saved / filename)
+        corrected = None if plan_repair else read_json(saved / filename)
         config = deepcopy(config)
         settings = config["workflow"]
         settings["recovery_updated_at"] = datetime.now(ZoneInfo(config["timezone"])).date().isoformat()
         if day.isoformat() > settings["recovery_updated_at"]:
             raise ValueError("Cannot recover a future publication day")
-        build_draft(corrected, packet, config, day, plan=plan)
+        if corrected is not None:
+            build_draft(corrected, packet, config, day, plan=plan)
     else:
         packet = collect_packet(config, root, db, day)
+    if replan:
+        if not re.fullmatch(r"[a-f0-9]{32}", replan.get("run_id", "")):
+            raise ValueError("Replanning needs an existing run ID")
+        replan_saved = root / "data/runs" / replan["run_id"]
+        prior_result = read_json(replan_saved / "result.json")
+        prior_packet = read_json(replan_saved / "source-packet.json")
+        if prior_result.get("business_status") != "insufficient_evidence" or prior_packet.get("day") != day.isoformat():
+            raise ValueError("Replanning requires an insufficient-evidence result for this day")
+        if digest({key: packet[key] for key in ("sources", "evidence")}) == digest({key: prior_packet[key] for key in ("sources", "evidence")}):
+            raise ValueError("Replanning requires changed source evidence")
     atomic_json(directory / "source-packet.json", packet)
     if len({source["url"] for source in packet["sources"]}) < 2:
         return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat()}
@@ -734,6 +805,15 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
     skill = skill_path.read_text(encoding="utf-8")
     skill_hash = hashlib.sha256(skill.encode()).hexdigest()
     atomic_bytes(directory / "humanizer-SKILL.md", skill.encode())
+    manual_humanizer, pre_edit = (load_manual_humanizer(saved, recovery, corrected, skill_hash)
+                                if recovery else (None, None))
+    if manual_humanizer:
+        atomic_json(directory / "manual-humanizer-audit.json", manual_humanizer)
+        atomic_json(directory / "pre-edit-model-draft.json", pre_edit)
+        # The operator supplied the edit; do not silently spend further correction calls.
+        settings["max_draft_revisions"] = 0
+        settings["max_final_revisions"] = 0
+        settings["max_length_repairs"] = 0
     editorial_skill = Path(settings["editorial_skill"]).read_text(encoding="utf-8")
     atomic_bytes(directory / "research-blog-editor-SKILL.md", editorial_skill.encode())
     if not execute:
@@ -747,18 +827,27 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         # A daily attempt reserves its slot before the first API call; never retry unattended.
         if day_path.exists():
             previous = read_json(day_path)
-            if recovery and previous["status"] == "failed" and previous.get("run_id") == recovery["run_id"]:
+            if replan and previous["status"] == "insufficient_evidence" and previous.get("run_id", replan["run_id"]) == replan["run_id"]:
+                atomic_json(directory / "recovery-audit.json", {"previous_attempt": previous,
+                    "recovered_from": replan["run_id"], "kind": "manual_evidence_replan",
+                    "previous_packet_sha256": digest(prior_packet), "packet_sha256": digest(packet), "requested_at": now()})
+            elif recovery and previous["status"] == "failed" and previous.get("run_id") == recovery["run_id"]:
                 atomic_json(directory / "recovery-audit.json", {"previous_attempt": previous,
                     "recovered_from": recovery["run_id"], "packet_sha256": digest(packet),
                     "corrected_draft_sha256": digest(corrected), "requested_at": now()})
             else:
                 failed = previous["status"] in {"started", "failed"}
                 return {"success": not failed, "business_status": "previous_attempt_failed" if failed else "already_attempted", "day": day.isoformat()}
-        elif recovery:
-            raise ValueError("Recovery requires the failed daily attempt marker")
+        elif recovery or replan:
+            raise ValueError("Recovery requires the original daily attempt marker")
         runner = model_runner or ModelRunner(config, root)
         if recovery:
-            runner = RecoveryStages(runner, saved, corrected)
+            runner = RecoveryStages(runner, saved, corrected, plan=plan, manual_humanizer=manual_humanizer)
+        if replan_saved:
+            prior_calls = previous_model_calls(replan_saved)
+            if len(prior_calls) + 5 > settings["network_policy"]["max_cli_invocations_per_day"]:
+                raise ValueError("Daily model invocation limit cannot accommodate replanning")
+            runner.calls.extend(prior_calls)
         atomic_json(day_path, {"status": "started", "run_id": os.environ.get("NEWS_CLAW_RUN_ID"), "started_at": now()})
         from web.blog import _ARTICLES
         recent = sorted((*load_runtime_articles(site), *_ARTICLES), key=lambda item: item["published_at"], reverse=True)
@@ -768,12 +857,13 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             plan = runner("plan", planning_prompt(packet, history, settings, editorial_skill),
                           SCHEMAS / "daily-blog-plan.schema.json", directory / "00-codex-plan")
             validate_shape(plan, read_json(SCHEMAS / "daily-blog-plan.schema.json"))
+            plan = editorial.canonicalize_locators(plan, packet)
             editorial.validate_plan(plan, packet, settings, packet_sha256=digest(packet))
             atomic_json(directory / "topic-candidates.json", {"version": 1, "status": plan["status"],
                 "reason": plan["reason"], "packet_sha256": plan["packet_sha256"], "candidates": plan["candidates"],
                 "selected_candidate_id": plan["selected_candidate_id"], "selection_reason": plan["selection_reason"]})
             if plan["status"] != "ready":
-                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                 return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), "stage": "planning",
                         "candidate_topics_path": str(directory / "topic-candidates.json")}
             atomic_json(directory / "blog-outline.json", plan)
@@ -801,13 +891,13 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                         "allowed_tags": list(TAGS_BY_ID)}, ensure_ascii=False))
             generated = runner("draft", prompt, schema, directory / "01-agy-draft")
             if generated["status"] != "ready":
-                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                 return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
             repair_budget = {"remaining": settings.get("max_length_repairs", 0)}
             generated, original = prepare_draft(generated, packet, config, day, plan, runner, directory,
                                                 repair_budget, "01")
             if original is None:
-                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                 return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
             atomic_json(directory / "original-draft.json", original)
             first = runner("review", review_prompt(original, packet), SCHEMAS / "daily-blog-verdict.schema.json", directory / "02-codex-review")
@@ -830,7 +920,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 original_tags = generated["article"]["tags"]
                 generated = runner("revise", correction, schema, directory / "02b-codex-correction")
                 if generated["status"] != "ready":
-                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                     return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
                 # Correction changes prose and claims; keep the already validated topic metadata.
                 generated = deepcopy(generated)
@@ -838,7 +928,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 generated, original = prepare_draft(generated, packet, config, day, plan, runner, directory,
                                                     repair_budget, "02b")
                 if original is None:
-                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                     return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
                 atomic_json(directory / "corrected-draft.json", original)
                 first = runner("review_revised", review_prompt(original, packet), SCHEMAS / "daily-blog-verdict.schema.json", directory / "02c-codex-re-review")
@@ -864,7 +954,8 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     raise ValueError("Humanizer changed source or fact-check metadata")
             final = build_draft(edited, packet, config, day, plan=plan, humanized=True)
             atomic_json(directory / "final-draft.json", final)
-            last = runner("final_review", review_prompt(final, packet, original=original, skill=skill),
+            review_baseline = (build_draft(pre_edit, packet, config, day, plan=plan) if manual_humanizer else original)
+            last = runner("final_review", review_prompt(final, packet, original=review_baseline, skill=skill),
                           SCHEMAS / "daily-blog-verdict.schema.json", directory / "04-codex-final-review")
             if last["article_sha256"] != digest(final) or last["packet_sha256"] != digest(packet):
                 raise ValueError("Final review is not bound to this exact article and source packet")
@@ -882,7 +973,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                                 "final_review": last}, ensure_ascii=False))
                 revised = runner("revise_final", prompt, schema, directory / "04b-codex-final-correction")
                 if revised["status"] != "ready":
-                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now()})
+                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                     return {"success": True, "business_status": "insufficient_evidence", "day": day.isoformat(), **outline_result}
                 for key in ("used_source_ids", "tags"):
                     if revised["article"][key] != edited["article"][key]:
@@ -898,8 +989,11 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                               os.environ.get("NEWS_CLAW_RUN_ID", "manual"))
             result = {"success": True, **outcome, "day": day.isoformat(), **outline_result,
                       "reading_estimates": final["automation"]["reading_estimates"], "model_calls": getattr(runner, "calls", [])}
-            if recovery:
-                result["recovered_from"] = recovery["run_id"]
+            if manual_humanizer:
+                result["humanizer_mode"] = "operator_applied_skill"
+                result["humanizer_audit_sha256"] = digest(manual_humanizer)
+            if recovery or replan:
+                result["recovered_from"] = (recovery or replan)["run_id"]
             if outcome["business_status"] == "published":
                 result["url"] = settings["public_base_url"].rstrip("/") + "/blog/" + outcome["slug"]
             atomic_json(directory / "publication.json", result)
@@ -942,6 +1036,16 @@ def main():
                                         (run_id, args.task)).fetchone()
             if not row[1] or row[2] != "news-claw" or not active:
                 parser.error("Launch this enabled task through the Go engine")
+            replan = config["workflow"].get("manual_replan")
+            if replan and json.loads(active[0]).get("trigger") != "manual":
+                config = deepcopy(config)
+                config["workflow"].pop("manual_replan")
+                replan = None
+            if replan:
+                prior = connection.execute("SELECT metadata_json FROM task_runs WHERE id=? AND task_id=? AND status='succeeded'",
+                                           (replan.get("run_id"), args.task)).fetchone()
+                if not prior or json.loads(prior[0]).get("result", {}).get("business_status") != "insufficient_evidence":
+                    parser.error("Replanning requires a manual run after insufficient evidence")
             recovery = config["workflow"].get("manual_recovery")
             if recovery and json.loads(active[0]).get("trigger") != "manual":
                 # A queued operator recovery must never turn a later cron run into a backfill.
@@ -957,7 +1061,7 @@ def main():
     signal.signal(signal.SIGTERM, terminate_model)
     signal.signal(signal.SIGINT, terminate_model)
     try:
-        recovery = config["workflow"].get("manual_recovery") if not args.check else None
+        recovery = (config["workflow"].get("manual_recovery") or config["workflow"].get("manual_replan")) if not args.check else None
         recovery_day = date.fromisoformat(recovery["day"]) if recovery else None
         result = run(config, root, db, directory, execute=not args.check, day=recovery_day)
     except Exception as error:

@@ -1,0 +1,44 @@
+{
+  "approval_kind": "model_review",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/much-ai-cloud-growth-figures-tell-us-about-2026-10-14/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/much-ai-cloud-growth-figures-tell-us-about-2026-10-14/zh.md"
+  },
+  "article_sha256": "4cd866318a6e273adc7d35427f8c6e51657e91036c4016cedecdb3b721ee294c",
+  "day": "2026-10-14",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "投资者如何从云业务需求、收入和营业利润，走到对 AI 基础设施现金回报的判断；现有 Q2 披露在哪一步停止提供证据？",
+    "section_count": 7,
+    "selected_candidate_id": "cloud-return",
+    "target_reading_minutes": 20,
+    "title": "AI 云增长很快，投资回报走到了哪一步？"
+  },
+  "editorial_plan_sha256": "c88c452e44c7977ccc1ba7004f02cc166724a4c2f31d15b988fefd85a7a2b7ee",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "1de362a8b5c856c0b4725bccf1c3b47418c6a33d344715f85288a9001c9280f8",
+  "publication_kind": "original",
+  "reading_estimates": {
+    "en": {
+      "minutes": 17,
+      "rate": 200,
+      "units": 3266
+    },
+    "zh": {
+      "minutes": 18,
+      "rate": 300,
+      "units": 5283
+    }
+  },
+  "slug": "much-ai-cloud-growth-figures-tell-us-about-2026-10-14",
+  "source_urls": [
+    "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results/default.aspx",
+    "https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q2-2026/"
+  ],
+  "summary": "Amazon 报告 AWS Q2 收入422亿美元、营业利润166亿美元，集团 TTM 自由现金流净流出76亿美元；Google 报告云收入增长82%、订单积压5140亿美元（[Amazon](https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results/default.aspx)；[Google](https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q2-2026/)）。这些披露支持商业进展，但尚未配对新增 AI 资本与持续现金产出。",
+  "summary_en": "Amazon reported AWS Q2 sales of $42.2 billion and operating income of $16.6 billion alongside negative $7.6 billion consolidated TTM free cash flow; Google reported 82% Cloud revenue growth and $514 billion backlog ([Amazon](https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results/default.aspx); [Google](https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q2-2026/)). These disclosures support commercial progress while leaving incremental AI capital and cash returns unmatched.",
+  "title": "AI 云增长很快，投资回报走到了哪一步？",
+  "title_en": "How much do AI cloud growth figures tell us about investment returns?",
+  "url": "https://growthyoung.com/blog/much-ai-cloud-growth-figures-tell-us-about-2026-10-14",
+  "version": 1
+}

@@ -65,7 +65,12 @@
       "company_pulses": "/mnt/quant-state/quant-web/company_pulses.json",
       "news_timeline": "/mnt/quant-state/quant-web/news_timeline.json",
       "max_reviewed_topic_summaries": 5,
-      "reviewed_topic_lookback_days": 2
+      "reviewed_topic_lookback_days": 2,
+      "primary_source_urls": [
+        "https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q2-2026/",
+        "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results/default.aspx"
+      ],
+      "primary_max_text_chars": 20000
     },
     "stages": [
       "codex_topics_and_outline",

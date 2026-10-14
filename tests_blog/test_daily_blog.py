@@ -175,6 +175,57 @@ class DailyBlogTests(unittest.TestCase):
         live.settings = self.config["workflow"]
         return saved, live
 
+    def manual_humanizer_fixture(self):
+        saved, live = self.recovery_fixture()
+        original = self.draft()
+        edited = deepcopy(original)
+        for lang in ("zh", "en"):
+            edited["article"][lang]["body_markdown"] += "\nEditorial fixture revision.\n"
+        audit = {"mode": "operator_applied_skill", "editor": "Offline test",
+                 "changes": ["Edited both languages"], "original_filename": "02b-codex-correction/response.json",
+                 "original_draft_sha256": blog.digest(original), "edited_draft_sha256": blog.digest(edited),
+                 "humanizer_skill_sha256": blog.hashlib.sha256(Path(self.config["workflow"]["humanizer_skill"]).read_bytes()).hexdigest()}
+        blog.atomic_json(saved / "recovery-corrected-draft.json", edited)
+        blog.atomic_json(saved / "manual-edit.json", audit)
+        self.config["workflow"]["manual_recovery"]["humanizer_audit_filename"] = "manual-edit.json"
+        self.config["workflow"]["network_policy"]["max_cli_invocations_per_day"] = 6
+        return saved, live, audit
+
+    def test_operator_humanizer_requires_two_fresh_reviews_and_records_provenance(self):
+        saved, live, audit = self.manual_humanizer_fixture()
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, ["review", "final_review"])
+        self.assertEqual(len(result["model_calls"]), 6)
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(result["humanizer_mode"], "operator_applied_skill")
+        self.assertEqual(blog.read_json(self.directory / "03-codex-humanizer/operator-edit.json"), audit)
+        baseline = self.payloads["final_review"]["original_draft"]
+        self.assertNotIn("Editorial fixture revision", baseline["article"]["body_markdown"])
+        self.assertIn("Editorial fixture revision", self.payloads["review"]["draft"]["article"]["body_markdown"])
+
+    def test_operator_edit_cannot_bypass_final_rejection(self):
+        saved, live, audit = self.manual_humanizer_fixture()
+        self.responses["final_review"] = lambda value: value.update(approved=False, humanizer_applied=False, issues=["Unresolved"])
+        with self.assertRaisesRegex(ValueError, "Codex rejected"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, ["review", "final_review"])
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_operator_edit_rejects_tampered_provenance_before_models(self):
+        saved, live, audit = self.manual_humanizer_fixture()
+        audit["edited_draft_sha256"] = "0" * 64
+        blog.atomic_json(saved / "manual-edit.json", audit)
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, [])
+
+    def test_operator_edit_does_not_reset_daily_budget(self):
+        saved, live, audit = self.manual_humanizer_fixture()
+        self.config["workflow"]["network_policy"]["max_cli_invocations_per_day"] = 5
+        with self.assertRaisesRegex(ValueError, "invocation limit"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, [])
+
     def test_manual_recovery_reuses_models_and_keeps_failed_history(self):
         saved, live = self.recovery_fixture()
         result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
@@ -273,6 +324,72 @@ class DailyBlogTests(unittest.TestCase):
         self.config["workflow"]["network_policy"]["max_cli_invocations_per_day"] = 7
         with self.assertRaisesRegex(ValueError, "invocation limit"):
             blog.RecoveryStages(live, child, self.draft())
+
+    def test_manual_replan_requires_new_evidence_and_retains_budget(self):
+        saved, live = self.recovery_fixture()
+        self.config["workflow"].pop("manual_recovery")
+        self.config["workflow"]["manual_replan"] = {"day": DAY.isoformat(), "run_id": saved.name}
+        blog.atomic_json(saved / "result.json", {"business_status": "insufficient_evidence", "day": DAY.isoformat()})
+        marker = self.root / "data/runs/daily-blog-days" / (DAY.isoformat() + ".json")
+        blog.atomic_json(marker, {"status": "insufficient_evidence", "run_id": saved.name})
+        with self.assertRaisesRegex(ValueError, "changed source evidence"):
+            blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, [])
+        self.pulses["companies"]["test"]["metrics"][0]["value"] = "Additional cached evidence"
+        (self.root / "company_pulses.json").write_text(json.dumps(self.pulses))
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(result["recovered_from"], saved.name)
+        self.assertEqual(len(result["model_calls"]), 9)
+        self.assertEqual(blog.read_json(saved / "result.json")["business_status"], "insufficient_evidence")
+        self.assertEqual(blog.read_json(self.directory / "recovery-audit.json")["kind"], "manual_evidence_replan")
+
+    def test_pinned_primary_disclosure_keeps_fuller_text_and_its_original_date(self):
+        url = "https://example.org/quarterly-report"
+        self.config["workflow"]["inputs"].update(primary_source_urls=[url], primary_max_text_chars=18000)
+        record = {"canonical_url": url, "title": "Dated quarterly report", "published_at": "2026-07-30",
+                  "record_type": "webpage", "text": "Disclosed financial evidence. " * 1000}
+        relative = "data/normalized/documents/primary.json"
+        blog.atomic_json(self.root / relative, record)
+        checksum = blog.hashlib.sha256(json.dumps(record, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        with sqlite3.connect(self.db) as db:
+            db.execute("INSERT INTO documents(id,canonical_url,title,published_at,fetched_at,content_hash,raw_path,normalized_path,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                       ("primary-fixture",url,record["title"],record["published_at"],"2026-07-30",checksum,"unused",relative,"2026-07-30"))
+        packet = blog.collect_packet(self.config, self.root, self.db, DAY)
+        item = next(e for e in packet["evidence"] if e["locator"] == relative)
+        self.assertEqual(len(item["text"]), 18000)
+        source = next(s for s in packet["sources"] if s["id"] == "doc-primary-fixture")
+        self.assertEqual(source["source_date"], "2026-07-30")
+        self.assertEqual(source["evidence_level"], "cached_webpage")
+        (self.root / relative).write_text(json.dumps({**record, "text": "tampered"}))
+        with self.assertRaisesRegex(ValueError, "hash differs"):
+            blog.collect_packet(self.config, self.root, self.db, DAY)
+
+    def test_plan_locator_annotations_normalize_only_existing_source_paths(self):
+        saved, live = self.recovery_fixture()
+        packet = blog.read_json(saved / "source-packet.json")
+        plan = blog.read_json(saved / "00-codex-plan/response.json")
+        original = plan["outline"]["sections"][0]["evidence_refs"][0]["locator"]
+        plan["outline"]["sections"][0]["evidence_refs"][0]["locator"] += "；text：section description"
+        repaired = blog.editorial.canonicalize_locators(plan, packet)
+        self.assertEqual(repaired["outline"]["sections"][0]["evidence_refs"][0]["locator"], original)
+        self.assertIn("；text：", plan["outline"]["sections"][0]["evidence_refs"][0]["locator"])
+        plan["outline"]["sections"][0]["evidence_refs"][0]["locator"] = "invented/path；text：description"
+        repaired = blog.editorial.canonicalize_locators(plan, packet)
+        with self.assertRaisesRegex(ValueError, "locator"):
+            blog.editorial.validate_plan(repaired, packet, self.config["workflow"], packet_sha256=blog.digest(packet))
+
+    def test_plan_validation_failure_resumes_without_replanning_or_losing_budget(self):
+        saved, live = self.recovery_fixture()
+        self.config["workflow"]["manual_recovery"] = {"day": DAY.isoformat(), "run_id": saved.name, "resume_stage": "plan"}
+        blog.atomic_json(saved / "result.json", {"error": "Outline evidence locator does not exist in the source packet"})
+        plan = blog.read_json(saved / "00-codex-plan/response.json")
+        plan["outline"]["sections"][0]["evidence_refs"][0]["locator"] += "；text：paragraph annotation"
+        blog.atomic_json(saved / "00-codex-plan/response.json", plan)
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, ["draft", "review", "humanize", "final_review"])
+        self.assertEqual(len(result["model_calls"]), 8)
+        self.assertEqual(result["business_status"], "published")
 
     def test_recovery_cannot_exceed_the_original_daily_budget(self):
         saved, live = self.recovery_fixture()

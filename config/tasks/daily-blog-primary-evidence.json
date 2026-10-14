@@ -1,0 +1,64 @@
+{
+  "id": "daily-blog-primary-evidence",
+  "name": "研究博客：官方财报正文缓存",
+  "description": "缓存明确列出的公开季度披露，保留原日期，为博客提供正文而非标题。robots enforced；每周更新有界缓存。",
+  "scheduler_engine": "news-claw",
+  "task_type": "crawl",
+  "enabled": true,
+  "schedule": "5 7 * * 1",
+  "schedule_format": "cron",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "daily-research-blog",
+    "ai-products-attention-feedback"
+  ],
+  "collector": {
+    "type": "public_primary_pages",
+    "sources": [
+      {
+        "name": "Alphabet Q2 2026 CEO remarks",
+        "type": "page",
+        "url": "https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q2-2026/",
+        "language": "en",
+        "obey_robots_txt": true
+      },
+      {
+        "name": "Amazon Q2 2026 earnings release",
+        "type": "page",
+        "url": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results/default.aspx",
+        "language": "en",
+        "obey_robots_txt": true
+      }
+    ],
+    "access_review": {
+      "status": "public_issuer_disclosures",
+      "reviewed_at": "2026-10-14",
+      "authentication": "none_required",
+      "scope": "Two public issuer-owned earnings pages, robots enforced, cache first, no recursive crawl or SEC requests."
+    },
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "min_interval_seconds_global": 10,
+      "max_requests_per_run": 6,
+      "automatic_retry_after_denial": false,
+      "stop_on_403_429_or_access_denial": true
+    }
+  },
+  "options": {
+    "start_jitter_seconds": 0,
+    "lookback_hours": 8760,
+    "max_items_per_run": 2
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.news"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 300,
+    "stop_grace_seconds": 15,
+    "lock_group": "web-fetch"
+  }
+}
