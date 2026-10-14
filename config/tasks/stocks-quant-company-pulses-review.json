@@ -1,7 +1,7 @@
 {
   "id": "stocks-quant-company-pulses-review",
-  "name": "Rocket Lab 与 SpaceX 公司脉冲复核",
-  "description": "每周两次复核 Rocket Lab 和 SpaceX 的公司、技术与里程碑变化。",
+  "name": "七家公司经营资料复核",
+  "description": "每周两次复核 Rocket Lab、SpaceX、Google、Amazon、Coinbase、NVIDIA 与 TSMC 的经营指标及验证节点；Tesla 由独立供应链任务维护。",
   "scheduler_engine": "news-claw",
   "enabled": true,
   "schedule": "10 10 * * 1,4",
@@ -19,7 +19,12 @@
     "observed_at": "2026-10-10",
     "entities": [
       "Rocket Lab",
-      "SpaceX"
+      "SpaceX",
+      "Google",
+      "Amazon",
+      "Coinbase",
+      "NVIDIA",
+      "TSMC"
     ],
     "source_classes": [
       "issuer investor relations",
