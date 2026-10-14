@@ -1,0 +1,63 @@
+{
+  "id": "csi300-akshare-daily",
+  "name": "沪深300日线 OHLCV（待确认上游额度）",
+  "description": "独立积累不复权日线与成交量；权限及额度未确认，保持关闭，不触发策略。",
+  "scheduler_engine": "news-claw",
+  "task_type": "crawl",
+  "enabled": false,
+  "schedule": "30 6 * * 2-6",
+  "schedule_format": "cron",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [],
+  "collector": {
+    "type": "akshare_daily",
+    "provider": "eastmoney",
+    "akshare_version": "1.19.1",
+    "universe_path": "config/universes/csi300-akshare.json",
+    "state_dir": "/mnt/quant-state/akshare-daily",
+    "initial_start_date": "2026-10-01",
+    "adjustment": "none",
+    "access_review": {
+      "status": "pending_provider_quota",
+      "endpoint": "https://push2his.eastmoney.com/api/qt/stock/kline/get",
+      "reviewed_at": "2026-10-14",
+      "evidence_reference": null,
+      "reason": "User requires confirmed provider limits before any data request. No authoritative quota found; AKShare wrapper documentation is not provider authorization."
+    },
+    "request_policy": {
+      "min_interval_seconds": 60,
+      "max_requests_per_run": 300,
+      "max_requests_per_day": 300,
+      "concurrency": 1,
+      "automatic_retry": false,
+      "policy_status": "local_upper_bounds_only_not_provider_confirmed",
+      "cache_first": true,
+      "persistent_circuit_breaker": true
+    }
+  },
+  "execution": {
+    "command": [
+      ".venv-akshare/bin/python",
+      "-m",
+      "collectors.akshare_daily",
+      "--execute",
+      "--max-requests",
+      "300"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 21600,
+    "lock_group": "akshare-eastmoney",
+    "stop_grace_seconds": 30
+  },
+  "workflow": {
+    "outputs": [
+      "/mnt/quant-state/akshare-daily/bars"
+    ],
+    "strategy_execution": "disabled",
+    "website_delivery": {
+      "kind": "private_research_cache",
+      "frontend_build_required": false,
+      "restart_required": false
+    }
+  }
+}
