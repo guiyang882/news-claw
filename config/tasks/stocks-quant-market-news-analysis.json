@@ -161,6 +161,21 @@
       "after_publish": "none",
       "frontend_build_required": false,
       "restart_required": false
+    },
+    "presentation_contract": {
+      "version": 1,
+      "renderer": "Next.js ResearchMap",
+      "view": "company_comparison",
+      "format": "existing_validated_json_no_generated_markup",
+      "preserve": [
+        "source_references",
+        "observation_dates",
+        "uncertainty",
+        "company_scope"
+      ],
+      "missing_evidence": "show_unavailable_never_fill_with_invented_values",
+      "connections": "research_navigation_not_inferred_causation_or_business_relationship",
+      "content_updates_require_build": false
     }
   }
 }

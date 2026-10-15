@@ -90,6 +90,16 @@ def publish_news(config, root, db, *, execute=False):
             'events': len(bundle['events']), 'output': str(output)}
 
 
+def presentation_guidance(settings):
+    if settings.get('presentation_contract', {}).get('version') != 1:
+        return ''
+    return ('The website uses this brief in a company-centered comparison map. '
+            'Keep each evidence point self-contained with attribution and dates; distinguish actual results, '
+            'targets and open checks. Thematic comparisons do not establish partnerships, supply ties or causation. '
+            'Do not invent comparison metrics or relations for a diagram. Use the existing JSON fields and evidence IDs; '
+            'do not output HTML, SVG or Mermaid. ')
+
+
 def review_and_repair(raw, events, company, settings, root, directory, runner, *, initial_review=None):
     """Review once; repair a grounded rejection once, then require a fresh approval."""
     source_hash = content_digest(events)
@@ -116,7 +126,7 @@ def review_and_repair(raw, events, company, settings, root, directory, runner, *
             'Do not browse, use tools or delegate. Reject unsupported facts, source/date mismatches, guesses, '
             'investment recommendations and unsupported causal claims. Accept properly attributed issuer announcements '
             'and clearly conditional questions. Echo source_sha256 and analysis_sha256 exactly. '
-            'Return approved=false with issues if necessary. Input: '
+            'Return approved=false with issues if necessary. ' + presentation_guidance(settings) + 'Input: '
             + json.dumps({'sources': events, 'analysis': analysis, 'source_sha256': source_hash,
                           'analysis_sha256': content_digest(analysis)}, ensure_ascii=False))
         return check_review(runner(stage, prompt, review_schema, directory / output), analysis)
@@ -131,7 +141,7 @@ def review_and_repair(raw, events, company, settings, root, directory, runner, *
             'Remove or narrow unsupported claims; do not invent replacement facts. Preserve the company, dates, '
             'attribution and evidence boundaries. Do not transfer claims between products. Absence from these excerpts '
             'does not prove absence of independent validation. Use only listed evidence IDs. '
-            'At most 2 items per list, 200 characters per item and 400 per summary. Return the complete brief schema. Input: '
+            'At most 2 items per list, 200 characters per item and 400 per summary. Return the complete brief schema. ' + presentation_guidance(settings) + 'Input: '
             + json.dumps({'sources': events, 'analysis': analysis, 'review_issues': review['issues']}, ensure_ascii=False))
         analysis = normalize(runner('revise', prompt, schema, directory / '03-codex-repair'))
         review = review_once(analysis, 'review_revised', '04-review-revised')
@@ -204,7 +214,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, now=No
                 'Absence from these excerpts is not proof that independent validation does not exist. '
                 'A single source is sufficient only for a narrow, explicitly attributed brief; do not imply corroboration. '
                 'At most 2 items per list, 200 characters per item and 400 per summary. '
-                'Copy only listed evidence IDs. Input: ' + json.dumps(packet, ensure_ascii=False))
+                'Copy only listed evidence IDs. ' + presentation_guidance(settings) + 'Input: ' + json.dumps(packet, ensure_ascii=False))
             if len(prompt) > budget['max_input_chars']:
                 raise ValueError('Company prompt exceeded the input budget')
             schema = root / 'config/schemas/company-brief.schema.json'
