@@ -1,0 +1,162 @@
+{
+  "id": "company-dependencies-evidence",
+  "name": "八家公司上下游：官方正文采集",
+  "description": "从现有官方RSS缓存发现业务关系公告，最多4篇正文；复用缓存，10秒间隔，拒绝即熔断。",
+  "scheduler_engine": "news-claw",
+  "task_type": "crawl",
+  "enabled": true,
+  "schedule": "20 7 * * *",
+  "schedule_format": "cron",
+  "timezone": "Asia/Shanghai",
+  "topic_ids": [
+    "daily-research-blog",
+    "ai-products-attention-feedback",
+    "robotics-and-humanoids",
+    "physical-ai",
+    "space-race"
+  ],
+  "collector": {
+    "type": "public_primary_pages",
+    "sources": [],
+    "access_review": {
+      "status": "public_issuer_disclosures",
+      "reviewed_at": "2026-10-15",
+      "authentication": "none_required",
+      "scope": "Read public official announcements discovered from existing publisher feeds, obey robots and shared denial circuits; no recursive crawling, credentials, SEC, or denied origins."
+    },
+    "request_policy": {
+      "max_concurrent_requests_per_host": 1,
+      "min_interval_seconds_per_host": 10,
+      "min_interval_seconds_global": 10,
+      "max_requests_per_run": 8,
+      "automatic_retry_after_denial": false,
+      "stop_on_403_429_or_access_denial": true
+    },
+    "discovery": {
+      "lookback_days": 30,
+      "max_pages_per_run": 4,
+      "max_pages_per_host": 2,
+      "official_url_prefixes": [
+        "https://blog.google/innovation-and-ai/",
+        "https://blog.google/company-news/",
+        "https://blogs.nvidia.com/blog/",
+        "https://nvidianews.nvidia.com/news/",
+        "https://aws.amazon.com/blogs/aws/",
+        "https://www.nasa.gov/news-release/",
+        "https://science.nasa.gov/"
+      ],
+      "official_feed_hosts": [
+        "blog.google",
+        "blogs.nvidia.com",
+        "nvidianews.nvidia.com",
+        "aws.amazon.com",
+        "www.nasa.gov"
+      ],
+      "title_pattern": "partnership|partner|supply|supplier|customer|manufactur|launch|chip|foundry|cloud|contract|agreement|collaborat|battery|USDC|custody|satellite|semiconductor"
+    }
+  },
+  "options": {
+    "start_jitter_seconds": 0,
+    "lookback_hours": 8760,
+    "max_items_per_run": 4
+  },
+  "execution": {
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "collectors.dependency_evidence",
+      "--execute"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 900,
+    "stop_grace_seconds": 15,
+    "lock_group": "web-fetch"
+  },
+  "workflow": {
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "website_delivery": {
+      "kind": "cached_evidence",
+      "reader": "Company dependencies evidence review",
+      "after_publish": "none",
+      "frontend_build_required": false,
+      "restart_required": false
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "relationships": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "zh": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ]
+          },
+          "role": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "zh": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ]
+          },
+          "claim": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "zh": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ]
+          },
+          "watch": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "zh": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ]
+          },
+          "company": {
+            "type": "string",
+            "enum": [
+              "rocket_lab",
+              "spacex",
+              "tesla",
+              "google",
+              "amazon",
+              "coinbase",
+              "nvidia",
+              "tsmc"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "upstream",
+              "downstream"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "customer",
+              "platform",
+              "partner",
+              "internal",
+              "infrastructure"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "disclosed",
+              "historical"
+            ]
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "role",
+          "claim",
+          "watch",
+          "company",
+          "direction",
+          "kind",
+          "status",
+          "source_id",
+          "quote"
+        ]
+      }
+    }
+  },
+  "required": [
+    "relationships"
+  ]
+}

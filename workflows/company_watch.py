@@ -93,7 +93,7 @@ def publish_news(config, root, db, *, execute=False):
 def presentation_guidance(settings):
     if settings.get('presentation_contract', {}).get('version') != 1:
         return ''
-    return ('The website uses this brief in a company-centered comparison map. '
+    return ('The website uses this brief in the company briefing. Business dependencies have a separate evidence-reviewed dataset. '
             'Keep each evidence point self-contained with attribution and dates; distinguish actual results, '
             'targets and open checks. Thematic comparisons do not establish partnerships, supply ties or causation. '
             'Do not invent comparison metrics or relations for a diagram. Use the existing JSON fields and evidence IDs; '

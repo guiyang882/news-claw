@@ -1,0 +1,177 @@
+{
+  "id": "company-dependencies-review",
+  "name": "八家公司上下游：双语证据复核与发布",
+  "description": "每日报告中仅发布有正文证据并通过独立复核的依赖关系；保留旧快照和真实披露日期。",
+  "scheduler_engine": "news-claw",
+  "task_type": "workflow",
+  "enabled": true,
+  "schedule": "45 7 * * *",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "cron",
+  "topic_ids": [
+    "daily-research-blog",
+    "ai-products-attention-feedback",
+    "robotics-and-humanoids",
+    "physical-ai",
+    "space-race"
+  ],
+  "options": {
+    "start_jitter_seconds": 180,
+    "model_permissions": "full_no_interactive_approval"
+  },
+  "execution": {
+    "command": [
+      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      "-m",
+      "workflows.dependencies",
+      "--execute"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 900,
+    "stop_grace_seconds": 15,
+    "lock_group": "model-cli",
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "HOME": "/root",
+      "CODEX_HOME": "/root/.codex"
+    }
+  },
+  "workflow": {
+    "state_root": "/mnt/quant-state/quant-web",
+    "kind": "company-dependencies-v1",
+    "writer": {
+      "executable": "/root/.local/bin/agy",
+      "model": "gemini-3.8-flash-low",
+      "timeout_seconds": 360,
+      "permissions": "full"
+    },
+    "reviewer": {
+      "executable": "/usr/local/bin/codex",
+      "model": "gpt-6.1-sol",
+      "timeout_seconds": 240,
+      "permissions": "full",
+      "service_tier": "default",
+      "reasoning_effort": "medium"
+    },
+    "min_model_interval_seconds": 10,
+    "network_policy": {
+      "source_web_requests": 0,
+      "max_cli_invocations_per_run": 2,
+      "automatic_retries": 0,
+      "provider_denial": "persistent_circuit_requires_explicit_reset"
+    },
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/blog",
+        "frontend_body_marker": "RESEARCH LIBRARY",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "website_delivery": {
+      "kind": "validated_runtime_snapshot",
+      "reader": "Authenticated local content bridge",
+      "after_publish": "none",
+      "frontend_build_required": false,
+      "restart_required": false
+    },
+    "presentation_contract": {
+      "version": 1,
+      "renderer": "Next.js CompanyDependencies",
+      "view": "upstream_downstream",
+      "format": "validated_bilingual_json",
+      "connections": "disclosed_business_relationships_only",
+      "content_updates_require_build": false
+    },
+    "output": "/mnt/quant-state/quant-web/company_dependencies.json",
+    "official_url_prefixes": [
+      "https://blog.google/innovation-and-ai/",
+      "https://blog.google/company-news/",
+      "https://blogs.nvidia.com/blog/",
+      "https://nvidianews.nvidia.com/news/",
+      "https://aws.amazon.com/blogs/aws/",
+      "https://www.nasa.gov/news-release/",
+      "https://science.nasa.gov/"
+    ],
+    "company_terms": [
+      "Rocket Lab",
+      "SpaceX",
+      "Tesla",
+      "Google",
+      "Amazon",
+      "Coinbase",
+      "NVIDIA",
+      "TSMC"
+    ]
+  }
+}

@@ -151,7 +151,9 @@ class RequestPolicy:
                 break
 
     async def process_response(self, request, response, spider):
-        if response.status in {401, 403, 429}:
+        denied_body = (hasattr(response, 'text') and response.status == 200 and
+                       re.search(r'<title[^>]*>[^<]*(?:access denied|just a moment|attention required|captcha)|verify you are human|unusual traffic from your computer', response.text[:80000], re.I))
+        if response.status in {401, 403, 429} or denied_body:
             request.meta["failure_detail"] = {
                 "category": "http_rate_limited" if response.status == 429 else "http_access_denied",
                 "url": request.url, "http_status": response.status,
@@ -167,7 +169,7 @@ class RequestPolicy:
                         await asyncio.sleep(0.05)
                 state = load_state(state_path)
                 retry_after = response.headers.get("Retry-After", b"").decode()
-                atomic_json(state_path, {**state, "source": key, "blocked": f"HTTP {response.status}",
+                atomic_json(state_path, {**state, "source": key, "blocked": "access challenge" if denied_body else f"HTTP {response.status}",
                                         "blocked_at": utcnow(), "retry_after": retry_after,
                                         "not_before": max(float(state.get("not_before", 0)), retry_after_deadline(retry_after))})
             spider.fail(f"source {key} stopped after HTTP {response.status}: {request.url}",
@@ -471,7 +473,7 @@ def main():
     process = CrawlerProcess(settings={
         "USER_AGENT": identity,
         "TELNETCONSOLE_ENABLED": False,
-        "ROBOTSTXT_OBEY": True, "CONCURRENT_REQUESTS": 2, "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
+        "ROBOTSTXT_OBEY": True, "CONCURRENT_REQUESTS": 1 if os.environ.get("NEWS_CLAW_SERIAL_REQUESTS") == "1" else 2, "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
         "DOWNLOAD_TIMEOUT": 45, "DOWNLOAD_MAXSIZE": 5 * 1024 * 1024,
         "RETRY_ENABLED": False, "COOKIES_ENABLED": False,
         "HTTPCACHE_ENABLED": True, "HTTPCACHE_DIR": str(root / "data/runs/http-cache"),
