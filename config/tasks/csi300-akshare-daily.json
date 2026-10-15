@@ -20,9 +20,9 @@
     "access_review": {
       "status": "pending_provider_quota",
       "endpoint": "https://push2his.eastmoney.com/api/qt/stock/kline/get",
-      "reviewed_at": "2026-10-14",
-      "evidence_reference": null,
-      "reason": "User requires confirmed provider limits before any data request. No authoritative quota found; AKShare wrapper documentation is not provider authorization."
+      "reviewed_at": "2026-10-15",
+      "evidence_reference": "docs/AKSHARE_REVIEW_2026-10-15.md",
+      "reason": "Exact push2his endpoint quota and automated access permission remain unconfirmed. EMT FAQ rates belong to a different API and cannot authorize this endpoint. Keep disabled under the user precondition."
     },
     "request_policy": {
       "min_interval_seconds": 60,

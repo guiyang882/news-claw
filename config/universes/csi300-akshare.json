@@ -1,11 +1,21 @@
 {
   "index": "000300",
-  "as_of": "2026-08-31",
-  "verified_current": false,
-  "valid_through": "2026-08-31",
-  "source_path": "/mnt/quant/strategies/stocks-quant/data/csi300_robust_50_v1/membership/2026-08-31.csv",
-  "source_sha256": "e1693529c13068d2c10bf94fee779ff094ddd464c3f2d65584cfdcd6192e5a6a",
-  "note": "Existing historical membership snapshot only; verify current effective membership before execution.",
+  "as_of": "2026-10-14",
+  "verified_current": true,
+  "valid_through": "2026-10-14",
+  "verified_at": "2026-10-15T02:01:10.602409+00:00",
+  "source_url": "https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/file/autofile/cons/000300cons.xls",
+  "source_path": "/mnt/quant-state/akshare-daily/membership/2026-10-14/000300cons.xls",
+  "source_sha256": "af5f512eda5822c98fed43b8331c2feb3bed73cf770aa221271890d5e28855bf",
+  "source_last_modified": "Wed, 14 Oct 2026 14:35:18 GMT",
+  "normalized_path": "config/universes/csi300-2026-10-14.csv",
+  "normalized_sha256": "41ad7d34bdcc55cb2c784f6565e3b02d214252b49f890f1bfc879acd0ef1dae4",
+  "note": "Official current-list download verified on 2026-10-15. Covers only the source snapshot date; no future validity or historical membership is inferred.",
+  "previous_snapshot_comparison": {
+    "as_of": "2026-08-31",
+    "added": [],
+    "removed": []
+  },
   "symbols": [
     "000001",
     "000002",
