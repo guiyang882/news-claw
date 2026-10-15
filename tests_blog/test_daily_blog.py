@@ -238,6 +238,19 @@ class DailyBlogTests(unittest.TestCase):
         self.assertNotIn("Editorial fixture revision", baseline["article"]["body_markdown"])
         self.assertIn("Editorial fixture revision", self.payloads["review"]["draft"]["article"]["body_markdown"])
 
+    def test_operator_edit_can_compare_against_short_rejected_baseline(self):
+        saved, live, audit = self.manual_humanizer_fixture()
+        original = self.draft()
+        original['article']['en']['body_markdown'] = ('\n'.join(f'## Section {i}\nBrief fixture.' for i in range(6))
+            + '\n[First source](https://example.org/a) [Second source](https://example.org/b)\n')
+        blog.atomic_json(saved / audit['original_filename'], original)
+        audit['original_draft_sha256'] = blog.digest(original)
+        blog.atomic_json(saved / 'manual-edit.json', audit)
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(result['business_status'], 'published')
+        self.assertEqual(self.calls, ['review', 'final_review'])
+        self.assertIn('Brief fixture', self.payloads['final_review']['original_draft']['article']['en']['body_markdown'])
+
     def test_operator_edit_cannot_bypass_final_rejection(self):
         saved, live, audit = self.manual_humanizer_fixture()
         self.responses["final_review"] = lambda value: value.update(approved=False, humanizer_applied=False, issues=["Unresolved"])
@@ -273,6 +286,16 @@ class DailyBlogTests(unittest.TestCase):
         again = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
         self.assertEqual(again["business_status"], "already_published")
         self.assertEqual(len(self.calls), 3)
+
+    def test_length_failure_before_humanizer_can_resume_with_fresh_reviews(self):
+        saved, live = self.recovery_fixture()
+        blog.atomic_json(saved / "result.json", {"success": False,
+            "error": "en article does not meet the approximate reading time target: 3135 units; required 3201–4600"})
+        self.assertFalse((saved / "03-codex-humanizer/response.json").exists())
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(result["business_status"], "published")
+        self.assertEqual(self.calls, ["review", "humanize", "final_review"])
+        self.assertEqual(len(result["model_calls"]), 7)
 
     def test_rejected_early_review_can_be_backfilled_with_fresh_verdicts(self):
         saved, live = self.recovery_fixture()
@@ -344,6 +367,24 @@ class DailyBlogTests(unittest.TestCase):
         result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
         self.assertEqual(self.calls, ["final_review"])
         self.assertEqual(len(result["model_calls"]), 6)
+        self.assertEqual(result["business_status"], "published")
+
+    def test_budget_failure_after_approved_revision_resumes_exact_final_review(self):
+        saved, live = self.recovery_fixture()
+        packet = blog.read_json(saved / "source-packet.json")
+        plan = blog.read_json(saved / "blog-outline.json")
+        config = deepcopy(self.config)
+        config["workflow"]["recovery_updated_at"] = blog.datetime.now(blog.ZoneInfo(config["timezone"])).date().isoformat()
+        original = blog.build_draft(self.draft(), packet, config, DAY, plan=plan)
+        review = blog.read_json(saved / "02-codex-review/response.json")
+        review.update(approved=True, citations_valid=True, issues=[], article_sha256=blog.digest(original))
+        blog.atomic_json(saved / "02c-codex-re-review/response.json", review)
+        blog.atomic_json(saved / "reviewed-draft.json", original)
+        blog.atomic_json(saved / "03-codex-humanizer/response.json", self.draft())
+        blog.atomic_json(saved / "result.json", {"error": "Model invocation limit reached"})
+        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        self.assertEqual(self.calls, ["final_review"])
+        self.assertEqual(len(result["model_calls"]), 7)
         self.assertEqual(result["business_status"], "published")
 
     def test_recovery_budget_counts_ancestors_but_not_replayed_responses(self):
@@ -769,6 +810,16 @@ class PresentationTests(unittest.TestCase):
     model = DailyBlogTests.model
     run_blog = DailyBlogTests.run_blog
 
+    def test_references_do_not_present_unverified_metadata_as_publication_dates(self):
+        from workflows.blog_presentation import with_references
+        source = {'title': 'Source — report', 'url': 'https://example.org/a', 'publisher': 'Publisher',
+                  'source_date': '2026-10-15', 'snapshot_as_of': '2026-10-14'}
+        for lang in ('zh', 'en'):
+            rendered = with_references('Body', [source], lang)
+            self.assertNotIn('2026-10', rendered)
+            self.assertNotIn('—', rendered)
+            self.assertIn('[Source :  report](https://example.org/a)', rendered)
+
     def test_publication_has_topic_url_references_and_no_process_footer(self):
         result = self.run_blog()
         self.assertEqual(result["slug"], "offline-topic-outline-2026-10-10")
@@ -776,7 +827,7 @@ class PresentationTests(unittest.TestCase):
         for localized in (proof["draft"]["article"], proof["draft"]["article"]["en"]):
             self.assertNotIn("Drafted with", localized["body_markdown"])
             self.assertNotIn("编写与复核", localized["body_markdown"])
-            self.assertIn("2026-10-09", localized["body_markdown"])
+            self.assertNotIn("2026-10-09", localized["body_markdown"].split("## ")[-1])
         self.assertIn("## References", proof["draft"]["article"]["en"]["body_markdown"])
         self.assertTrue((self.root / "data/knowledge/topics/daily-research-blog/articles" / result["slug"] / "zh.md").is_file())
 

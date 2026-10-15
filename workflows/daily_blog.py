@@ -381,7 +381,7 @@ class ReadingLengthError(ValueError):
     """A ready article needs a bounded content edit before factual review."""
 
 
-def build_draft(result, packet, config, day, *, plan, humanized=False):
+def build_draft(result, packet, config, day, *, plan, humanized=False, comparison_baseline=False):
     presentation_settings = presentation.policy(config)
     validate_shape(result, read_json(SCHEMAS / "daily-blog-draft.schema.json"))
     if result["status"] != "ready":
@@ -424,7 +424,7 @@ def build_draft(result, packet, config, day, *, plan, humanized=False):
         if len(body) > 90_000 or len(re.findall(r"(?m)^##\s+", body)) < config["workflow"]["planning"]["min_sections"]:
             raise ValueError("Article is too short or lacks sections")
         reading[language] = editorial.reading_metrics(body, language, config["workflow"]["reading"])
-        if not lengths[language]["minimum"] <= reading[language]["units"] <= lengths[language]["maximum"]:
+        if not comparison_baseline and not lengths[language]["minimum"] <= reading[language]["units"] <= lengths[language]["maximum"]:
             raise ReadingLengthError(
                 f"{language} article does not meet the approximate reading time target: "
                 f"{reading[language]['units']} units; required "
@@ -636,6 +636,7 @@ def length_prompt(settings):
             f"Chinese {lengths['zh']['minimum']}–{lengths['zh']['maximum']} reading units "
             "(one Han character or one Latin word/number counts as one unit, excluding URLs and code); "
             f"English {lengths['en']['minimum']}–{lengths['en']['maximum']} words. "
+            "Aim near the target rather than the minimum so later factual corrections and editing can remove repetition. "
             f"At least {settings['planning']['min_sections']} second-level sections per language. "
             "Follow the approved section budgets and central question; never pad or fabricate to meet length. ")
 
@@ -741,12 +742,17 @@ class RecoveryStages:
             runner.calls.extend(completed)
             return
         edited = saved / "03-codex-humanizer/response.json"
+        review_checkpoint = saved / "02c-codex-re-review/response.json"
+        draft_checkpoint = saved / "02b-codex-correction/response.json"
+        if not review_checkpoint.is_file():
+            review_checkpoint = saved / "02-codex-review/response.json"
+            draft_checkpoint = saved / "01-agy-draft/response.json"
         # An unchanged, already humanized checkpoint can resume at final review.
         # Its initial verdict is still checked against the exact reconstructed hash.
         resume_final = (edited.is_file() and read_json(edited) == corrected
                         and (saved / "reviewed-draft.json").is_file()
-                        and (saved / "02-codex-review/response.json").is_file()
-                        and read_json(saved / "02-codex-review/response.json").get("approved") is True)
+                        and review_checkpoint.is_file() and draft_checkpoint.is_file()
+                        and read_json(review_checkpoint).get("approved") is True)
         remaining = 2 if manual_humanizer else (1 if resume_final else 3)
         if len(completed) + remaining > runner.settings["network_policy"]["max_cli_invocations_per_day"]:
             raise ValueError("Daily model invocation limit cannot accommodate the remaining recovery stages")
@@ -754,8 +760,8 @@ class RecoveryStages:
         if manual_humanizer:
             self.saved["humanize"] = corrected
         elif resume_final:
-            self.saved.update(draft=read_json(saved / "01-agy-draft/response.json"),
-                              review=read_json(saved / "02-codex-review/response.json"),
+            self.saved.update(draft=read_json(draft_checkpoint),
+                              review=read_json(review_checkpoint),
                               humanize=corrected)
         runner.calls.extend(completed)
 
@@ -806,9 +812,13 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         saved = root / "data/runs" / recovery["run_id"]
         error = read_json(saved / "result.json").get("error")
         length_failure = (isinstance(error, str) and re.match(r"^(zh|en) article does not meet the approximate reading time target:", error)
-                          and (saved / "03-codex-humanizer/response.json").is_file())
+                          and any((saved / stage / "response.json").is_file() for stage in
+                                  ("01-agy-draft", "01-length-repair", "02b-codex-correction", "03-codex-humanizer")))
         plan_repair = recovery.get("resume_stage") == "plan" and error == "Outline evidence locator does not exist in the source packet"
-        if not length_failure and not plan_repair and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
+        final_budget_failure = (error == "Model invocation limit reached"
+                                and (saved / "03-codex-humanizer/response.json").is_file()
+                                and (saved / "reviewed-draft.json").is_file())
+        if not length_failure and not plan_repair and not final_budget_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
             raise ValueError("Recovery only supports a saved editorial validation failure")
         filename = recovery.get("draft_filename", "")
         if not plan_repair and (not filename or Path(filename).name != filename or filename in {".", ".."}):
@@ -995,7 +1005,9 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     raise ValueError("Humanizer changed source or fact-check metadata")
             final = build_draft(edited, packet, config, day, plan=plan, humanized=True)
             atomic_json(directory / "final-draft.json", final)
-            review_baseline = (build_draft(pre_edit, packet, config, day, plan=plan) if manual_humanizer else original)
+            # A rejected draft can be short; only the corrected publication must meet the length target.
+            review_baseline = (build_draft(pre_edit, packet, config, day, plan=plan, comparison_baseline=True)
+                               if manual_humanizer else original)
             last = runner("final_review", review_prompt(final, packet, original=review_baseline, skill=skill),
                           SCHEMAS / "daily-blog-verdict.schema.json", directory / "04-codex-final-review")
             if last["article_sha256"] != digest(final) or last["packet_sha256"] != digest(packet):

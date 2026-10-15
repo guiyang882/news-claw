@@ -1,0 +1,44 @@
+{
+  "approval_kind": "model_review",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/when-simulation-runs-30-times-faster-much-factory-2026-10-15/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/when-simulation-runs-30-times-faster-much-factory-2026-10-15/zh.md"
+  },
+  "article_sha256": "7ecd9705d6f74434d22f0e3197461ccea042c0ecd6b4afec78e5be7ed7bf0ad1",
+  "day": "2026-10-15",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "面对工业AI的性能与部署宣传，工程团队需要哪些证据，才能判断局部加速是否改善了完整工程任务？",
+    "section_count": 7,
+    "selected_candidate_id": "c1",
+    "target_reading_minutes": 20,
+    "title": "仿真快了30倍，工厂能快多少？"
+  },
+  "editorial_plan_sha256": "e2e327a061a289d4a842991cfe8711d6a8289af7fdff1e5419810fb3db718af3",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "e6b2364de2f5bf0a6a33a4e90a9c6d03dd20b538aaa4c07eab10b2bcf610f115",
+  "publication_kind": "original",
+  "reading_estimates": {
+    "en": {
+      "minutes": 17,
+      "rate": 200,
+      "units": 3227
+    },
+    "zh": {
+      "minutes": 18,
+      "rate": 300,
+      "units": 5246
+    }
+  },
+  "slug": "when-simulation-runs-30-times-faster-much-factory-2026-10-15",
+  "source_urls": [
+    "https://nvidianews.nvidia.com/news/nvidia-and-semiconductor-leaders-advance-ai-across-chip-design-and-manufacturing-for-ai-defined-labs",
+    "https://blogs.nvidia.com/blog/nordics-technology-ecosystem/"
+  ],
+  "summary": "NVIDIA于2026年10月14日发布的半导体公告与10月15日缓存的北欧文章，涉及不同任务、基线和交付状态。供应商报告可以指导本地试点；要判断部署或生产收益，仍需质量检查与完整任务记录。",
+  "summary_en": "NVIDIA's October 14, 2026 semiconductor release and the Nordic article cached on October 15 concern different workloads, baselines and delivery states. Their vendor-reported results can guide local trials. Inferring deployment or production benefits still requires quality checks and complete task records.",
+  "title": "计划中的特定刻蚀建模预计最多加速30倍，工厂能受益多少？",
+  "title_en": "If selected etch modeling gains up to 30x as planned, how much could the factory gain?",
+  "url": "https://growthyoung.com/blog/when-simulation-runs-30-times-faster-much-factory-2026-10-15",
+  "version": 1
+}

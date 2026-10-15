@@ -113,10 +113,11 @@ def with_references(body, sources, language):
     heading = "参考资料" if language == "zh" else "References"
     lines = [body.rstrip(), "", "## " + heading, ""]
     for i, source in enumerate(sources, 1):
-        title = source["title"].replace("[", "").replace("]", "")
-        date = str(source.get("source_date") or source.get("snapshot_as_of") or "")[:10]
+        title = source["title"].replace("[", "").replace("]", "").replace("—", ": ").replace("–", "-")
         publisher = source.get("publisher", "")
-        lines.append(f'{i}. {publisher}. [{title}]({source["url"]}). {date}.')
+        # Feed/cache dates are not independently verified publication dates.
+        # Keep any dated claims and their qualifications beside the body citations.
+        lines.append(f'{i}. {publisher}. [{title}]({source["url"]}).')
     return "\n".join(lines) + "\n"
 
 
