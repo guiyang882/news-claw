@@ -318,9 +318,13 @@ class NewsSpider(scrapy.Spider):
             self.items_seen += 1
             if self.items_emitted < self.max_items:
                 self.items_emitted += 1
+                text = " ".join(response.xpath(
+                    "//body//text()[not(ancestor::script or ancestor::style or ancestor::nav or ancestor::header or ancestor::footer)]").getall()).strip()
+                if len(text) < source.get("minimum_text_chars", 0):
+                    self.fail("Official page body is too short: " + response.url)
+                    return
                 yield {**archived, "canonical_url": response.url, "title": response.css("title::text").get(default="").strip(),
-                       "published_at": None, "record_type": "webpage", "text": " ".join(response.xpath(
-                           "//body//text()[not(ancestor::script or ancestor::style or ancestor::nav or ancestor::header or ancestor::footer)]").getall()).strip()}
+                       "published_at": published_time(source.get("published_at")), "record_type": "webpage", "text": text}
             return
         try:
             tree = ET.fromstring(response.body)

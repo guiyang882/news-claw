@@ -144,6 +144,21 @@ def collect_packet(config, root, db, day, *, include_media=True):
               WHERE json_extract(link.value,'$.topic_id') IN ({placeholders}))
             ORDER BY COALESCE(published_at,fetched_at) DESC LIMIT ?""",
             (cutoff.isoformat(), *config["topic_ids"], inputs["max_documents"])))
+        # Pull first-party page caches independently of the short feed window.
+        # Discovery pages are fetched by the preceding bounded crawl task, never here.
+        page_cutoff = (day - timedelta(days=inputs.get("primary_page_lookback_days", 14))).isoformat()
+        page_rows = connection.execute("SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=? AND source_json LIKE '%discovery_document_id%' ORDER BY COALESCE(published_at,fetched_at) DESC, fetched_at DESC LIMIT 100", (page_cutoff,)).fetchall()
+        dynamic_urls, page_seen = [], set()
+        for row in page_rows:
+            source = json.loads(row["source_json"])
+            if source.get("type") != "page" or row["canonical_url"] in page_seen:
+                continue
+            page_seen.add(row["canonical_url"])
+            dynamic_urls.append(row["canonical_url"])
+            rows = [old for old in rows if old["canonical_url"] != row["canonical_url"]]
+            rows.append(row)
+            if len(dynamic_urls) >= inputs.get("max_primary_pages", 8):
+                break
         primary_urls = inputs.get("primary_source_urls", [])
         if len(primary_urls) > 6:
             raise ValueError("Primary evidence needs at most six public source URLs")
@@ -152,6 +167,7 @@ def collect_packet(config, root, db, day, *, include_media=True):
             primary = connection.execute("SELECT * FROM documents WHERE canonical_url=? ORDER BY fetched_at DESC LIMIT 1", (url,)).fetchone()
             if primary and primary["id"] not in {row["id"] for row in rows}:
                 rows.append(primary)
+        primary_urls = list(dict.fromkeys([*primary_urls, *dynamic_urls]))
         for row in rows:
             topics = {link["topic_id"] for link in json.loads(row["topic_links_json"])}
             if not topics.intersection(config["topic_ids"]) and row["canonical_url"] not in primary_urls:
@@ -599,6 +615,7 @@ def planning_prompt(packet, history, settings, skill):
             f"先提出最多{settings['planning']['max_candidates']}个问题不同的候选题，说明各自的读者价值、时效、已有来源和证据缺口，再选择最值得写的一题。"
             "优先证据深度、明确的读者问题、可解释的机制和近期文章没有展开过的角度。资料不足可以少提出候选；"
             "不能仅凭新闻标题支撑长文，不为每日数量或篇幅拼凑题目。选不出可支持的长文时返回 insufficient_evidence。"
+            "evidence_refs中的locator必须逐字复制资料包中的locator，不能添加段落说明或text注释；说明放argument或boundaries。"
             "选中题目必须至少有两个不同来源URL，使用source_id和精确的evidence locator做逐章引用。"
             "大纲必须依次展开读者利害与核心问题、证据或案例、机制分析、最强反论证与证伪条件、判断的影响和未决问题。"
             "各章给出具体论点、证据边界、中英标题和两种语言的篇幅预算。所有章节必须能追溯到所选来源；"

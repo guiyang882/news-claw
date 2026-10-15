@@ -1,63 +1,73 @@
 {
   "id": "daily-blog-primary-evidence",
-  "name": "研究博客：官方财报正文缓存",
-  "description": "缓存明确列出的公开季度披露，保留原日期，为博客提供正文而非标题。robots enforced；每周更新有界缓存。",
+  "name": "研究博客：官方新文章正文缓存",
+  "description": "每日选题前，从已缓存官方RSS发现最多6篇新正文；白名单、去重、保留来源日期、robots和限流，不递归抓取。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
   "enabled": true,
-  "schedule": "5 7 * * 1",
+  "schedule": "55 6 * * *",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
   "topic_ids": [
     "daily-research-blog",
-    "ai-products-attention-feedback"
+    "ai-products-attention-feedback",
+    "robotics-and-humanoids",
+    "physical-ai",
+    "space-race"
   ],
   "collector": {
     "type": "public_primary_pages",
-    "sources": [
-      {
-        "name": "Alphabet Q2 2026 CEO remarks",
-        "type": "page",
-        "url": "https://blog.google/company-news/inside-google/message-ceo/alphabet-earnings-q2-2026/",
-        "language": "en",
-        "obey_robots_txt": true
-      },
-      {
-        "name": "Amazon Q2 2026 earnings release",
-        "type": "page",
-        "url": "https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Second-Quarter-Results/default.aspx",
-        "language": "en",
-        "obey_robots_txt": true
-      }
-    ],
+    "sources": [],
     "access_review": {
       "status": "public_issuer_disclosures",
-      "reviewed_at": "2026-10-14",
+      "reviewed_at": "2026-10-15",
       "authentication": "none_required",
-      "scope": "Two public issuer-owned earnings pages, robots enforced, cache first, no recursive crawl or SEC requests."
+      "scope": "Up to six public official articles discovered in cached official feeds; exact HTTPS host/path allowlist, robots enforced, cache first, no recursive traversal, no SEC requests."
     },
     "request_policy": {
       "max_concurrent_requests_per_host": 1,
       "min_interval_seconds_per_host": 10,
       "min_interval_seconds_global": 10,
-      "max_requests_per_run": 6,
+      "max_requests_per_run": 12,
       "automatic_retry_after_denial": false,
       "stop_on_403_429_or_access_denial": true
+    },
+    "discovery": {
+      "lookback_days": 7,
+      "max_pages_per_run": 6,
+      "max_pages_per_host": 2,
+      "official_url_prefixes": [
+        "https://blog.google/innovation-and-ai/",
+        "https://blog.google/company-news/",
+        "https://blogs.nvidia.com/blog/",
+        "https://nvidianews.nvidia.com/news/",
+        "https://aws.amazon.com/blogs/aws/",
+        "https://www.nasa.gov/news-release/",
+        "https://science.nasa.gov/"
+      ],
+      "official_feed_hosts": [
+        "blog.google",
+        "blogs.nvidia.com",
+        "nvidianews.nvidia.com",
+        "aws.amazon.com",
+        "www.nasa.gov"
+      ],
+      "title_pattern": "AI|agent|intelligence|research|compute|computing|chip|semiconductor|safety|security|S3|Vercel|Artemis|Starship|Starlink|space|lunar|testing"
     }
   },
   "options": {
     "start_jitter_seconds": 0,
     "lookback_hours": 8760,
-    "max_items_per_run": 2
+    "max_items_per_run": 6
   },
   "execution": {
     "command": [
       ".venv/bin/python",
       "-m",
-      "collectors.news"
+      "collectors.blog_evidence"
     ],
     "working_dir": ".",
-    "timeout_seconds": 300,
+    "timeout_seconds": 900,
     "stop_grace_seconds": 15,
     "lock_group": "web-fetch"
   },

@@ -49,6 +49,41 @@ class DailyBlogTests(unittest.TestCase):
         self.payloads = {}
         self.schemas = {}
 
+    def test_discovered_page_is_retained_beyond_feed_window_and_not_truncated(self):
+        import hashlib
+        url='https://blogs.nvidia.com/blog/test-official/'
+        for doc_id,kind,text,stamp in [('official-page','webpage','evidence '*1000,'2026-10-05'),
+                                      ('recent-feed','feed_entry','headline snippet','2026-10-09')]:
+            record={'record_type':kind,'text':text}
+            relative=f'data/normalized/documents/{doc_id}.json'
+            path=self.root/relative;path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text(json.dumps(record))
+            hashed=hashlib.sha256(json.dumps(record,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+            source={'type':'page' if kind=='webpage' else 'rss','name':'Official'}
+            if kind=='webpage':source['discovery_document_id']='feed-discovery'
+            topics=[{'topic_id':self.config['topic_ids'][0]}]
+            with sqlite3.connect(self.db) as db:
+                db.execute('INSERT INTO documents(id,canonical_url,title,published_at,fetched_at,content_hash,raw_path,normalized_path,created_at,source_json,topic_links_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    (doc_id,url,'Official',stamp,stamp,hashed,'unused',relative,stamp,json.dumps(source),json.dumps(topics)))
+        packet=blog.collect_packet(self.config,self.root,self.db,DAY)
+        sources=[x for x in packet['sources'] if x['url']==url]
+        self.assertEqual(len(sources),1)
+        self.assertEqual(sources[0]['evidence_level'],'cached_webpage')
+        evidence=next(x for x in packet['evidence'] if x['source_ids']==['doc-official-page'])
+        self.assertGreater(len(evidence['text']),4000)
+        self.assertEqual(sources[0]['source_date'],'2026-10-05')
+
+    def test_locator_annotations_only_normalize_exact_source_path(self):
+        from workflows.blog_planning import canonicalize_locators
+        packet={'evidence':[{'source_ids':['s1'],'locator':'data/source.json'}]}
+        for suffix in ['；text：paragraph','；text → paragraph','; text -> paragraph']:
+            plan={'outline':{'sections':[{'evidence_refs':[{'source_id':'s1','locator':'data/source.json'+suffix}]}]}}
+            corrected=canonicalize_locators(plan,packet)
+            self.assertEqual(corrected['outline']['sections'][0]['evidence_refs'][0]['locator'],'data/source.json')
+        for sid,loc in [('other','data/source.json；text → paragraph'),('s1','data/source.json.evil；text → paragraph')]:
+            plan={'outline':{'sections':[{'evidence_refs':[{'source_id':sid,'locator':loc}]}]}}
+            self.assertEqual(canonicalize_locators(plan,packet),plan)
+
     def draft(self):
         article = {"tags": ["primary-sources"], "used_source_ids": ["source-a", "source-b"],
             "fact_checks": [{"source_id": f"source-{name}", "claim": "This synthetic claim exists only in an offline fixture.",

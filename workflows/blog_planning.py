@@ -43,9 +43,13 @@ def canonicalize_locators(plan, packet):
     for section in plan.get("outline", {}).get("sections", []):
         for reference in section["evidence_refs"]:
             locator = reference["locator"]
-            base, separator, _ = locator.partition("；text：")
-            if separator and (reference["source_id"], base) in pairs:
-                reference["locator"] = base
+            for sid, base in pairs:
+                if sid != reference["source_id"] or not locator.startswith(base):
+                    continue
+                suffix = locator[len(base):]
+                if re.match(r"^[；;]\s*text\s*(?:[:：]|→|->)", suffix):
+                    reference["locator"] = base
+                    break
     return plan
 
 
