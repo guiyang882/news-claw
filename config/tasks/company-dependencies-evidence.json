@@ -1,7 +1,7 @@
 {
   "id": "company-dependencies-evidence",
   "name": "八家公司上下游：官方正文采集",
-  "description": "从现有官方RSS缓存发现业务关系公告，最多4篇正文；复用缓存，10秒间隔，拒绝即熔断。",
+  "description": "官方RSS正文与人工核对的公告队列，每次最多4篇、每域最多2篇；复用缓存，10秒间隔，拒绝即熔断。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
   "enabled": true,
@@ -22,7 +22,7 @@
       "status": "public_issuer_disclosures",
       "reviewed_at": "2026-10-15",
       "authentication": "none_required",
-      "scope": "Read public official announcements discovered from existing publisher feeds, obey robots and shared denial circuits; no recursive crawling, credentials, SEC, or denied origins."
+      "scope": "Read public official announcements discovered from existing publisher feeds, obey robots and shared denial circuits; no recursive crawling, credentials, SEC, or denied origins. Also read exact reviewed public announcement URLs in discovery.reviewed_pages; no recursive discovery."
     },
     "request_policy": {
       "max_concurrent_requests_per_host": 1,
@@ -43,7 +43,20 @@
         "https://nvidianews.nvidia.com/news/",
         "https://aws.amazon.com/blogs/aws/",
         "https://www.nasa.gov/news-release/",
-        "https://science.nasa.gov/"
+        "https://science.nasa.gov/",
+        "https://rocketlabcorp.com/updates/rocket-lab-completes-mynaric-acquisition-adding-laser-optical-communications-to-growing-space-systems-portfolio/index.php",
+        "https://rocketlabcorp.com/updates/rocket-lab-delivers-second-spacecraft-completes-third-for-varda-space-industries/",
+        "https://rocketlabcorp.com/updates/rocket-lab-spacecraft-built-for-varda-successfully-operating-on-orbit/",
+        "https://www.t-mobile.com/news/network/t-mobile-activates-t-satellite-and-mobilizes-network-teams-tropical-storm-lala-hawaii",
+        "https://www.t-mobile.com/news/network/t-mobile-starlink-beta-open-for-all-carriers",
+        "https://news.panasonic.com/global/press/en161227-6",
+        "https://cloud.google.com/blog/topics/google-cloud-next/whats-next-for-digital-transformation-in-the-cloud",
+        "https://www.shopify.com/news/stablecoins-on-shopify",
+        "https://investors.micron.com/news/press-release/2024/Micron-Commences-Volume-Production-of-Industry-Leading-HBM3E-Solution-to-Accelerate-the-Growth-of-AI-02-26-2024/default.aspx",
+        "https://blogs.nvidia.com/blog/tsmc-blackwell-manufacturing/",
+        "https://blogs.nvidia.com/blog/nvidia-and-partners-build-in-america-for-america/",
+        "https://www.apple.com/newsroom/2025/08/apple-increases-us-commitment-to-600-billion-usd-announces-ambitious-program/",
+        "https://pr.tsmc.com/schinese/news/3192"
       ],
       "official_feed_hosts": [
         "blog.google",
@@ -52,7 +65,74 @@
         "aws.amazon.com",
         "www.nasa.gov"
       ],
-      "title_pattern": "partnership|partner|supply|supplier|customer|manufactur|launch|chip|foundry|cloud|contract|agreement|collaborat|battery|USDC|custody|satellite|semiconductor"
+      "title_pattern": "partnership|partner|supply|supplier|customer|manufactur|launch|chip|foundry|cloud|contract|agreement|collaborat|battery|USDC|custody|satellite|semiconductor",
+      "reviewed_pages": [
+        {
+          "url": "https://rocketlabcorp.com/updates/rocket-lab-completes-mynaric-acquisition-adding-laser-optical-communications-to-growing-space-systems-portfolio/index.php",
+          "name": "Rocket Lab — Mynaric acquisition completed",
+          "published_at": "2026-04-14T00:00:00+00:00"
+        },
+        {
+          "url": "https://rocketlabcorp.com/updates/rocket-lab-delivers-second-spacecraft-completes-third-for-varda-space-industries/",
+          "name": "Rocket Lab — Second Varda spacecraft delivered",
+          "published_at": "2024-12-17T00:00:00+00:00"
+        },
+        {
+          "url": "https://rocketlabcorp.com/updates/rocket-lab-spacecraft-built-for-varda-successfully-operating-on-orbit/",
+          "name": "Rocket Lab — Spacecraft built for Varda operating on orbit",
+          "published_at": "2023-06-12T00:00:00+00:00"
+        },
+        {
+          "url": "https://www.t-mobile.com/news/network/t-mobile-activates-t-satellite-and-mobilizes-network-teams-tropical-storm-lala-hawaii",
+          "name": "T-Mobile — T-Satellite activated ahead of Lala",
+          "published_at": "2026-08-14T00:00:00+00:00"
+        },
+        {
+          "url": "https://www.t-mobile.com/news/network/t-mobile-starlink-beta-open-for-all-carriers",
+          "name": "T-Mobile — T-Mobile Starlink beta takes off",
+          "published_at": "2025-02-09T00:00:00+00:00"
+        },
+        {
+          "url": "https://news.panasonic.com/global/press/en161227-6",
+          "name": "Panasonic — Tesla and Panasonic solar collaboration",
+          "published_at": "2016-12-27T00:00:00+00:00"
+        },
+        {
+          "url": "https://cloud.google.com/blog/topics/google-cloud-next/whats-next-for-digital-transformation-in-the-cloud",
+          "name": "Google Cloud — What’s next for digital transformation in the cloud",
+          "published_at": "2022-10-11T00:00:00+00:00"
+        },
+        {
+          "url": "https://www.shopify.com/news/stablecoins-on-shopify",
+          "name": "Shopify — Stablecoins on Shopify",
+          "published_at": "2025-06-12T00:00:00+00:00"
+        },
+        {
+          "url": "https://investors.micron.com/news/press-release/2024/Micron-Commences-Volume-Production-of-Industry-Leading-HBM3E-Solution-to-Accelerate-the-Growth-of-AI-02-26-2024/default.aspx",
+          "name": "Micron — Micron commences HBM3E volume production",
+          "published_at": "2024-02-26T00:00:00+00:00"
+        },
+        {
+          "url": "https://blogs.nvidia.com/blog/tsmc-blackwell-manufacturing/",
+          "name": "NVIDIA — First Blackwell wafer produced in the US",
+          "published_at": "2025-10-17T00:00:00+00:00"
+        },
+        {
+          "url": "https://blogs.nvidia.com/blog/nvidia-and-partners-build-in-america-for-america/",
+          "name": "NVIDIA — NVIDIA and partners build in America",
+          "published_at": "2026-08-05T00:00:00+00:00"
+        },
+        {
+          "url": "https://www.apple.com/newsroom/2025/08/apple-increases-us-commitment-to-600-billion-usd-announces-ambitious-program/",
+          "name": "Apple — Apple expands US investment program",
+          "published_at": "2025-08-06T00:00:00+00:00"
+        },
+        {
+          "url": "https://pr.tsmc.com/schinese/news/3192",
+          "name": "TSMC — 2024 outstanding supplier awards",
+          "published_at": "2024-12-02T00:00:00+00:00"
+        }
+      ]
     }
   },
   "options": {

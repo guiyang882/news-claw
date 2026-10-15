@@ -250,6 +250,20 @@ def terminate_model(signum=None, frame=None):
         raise SystemExit(128 + signum)
 
 
+def model_failure_kind(envelope, cli_diagnostics=""):
+    """Bounded, non-sensitive failure categories; never export provider text/prompts."""
+    reason = str(envelope.get("error", "")).lower()
+    if "internal (code 500)" in cli_diagnostics.lower():
+        return "provider_internal_error"
+    if "stream was interrupted" in reason:
+        return "provider_stream_interrupted"
+    if "timeout" in reason or "timed out" in reason:
+        return "provider_reported_timeout"
+    if "output token limit" in reason or "cut off" in reason:
+        return "output_token_limit"
+    return "unsuccessful_response"
+
+
 class ModelRunner:
     def __init__(self, config, root):
         self.settings = config["workflow"]
@@ -258,6 +272,28 @@ class ModelRunner:
         self.calls = []
 
     def __call__(self, stage, prompt, schema, directory):
+        policy = self.settings.get("transient_retry", {})
+        # Opt-in AGY retry only; every attempt still consumes the shared run budget.
+        retry_limit = min(1, max(0, int(policy.get("max_retries", 0)))) if stage == "draft" else 0
+        retryable = {"provider_internal_error", "provider_stream_interrupted",
+                     "provider_reported_timeout", "local_process_timeout"}
+        for attempt in range(retry_limit + 1):
+            attempt_dir = directory if attempt == 0 else directory / "retry-1"
+            previous_calls = len(self.calls)
+            try:
+                return self._call_once(stage, prompt, schema, attempt_dir)
+            except (ValueError, RuntimeError):
+                call = self.calls[-1] if len(self.calls) > previous_calls else {}
+                limits = self.settings["network_policy"]
+                budget = limits.get("max_cli_invocations_per_run", limits.get("max_cli_invocations_per_day", 0))
+                if attempt >= retry_limit or call.get("failure_kind") not in retryable or len(self.calls) >= budget:
+                    raise
+                delay = max(30, min(120, int(policy.get("delay_seconds", 45))))
+                atomic_json(directory / "retry.json", {"attempt": attempt + 1, "delay_seconds": delay,
+                            "reason": call["failure_kind"], "scheduled_at": now()})
+                time.sleep(delay)
+
+    def _call_once(self, stage, prompt, schema, directory):
         global _model_process
         limits = self.settings["network_policy"]
         limit = limits.get("max_cli_invocations_per_run", limits.get("max_cli_invocations_per_day", 0))
@@ -309,16 +345,18 @@ class ModelRunner:
                 raise PermissionError(f"{provider} provider circuit is open")
             call = None
             envelope = {}
+            started_monotonic = time.monotonic()
             try:
                 _model_process = subprocess.Popen(command, cwd=directory, stdin=subprocess.PIPE,
                     stdout=out, stderr=err, start_new_session=True, pass_fds=inherited)
                 call = {"stage": stage, "provider": provider, "model": settings["model"],
-                        "started_at": now(), "status": "started"}
+                        "started_at": now(), "status": "started", "timeout_seconds": timeout, "process_timeout_seconds": timeout + 15}
                 self.calls.append(call)
                 atomic_json(directory / "call.json", call)
                 try:
                     _model_process.communicate(input=prompt.encode() if provider == "codex" else b"", timeout=timeout + 15)
                 except subprocess.TimeoutExpired:
+                    call["failure_kind"] = "local_process_timeout"
                     # Do not copy argv (which contains the full prompt) into tracked SQLite errors.
                     raise RuntimeError(f"{provider} timed out after {timeout} seconds; see private stage logs") from None
                 code = _model_process.returncode
@@ -358,6 +396,8 @@ class ModelRunner:
             finally:
                 if call is not None:
                     call["finished_at"] = now()
+                    call["elapsed_seconds"] = round(time.monotonic() - started_monotonic, 3)
+                    call["exit_code"] = _model_process.returncode if _model_process else None
                     if call["status"] == "started":
                         call["status"] = "failed"
                     if provider == "agy":
@@ -369,6 +409,10 @@ class ModelRunner:
                             except (ValueError, OSError):
                                 pass
                         usage = envelope.get("usage", {})
+                        if call["status"] == "failed" and "failure_kind" not in call:
+                            cli_path = directory / "cli.log"
+                            diagnostics = cli_path.read_text(errors="replace")[-32000:] if cli_path.exists() else ""
+                            call["failure_kind"] = model_failure_kind(envelope, diagnostics)
                         call["usage"] = {key: value for key, value in (usage.items() if isinstance(usage, dict) else [])
                                          if type(value) is int and value >= 0}
                     atomic_json(directory / "call.json", call)

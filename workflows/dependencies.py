@@ -123,20 +123,27 @@ def run(config, root, db, directory, execute=False, runner=None):
         models.atomic_json(directory/'review-packet.json', review_input)
         if review['source_sha256'] != digest(documents) or review['candidate_sha256'] != digest(raw) or not review['approved']:
             raise ValueError('Dependency review rejected; published snapshot preserved')
+        published = 0
         for company, row in bound:
             current = old['companies'][company]
+            # Never regress a newer disclosure, including supplier-to-internal acquisitions.
+            same = [r for r in current['relationships'] if r['direction'] == row['direction'] and r['entity']['en'].casefold() == row['entity']['en'].casefold()]
+            newest = max((e['date'] for r in same for e in r['evidence']), default='')
+            if newest > max(e['date'] for e in row['evidence']):
+                continue
+            published += 1
             # Same counterparty/type/direction replaces its prior evidence, never duplicates it.
             current['relationships'] = [r for r in current['relationships'] if not (
                 r['kind'] == row['kind'] and r['direction'] == row['direction'] and r['entity']['en'].casefold() == row['entity']['en'].casefold())]
             current['relationships'].append(row)
             current['reviewed_on'] = today
         validate(old)
-        if bound:
+        if published:
             owner = pwd.getpwnam('quant-web')
             models.atomic_json(output, old, site_owner=(owner.pw_uid, owner.pw_gid))
-        models.atomic_json(directory/'publication.json', {'source_sha256': digest(documents), 'snapshot_sha256': digest(old), 'relationships': len(bound)})
-        return {'success': True, 'business_status': 'published' if bound else 'no_supported_relationships',
-                'items_new': len(bound), 'source_requests': 0, 'model_calls': runner.calls}
+        models.atomic_json(directory/'publication.json', {'source_sha256': digest(documents), 'snapshot_sha256': digest(old), 'relationships': published})
+        return {'success': True, 'business_status': 'published' if published else 'no_newer_supported_relationships',
+                'items_new': published, 'source_requests': 0, 'model_calls': runner.calls}
 
 
 def main():

@@ -1,0 +1,180 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "as_of": {
+      "type": "string"
+    },
+    "gaps": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "relationships": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "additionalProperties": false,
+            "properties": {
+              "en": {
+                "type": "string"
+              },
+              "zh": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ],
+            "type": "object"
+          },
+          "company": {
+            "enum": [
+              "rocket_lab",
+              "spacex",
+              "tesla",
+              "google",
+              "amazon",
+              "coinbase",
+              "nvidia",
+              "tsmc"
+            ],
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "upstream",
+              "downstream"
+            ],
+            "type": "string"
+          },
+          "entity": {
+            "additionalProperties": false,
+            "properties": {
+              "en": {
+                "type": "string"
+              },
+              "zh": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ],
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "supplier",
+              "customer",
+              "platform",
+              "partner",
+              "internal",
+              "infrastructure"
+            ],
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "role": {
+            "additionalProperties": false,
+            "properties": {
+              "en": {
+                "type": "string"
+              },
+              "zh": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ],
+            "type": "object"
+          },
+          "source_url": {
+            "type": "string"
+          },
+          "watch": {
+            "additionalProperties": false,
+            "properties": {
+              "en": {
+                "type": "string"
+              },
+              "zh": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "zh",
+              "en"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "company",
+          "direction",
+          "kind",
+          "entity",
+          "role",
+          "claim",
+          "watch",
+          "source_url",
+          "quote"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "searches": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "access": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "title",
+          "publisher",
+          "date",
+          "access"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "as_of",
+    "searches",
+    "sources",
+    "relationships",
+    "gaps"
+  ],
+  "type": "object"
+}
