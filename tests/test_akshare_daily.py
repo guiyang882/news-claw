@@ -47,6 +47,22 @@ class DailyTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'membership'):
             access_gate(config, {'verified_current': False}, date(2026, 10, 14))
 
+    def test_user_activation_preserves_local_caps_and_evidence(self):
+        config = {'collector': {'access_review': {
+            'status': 'user_authorized_conservative_access', 'endpoint': ENDPOINT,
+            'user_instruction': 'explicit activation', 'provider_quota_confirmed': False},
+            'request_policy': {'min_interval_seconds': 60, 'max_requests_per_day': 300}}}
+        universe = {'verified_current': True, 'valid_through': '2026-10-14',
+                    'symbols': [f'{i:06d}' for i in range(300)]}
+        access_gate(config, universe, date(2026, 10, 14))
+        config['collector']['request_policy']['min_interval_seconds'] = 59
+        with self.assertRaisesRegex(ValueError, 'conservative'):
+            access_gate(config, universe, date(2026, 10, 14))
+        config['collector']['request_policy']['min_interval_seconds'] = 60
+        config['collector']['access_review']['provider_quota_confirmed'] = True
+        with self.assertRaisesRegex(ValueError, 'explicit'):
+            access_gate(config, universe, date(2026, 10, 14))
+
     def test_denial_opens_persistent_circuit_without_retry(self):
         with tempfile.TemporaryDirectory() as td, patch('requests.Session') as session:
             response = Mock(status_code=429)

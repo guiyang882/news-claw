@@ -1,4 +1,4 @@
-"""Cache unadjusted CSI300 daily bars; never connect without an access review."""
+"""Cache unadjusted CSI300 daily bars; connect only with an explicit access decision."""
 import argparse
 import csv
 from datetime import date, datetime, timedelta, timezone
@@ -56,17 +56,25 @@ def normalize(frame, symbol, start, end):
 
 def access_gate(config, universe, target):
     review = config['collector']['access_review']
-    if review.get('status') != 'approved' or review.get('endpoint') != ENDPOINT:
-        raise ValueError('provider_access_and_quota_unconfirmed')
-    if not review.get('evidence_reference') or not review.get('reviewed_by'):
-        raise ValueError('missing_provider_evidence')
-    if date.fromisoformat(review['valid_until']) < target:
-        raise ValueError('access_review_expired')
     policy = config['collector']['request_policy']
-    if policy['min_interval_seconds'] < max(60, review['minimum_interval_seconds']):
-        raise ValueError('interval_exceeds_approved_rate')
-    if not 0 < policy['max_requests_per_day'] <= review['max_requests_per_day']:
-        raise ValueError('daily_budget_exceeds_authorization')
+    if review.get('endpoint') != ENDPOINT:
+        raise ValueError('provider_access_and_quota_unconfirmed')
+    if review.get('status') == 'user_authorized_conservative_access':
+        if not review.get('user_instruction') or review.get('provider_quota_confirmed') is not False:
+            raise ValueError('missing_explicit_user_access_decision')
+        if policy['min_interval_seconds'] < 60 or not 0 < policy['max_requests_per_day'] <= 300:
+            raise ValueError('exceeds_conservative_user_limit')
+    elif review.get('status') == 'approved':
+        if not review.get('evidence_reference') or not review.get('reviewed_by'):
+            raise ValueError('missing_provider_evidence')
+        if date.fromisoformat(review['valid_until']) < target:
+            raise ValueError('access_review_expired')
+        if policy['min_interval_seconds'] < max(60, review['minimum_interval_seconds']):
+            raise ValueError('interval_exceeds_approved_rate')
+        if not 0 < policy['max_requests_per_day'] <= review['max_requests_per_day']:
+            raise ValueError('daily_budget_exceeds_authorization')
+    else:
+        raise ValueError('provider_access_and_quota_unconfirmed')
     if not universe.get('verified_current') or date.fromisoformat(universe['valid_through']) < target:
         raise ValueError('csi300_membership_needs_current_verification')
     symbols = universe['symbols']
@@ -122,8 +130,8 @@ class Guard:
             raise
 
 
-def run(config, universe, state, execute=False, run_limit=1):
-    target = datetime.now(ZoneInfo('Asia/Shanghai')).date() - timedelta(days=1)
+def run(config, universe, state, execute=False, run_limit=1, target=None):
+    target = target or datetime.now(ZoneInfo('Asia/Shanghai')).date() - timedelta(days=1)
     result = {'success': True, 'business_status': 'preview', 'network_requests_made': 0,
               'universe_size': len(universe['symbols']), 'membership_as_of': universe['as_of'],
               'membership_verified_current': universe['verified_current'], 'through': target.isoformat(),
@@ -191,11 +199,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', default=os.environ.get('NEWS_CLAW_TASK_CONFIG_PATH', 'config/tasks/csi300-akshare-daily.json'))
     parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--refresh-membership', action='store_true')
     parser.add_argument('--max-requests', type=int, default=1)
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())
     universe = json.loads(Path(config['collector']['universe_path']).read_text())
-    result = run(config, universe, Path(config['collector']['state_dir']), args.execute, args.max_requests)
+    target = None
+    try:
+        if args.refresh_membership and args.execute:
+            # Validate access decision before any source request; current-list refresh
+            # subsequently validates the actual requested membership/market date.
+            access_gate(config, universe, date.fromisoformat(universe['as_of']))
+            from collectors.csi300_membership import refresh
+            latest_allowed = datetime.now(ZoneInfo('Asia/Shanghai')).date() - timedelta(days=1)
+            universe = refresh(Path(config['collector']['state_dir']), latest_allowed)
+            target = date.fromisoformat(universe['as_of'])
+        result = run(config, universe, Path(config['collector']['state_dir']), args.execute, args.max_requests, target)
+    except Exception as exc:
+        result = {'success': False, 'business_status': 'blocked', 'block_reason': str(exc),
+                  'items_seen': 0, 'items_new': 0, 'stage': 'membership_or_preflight'}
     if os.environ.get('NEWS_CLAW_RESULT_PATH'):
         save(Path(os.environ['NEWS_CLAW_RESULT_PATH']), result)
     print(json.dumps(result, ensure_ascii=False))

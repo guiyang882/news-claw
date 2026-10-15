@@ -1,10 +1,10 @@
 {
   "id": "csi300-akshare-daily",
-  "name": "沪深300日线 OHLCV（待确认上游额度）",
-  "description": "独立积累不复权日线与成交量；权限及额度未确认，保持关闭，不触发策略。",
+  "name": "沪深300日线 OHLCV（低频自动采集）",
+  "description": "北京时间周二至周六06:30核验官方名单，增量采集不复权日线；每60秒一次，每日最多300次，异常熔断，交易策略保持暂停。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
-  "enabled": false,
+  "enabled": true,
   "schedule": "30 6 * * 2-6",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
@@ -18,11 +18,13 @@
     "initial_start_date": "2026-10-01",
     "adjustment": "none",
     "access_review": {
-      "status": "pending_provider_quota",
+      "status": "user_authorized_conservative_access",
       "endpoint": "https://push2his.eastmoney.com/api/qt/stock/kline/get",
       "reviewed_at": "2026-10-15",
-      "evidence_reference": "docs/AKSHARE_REVIEW_2026-10-15.md",
-      "reason": "Exact push2his endpoint quota and automated access permission remain unconfirmed. EMT FAQ rates belong to a different API and cannot authorize this endpoint. Keep disabled under the user precondition."
+      "provider_quota_confirmed": false,
+      "user_instruction": "2026-10-15: 为啥不启动呢。启动下吧，把任务在 news-claw 中配置好吧（已告知上游限流未确认）",
+      "evidence_reference": "docs/AKSHARE_ENABLE_2026-10-15.md",
+      "reason": "User explicitly requested activation after disclosure of unknown provider quota. Apply local 60-second/300-per-day ceilings and persistent stop on any source failure; this is not provider approval."
     },
     "request_policy": {
       "min_interval_seconds": 60,
@@ -42,7 +44,8 @@
       "collectors.akshare_daily",
       "--execute",
       "--max-requests",
-      "300"
+      "300",
+      "--refresh-membership"
     ],
     "working_dir": ".",
     "timeout_seconds": 21600,
