@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import pandas as pd
-from collectors.akshare_daily import ENDPOINT, Guard, access_gate, normalize, run, save
+from collectors.akshare_daily import ENDPOINT, Guard, access_gate, error_details, normalize, run, save
 
 
 class DailyTest(unittest.TestCase):
@@ -38,6 +38,15 @@ class DailyTest(unittest.TestCase):
             self.assertEqual(result['network_requests_made'], 0)
             request.assert_not_called()
             self.assertEqual(list(Path(td).iterdir()), [])
+
+    def test_user_pause_blocks_manual_execute_without_network(self):
+        config = {'collector': {'access_review': {'status': 'paused_by_user'}}}
+        universe = {'symbols': [], 'as_of': '2026-10-14', 'verified_current': True}
+        with tempfile.TemporaryDirectory() as td, patch('requests.sessions.Session.request') as request:
+            result = run(config, universe, Path(td), execute=True)
+            self.assertFalse(result['success'])
+            self.assertEqual(result['block_reason'], 'collector_paused_by_user')
+            request.assert_not_called()
 
     def test_stale_membership_blocked_even_with_approval(self):
         config = {'collector': {'access_review': {'status': 'approved', 'endpoint': ENDPOINT,
@@ -74,6 +83,31 @@ class DailyTest(unittest.TestCase):
                 guard.get(ENDPOINT, params={'fqt': '0'})
             self.assertEqual(session.return_value.__enter__.return_value.get.call_count, 1)
             self.assertTrue(json.loads((Path(td) / 'circuit.json').read_text())['open'])
+
+    def test_exception_chain_and_first_circuit_cause_preserved(self):
+        from http.client import RemoteDisconnected
+        from urllib3.exceptions import ProtocolError
+        from requests.exceptions import ConnectionError
+        error = ConnectionError(ProtocolError('Connection aborted.', RemoteDisconnected('peer closed')))
+        details = error_details(error)
+        self.assertEqual(details['category'], 'peer_closed_without_http_response')
+        self.assertIn('RemoteDisconnected', [v['type'] for v in details['exception_chain']])
+        with tempfile.TemporaryDirectory() as td, patch('requests.Session') as session:
+            session.return_value.__enter__.return_value.get.side_effect = error
+            guard = Guard(Path(td), {'min_interval_seconds': 60, 'max_requests_per_day': 300}, 1)
+            with self.assertRaises(ConnectionError):
+                guard.get(ENDPOINT, params={'fqt': '0'})
+            guard.block('outer_generic_failure')
+            circuit=json.loads((Path(td)/'circuit.json').read_text())
+            self.assertEqual(circuit['reason'], 'network_or_response_failure_requires_review')
+            self.assertEqual(circuit['details']['error_details']['category'], 'peer_closed_without_http_response')
+            self.assertNotIn('http_status', circuit['details'])
+
+    def test_error_diagnostics_redact_url_and_credentials(self):
+        details = error_details(ValueError('request https://host/path?token=private password=hidden api_key=secretvalue'))
+        rendered=json.dumps(details)
+        for secret in ['private', 'hidden', 'secretvalue', 'https://host']:
+            self.assertNotIn(secret, rendered)
 
     def test_daily_budget_and_pacing_survive_restarts(self):
         import time

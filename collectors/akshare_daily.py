@@ -8,6 +8,7 @@ import io
 import json
 import math
 import os
+import re
 from pathlib import Path
 import time
 from unittest.mock import patch
@@ -56,6 +57,8 @@ def normalize(frame, symbol, start, end):
 
 def access_gate(config, universe, target):
     review = config['collector']['access_review']
+    if review.get('status') == 'paused_by_user':
+        raise ValueError('collector_paused_by_user')
     policy = config['collector']['request_policy']
     if review.get('endpoint') != ENDPOINT:
         raise ValueError('provider_access_and_quota_unconfirmed')
@@ -82,14 +85,52 @@ def access_gate(config, universe, target):
         raise ValueError('invalid_csi300_universe')
 
 
+def error_details(exc):
+    """Keep the exception chain, but never log request URLs or credentials."""
+    chain, seen, queue = [], set(), [exc]
+    while queue and len(chain) < 8:
+        current = queue.pop(0)
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        message = re.sub(r'https?://[^\s)\]\'"]+', '[url redacted]', str(current))
+        message = re.sub(r'(?i)(token|password|secret|authorization|api_key)([\s=:]+)[^\s,;]+', r'\1\2[redacted]', message)
+        item = {'type': type(current).__name__, 'message': message[:500]}
+        if isinstance(getattr(current, 'errno', None), int):
+            item['errno'] = current.errno
+        chain.append(item)
+        queue.extend(arg for arg in current.args if isinstance(arg, BaseException))
+        for cause in [current.__cause__, current.__context__, getattr(current, 'reason', None)]:
+            if isinstance(cause, BaseException):
+                queue.append(cause)
+    names = {item['type'] for item in chain}
+    if 'RemoteDisconnected' in names:
+        category = 'peer_closed_without_http_response'
+    elif 'SSLError' in names:
+        category = 'tls_error'
+    elif names & {'NameResolutionError', 'gaierror'}:
+        category = 'dns_error'
+    elif names & {'ConnectTimeout', 'ReadTimeout', 'TimeoutError', 'ReadTimeoutError'}:
+        category = 'network_timeout'
+    elif names & {'ConnectionResetError', 'ConnectionRefusedError'}:
+        category = 'connection_reset_or_refused'
+    else:
+        category = 'unclassified_failure'
+    return {'category': category, 'exception_chain': chain}
+
+
 class Guard:
     def __init__(self, state, policy, run_limit):
         self.state, self.policy, self.run_limit = state, policy, run_limit
         self.count = 0
         self.receipts = []
 
-    def block(self, reason):
-        save(self.state / 'circuit.json', {'open': True, 'reason': reason, 'at': datetime.now(timezone.utc).isoformat(), 'automatic_retry': False})
+    def block(self, reason, details=None):
+        # Preserve the first actionable cause instead of replacing it in run().
+        if read(self.state / 'circuit.json', {}).get('open'):
+            return
+        save(self.state / 'circuit.json', {'open': True, 'reason': reason,
+             'details': details, 'at': datetime.now(timezone.utc).isoformat(), 'automatic_retry': False})
 
     def get(self, url, **kwargs):
         import requests
@@ -126,7 +167,8 @@ class Guard:
             return response
         except Exception as exc:
             receipt['error_type'] = type(exc).__name__
-            self.block('network_or_response_failure_requires_review')
+            receipt['error_details'] = error_details(exc)
+            self.block('network_or_response_failure_requires_review', receipt)
             raise
 
 
@@ -184,8 +226,9 @@ def run(config, universe, state, execute=False, run_limit=1, target=None):
                 result['items_new'] += len(rows)
             result['business_status'] = 'downloaded' if result['items_new'] else 'cache_current'
         except Exception as exc:
-            guard.block('collection_failure_requires_review')
-            result.update(success=False, business_status='blocked', error_type=type(exc).__name__)
+            details = error_details(exc)
+            guard.block('collection_failure_requires_review', details)
+            result.update(success=False, business_status='blocked', error_type=type(exc).__name__, error_details=details)
         finally:
             result['symbols_current'] = sum(v['checked_through'] >= target.isoformat() for v in progress.values())
             result['coverage_complete'] = all(progress.get(s, {}).get('checked_through', '') >= target.isoformat() for s in universe['symbols'])

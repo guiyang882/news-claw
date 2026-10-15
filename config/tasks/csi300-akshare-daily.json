@@ -1,10 +1,10 @@
 {
   "id": "csi300-akshare-daily",
-  "name": "沪深300日线 OHLCV（低频自动采集）",
-  "description": "北京时间周二至周六06:30核验官方名单，增量采集不复权日线；每60秒一次，每日最多300次，异常熔断，交易策略保持暂停。",
+  "name": "沪深300日线 OHLCV（用户暂停）",
+  "description": "2026-10-15用户要求暂停：东方财富重复对端断连；停止自动采集和来源切换，保留缓存、诊断与熔断，策略继续暂停。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
-  "enabled": true,
+  "enabled": false,
   "schedule": "30 6 * * 2-6",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
@@ -18,13 +18,13 @@
     "initial_start_date": "2026-10-01",
     "adjustment": "none",
     "access_review": {
-      "status": "user_authorized_conservative_access",
+      "status": "paused_by_user",
       "endpoint": "https://push2his.eastmoney.com/api/qt/stock/kline/get",
       "reviewed_at": "2026-10-15",
       "provider_quota_confirmed": false,
       "user_instruction": "2026-10-15: 为啥不启动呢。启动下吧，把任务在 news-claw 中配置好吧（已告知上游限流未确认）",
-      "evidence_reference": "docs/AKSHARE_ENABLE_2026-10-15.md",
-      "reason": "User explicitly requested activation after disclosure of unknown provider quota. Apply local 60-second/300-per-day ceilings and persistent stop on any source failure; this is not provider approval."
+      "evidence_reference": "docs/AKSHARE_CONNECTION_2026-10-15.md",
+      "reason": "User requested pause after recurring RemoteDisconnected. Do not retry, resume, or switch data providers without a new instruction."
     },
     "request_policy": {
       "min_interval_seconds": 60,
