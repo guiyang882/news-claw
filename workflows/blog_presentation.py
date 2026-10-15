@@ -154,6 +154,11 @@ def writing_guidance(config):
             f'Use about {settings.get("preferred_tables", 2)} meaningful Markdown tables and '
             f'{settings.get("preferred_diagrams", 2)} fenced mermaid flowcharts tied to the actual argument. '
             "Keep diagrams short, label assumptions and distinguish evidence relationships from event order. "
+            'Typeset mathematical equations with native MathML using only math, mrow, mi, mn, mo, '
+            'mtext, msub, msup and mfrac. Use <math xmlns="http://www.w3.org/1998/Math/MathML" '
+            'display="block"> for standalone formulas and inline math for variables. '
+            'Do not leave equations as underscore/slash plain text, code blocks or unrendered LaTeX. '
+            'Preserve mathematical meaning and assumptions; do not add formulas merely for decoration. '
             + emphasis +
             "Use only approved local images with their supplied source, creator and license captions; no invented media. "
             "The publisher supplies a licensed hero when available. " + references)
