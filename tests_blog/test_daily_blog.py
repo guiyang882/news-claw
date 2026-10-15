@@ -33,6 +33,9 @@ class DailyBlogTests(unittest.TestCase):
         with closing(sqlite3.connect(blog.ROOT / "data/db/news.sqlite3")) as original, closing(sqlite3.connect(self.db)) as copy:
             original.backup(copy)
         self.config = json.loads((blog.ROOT / "config/tasks/daily-blog-agy-codex.json").read_text())
+        # These stage tests deliberately use synthetic snapshots, not the production
+        # upstream task chain. Its gate is exercised in test_blog_delivery.py.
+        self.config["workflow"].pop("readiness", None)
         self.config["workflow"]["website_state"] = str(self.site)
         self.config["workflow"]["min_model_interval_seconds"] = 0
         inputs = self.config["workflow"]["inputs"]

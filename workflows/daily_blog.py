@@ -850,6 +850,14 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         if digest({key: packet[key] for key in ("sources", "evidence")}) == digest({key: prior_packet[key] for key in ("sources", "evidence")}):
             raise ValueError("Replanning requires changed source evidence")
     atomic_json(directory / "source-packet.json", packet)
+    # Check actual source readiness, not just the relative cron times. This gate
+    # is before the model/day reservation, so a delayed crawl can use a later slot.
+    if settings.get("readiness", {}).get("enabled") and not (recovery or replan):
+        from .blog_delivery import preflight
+        readiness = preflight(config, root, db, day, packet=packet)
+        atomic_json(directory / "readiness.json", readiness)
+        if not readiness["success"]:
+            return readiness
     if len({source["url"] for source in packet["sources"]}) < 2:
         return missing_publication(day)
     skill_path = Path(settings["humanizer_skill"])
@@ -888,7 +896,9 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     "corrected_draft_sha256": digest(corrected), "requested_at": now()})
             else:
                 failed = previous["status"] in {"started", "failed", "insufficient_evidence"}
-                return {"success": not failed, "business_status": "previous_attempt_failed" if failed else "already_attempted", "day": day.isoformat()}
+                return {"success": not failed, "business_status": "previous_attempt_failed" if failed else "already_attempted",
+                        "day": day.isoformat(), "needs_attention": failed, "previous_attempt": previous,
+                        "model_called": False}
         elif recovery or replan:
             raise ValueError("Recovery requires the original daily attempt marker")
         runner = model_runner or ModelRunner(config, root)
@@ -1118,7 +1128,7 @@ def main():
         recovery_day = date.fromisoformat(recovery["day"]) if recovery else None
         result = run(config, root, db, directory, execute=not args.check, day=recovery_day)
     except Exception as error:
-        result = {"success": False, "business_status": "failed", "error": str(error), "finished_at": now()}
+        result = {"success": False, "business_status": "failed", "error": str(error), "finished_at": now(), "needs_attention": True}
         plan_path = directory / "blog-outline.json"
         if plan_path.is_file():
             try:

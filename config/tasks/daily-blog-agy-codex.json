@@ -1,11 +1,11 @@
 {
   "id": "daily-blog-agy-codex",
   "name": "每日研究博客：Gemini写稿、Codex复核与发布",
-  "description": "Codex 从本地缓存生成候选选题和约20分钟阅读大纲，agy/Gemini 3.8 Flash 按大纲写中英双语长文，GPT-6.1 Sol 复核、humanizer修订及最终复核后发布；每日最多一篇。",
+  "description": "每日07:30写作，09:30仅补启动尚未进入模型的任务；先检查当日正文采集及材料供给，独立复核后每日最多发布一篇。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
-  "schedule": "30 7 * * *",
+  "schedule": "30 7,9 * * *",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
   "topic_ids": [
@@ -84,7 +84,7 @@
       "codex_final_re_review_if_corrected",
       "offline_publish"
     ],
-    "publication_policy": "User-authorized model-reviewed publication; never generates human approvals. Reject unsupported claims; preserve evidence dates; one attempt and one article per day.",
+    "publication_policy": "Readiness gate before model reservation; 09:30 is a second start slot only for preflight-blocked days. One automatic model attempt and one article per day; no automatic retry of failed model/editorial stages. Preserve evidence dates and independent review.",
     "network_policy": {
       "source_web_requests": 0,
       "max_cli_invocations_per_day": 10,
@@ -223,6 +223,15 @@
       "after_publish": "none",
       "frontend_build_required": false,
       "restart_required": false
+    },
+    "readiness": {
+      "enabled": true,
+      "upstream_task_id": "daily-blog-primary-evidence",
+      "min_complete_sources": 2,
+      "min_unused_sources": 1,
+      "min_body_chars": 1000,
+      "max_source_age_days": 14,
+      "recent_publication_days": 7
     }
   }
 }

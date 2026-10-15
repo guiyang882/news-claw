@@ -5,7 +5,7 @@
 | 配置 | 当前值 |
 | --- | --- |
 | 任务 ID / 类型 | daily-blog-agy-codex / workflow |
-| 频率 | 每日北京时间 07:30，随机延迟 0–420 秒 |
+| 频率 | 每日北京时间 07:30；09:30 仅补启动尚未进入模型的任务，随机延迟 0–420 秒 |
 | 候选题与大纲 | Codex，gpt-6.1-sol；最多 3 个候选，自动选择一题并生成 6–9 节大纲 |
 | 阅读目标 | 中英文各约 20 分钟；默认允许约 17–23 分钟的篇幅区间 |
 | 写稿 | agy，gemini-3.8-flash-high（Gemini 3.8 Flash High） |
@@ -152,7 +152,7 @@ bin/news-claw enqueue --task daily-blog-agy-codex
 /mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.daily_blog --reset-provider codex
 ```
 
-频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。每日博客在北京时间 07:30 开始，保留最多七分钟随机延迟；整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
+频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。每日博客在北京时间 07:30 开始，09:30 仅在尚未进入模型阶段时补启动；保留最多七分钟随机延迟，整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
 
 CLI 参数已在本机 --help 核对；Codex 结构化响应方式参考 [非交互模式](https://learn.chatgpt.com/docs/non-interactive-mode)，模型标识参考 [GPT-6.1 Sol 文档](https://developers.openai.com/api/docs/models/gpt-6.1-sol)，推理与速度字段参考 [OpenAI 配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。
 
@@ -231,3 +231,7 @@ Mermaid 只接受限定长度的流程图，不允许交互链接和配置指令
 拒绝熔断和原始响应归档；没有新文章时复用已有缓存，不递归抓取。
 07:30选题包读取最近14天最多8篇完整正文，保留原发布日期，以正文替换同URL摘要。
 详细规则、根因和验证见[10月15日缺文排查](blog-incident-2026-10-15.md)。
+
+## 日更任务交接与交付检查（2026-10-15）
+
+已增加 07:20／09:20 材料检查、写作入口实时准入和 10:55 发布核对；失败状态、补启动边界、配置字段与排查命令见 [任务链说明](blog-delivery-chain-2026-10-15.md)。
