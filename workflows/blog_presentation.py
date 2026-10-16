@@ -114,7 +114,9 @@ def with_references(body, sources, language):
     lines = [body.rstrip(), "", "## " + heading, ""]
     for i, source in enumerate(sources, 1):
         title = source["title"].replace("[", "").replace("]", "").replace("—", ": ").replace("–", "-")
-        publisher = source.get("publisher", "")
+        # Collector labels describe the extraction method, not the publisher.
+        # Keep the evidence packet intact; remove only this known terminal label.
+        publisher = re.sub(r"\s+[—–-]\s+article body\s*$", "", source.get("publisher", ""), flags=re.I)
         # Feed/cache dates are not independently verified publication dates.
         # Keep any dated claims and their qualifications beside the body citations.
         lines.append(f'{i}. {publisher}. [{title}]({source["url"]}).')
