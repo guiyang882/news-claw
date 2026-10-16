@@ -299,7 +299,7 @@ class ModelRunner:
         limit = limits.get("max_cli_invocations_per_run", limits.get("max_cli_invocations_per_day", 0))
         if len(self.calls) >= limit:
             raise ValueError("Model invocation limit reached")
-        provider = "agy" if stage == "draft" else "codex"
+        provider = "agy" if stage == "draft" and self.settings.get("writer_provider", "agy") == "agy" else "codex"
         settings = self.settings["writer" if provider == "agy" else "planner" if stage == "plan" else "reviewer"]
         policy = self.root / "data/runs/blog-provider-policy"
         blocked = policy / (provider + ".blocked.json")
@@ -318,8 +318,11 @@ class ModelRunner:
                        "--output-format", "json", "--json-schema", str(schema),
                        "--print-timeout", f"{timeout}s", "--log-file", str(directory / "cli.log"), "--print", prompt]
         else:
+            permissions = (["--sandbox", "read-only", "-c", 'approval_policy="never"']
+                           if settings.get("permissions") == "read-only"
+                           else ["--dangerously-bypass-approvals-and-sandbox"])
             command = [settings["executable"], "exec", "--ephemeral", "--ignore-user-config",
-                       "--dangerously-bypass-approvals-and-sandbox", "--model", settings["model"], "--skip-git-repo-check",
+                       *permissions, "--model", settings["model"], "--skip-git-repo-check",
                        "-c", "service_tier=" + json.dumps(settings["service_tier"]),
                        "--disable", "multi_agent", "--disable", "shell_tool", "-c", 'web_search="disabled"',
                        "-c", 'model_provider="daily-blog"', "-c", 'model_providers.daily-blog.name="OpenAI"',
