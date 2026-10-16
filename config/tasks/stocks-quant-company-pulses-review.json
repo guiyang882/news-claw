@@ -1,7 +1,7 @@
 {
   "id": "stocks-quant-company-pulses-review",
   "name": "七家公司经营资料复核",
-  "description": "每周两次复核 Rocket Lab、SpaceX、Google、Amazon、Coinbase、NVIDIA 与 TSMC 的经营指标及验证节点；Tesla 由独立供应链任务维护。",
+  "description": "每周两次复核 Rocket Lab、SpaceX、Google、Amazon、Coinbase、NVIDIA 与 TSMC 的经营指标及验证节点；Tesla 由独立供应链任务维护。 SpaceX 按上市公司三个分部核验财报与资金需求，保留期间和口径，不将输入缺失误写为未披露。",
   "scheduler_engine": "news-claw",
   "enabled": true,
   "schedule": "10 10 * * 1,4",
@@ -44,7 +44,15 @@
     "automatic_retry_after_denial": false,
     "output": "/mnt/quant-state/quant-web/company_pulses.json",
     "audit": "/mnt/quant-state/quant-web/company_pulse_batches.jsonl",
-    "migration_observed_at": "2026-10-10T08:44:00+00:00"
+    "migration_observed_at": "2026-10-10T08:44:00+00:00",
+    "review_priorities": {
+      "spacex": [
+        "NASDAQ: SPCX issuer scope",
+        "Space / Connectivity / AI segment revenue, operating income and capex",
+        "Consolidated cash flow with exact reporting period and definition",
+        "Issuer IR releases first; local SEC access pause unchanged"
+      ]
+    }
   },
   "options": {
     "migration_state": "go_scheduled_legacy_service",

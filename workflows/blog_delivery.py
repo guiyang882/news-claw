@@ -84,9 +84,15 @@ def inspect_delivery(config, root, db, day):
     articles=load_runtime_articles(Path(config['workflow']['website_state']))
     published=[item for item in articles if item['published_at']==day.isoformat()]
     if published:
-        return {'success':True,'business_status':'publication_verified','day':day.isoformat(),
-                'slug':published[0]['slug'],'bilingual_sources_validated':True,
-                'model_called':False,'network_requests':0,'needs_attention':False}
+        surfaces=None
+        if config['workflow'].get('delivery_surfaces',{}).get('enabled'):
+            from .publication_surfaces import inspect_surfaces
+            surfaces=inspect_surfaces([item['slug'] for item in published],config['workflow']['delivery_surfaces'])
+        healthy=surfaces is None or surfaces['success']
+        return {'success':healthy,'business_status':'publication_verified' if healthy else 'publication_surface_mismatch','day':day.isoformat(),
+                'slug':published[0]['slug'],'bilingual_sources_validated':True,'surfaces':surfaces,
+                'model_called':False,'network_requests':0,'local_http_requests':surfaces['local_http_requests'] if surfaces else 0,
+                'needs_attention':not healthy}
     marker=root/'data/runs/daily-blog-days'/(day.isoformat()+'.json')
     previous=blog.read_json(marker) if marker.exists() else None
     readiness=preflight(config,root,db,day)
@@ -119,6 +125,7 @@ def main():
         if not writer or not writer[1]:
             raise ValueError('Blog writer is disabled or missing')
         config=json.loads(writer[0])
+        config['workflow']['delivery_surfaces']=task['workflow'].get('delivery_surfaces',{})
         day=datetime.now(ZoneInfo(config['timezone'])).date()
         if task['workflow']['mode']=='readiness':
             result=preflight(config,root,db,day)

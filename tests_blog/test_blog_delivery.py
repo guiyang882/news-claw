@@ -99,5 +99,13 @@ class ReadinessTests(unittest.TestCase):
             self.assertEqual(result['business_status'],'publication_verified')
             self.assertEqual(delivery.preflight(self.config,self.root,self.db,DAY)['business_status'],'already_published')
 
+    def test_rendered_failure_is_not_reported_as_successful_delivery(self):
+        self.config['workflow']['delivery_surfaces']={'enabled':True}
+        with patch('web.blog_runtime.load_runtime_articles',return_value=[{'published_at':str(DAY),'slug':'article'}]), patch('workflows.publication_surfaces.inspect_surfaces',return_value={'success':False,'local_http_requests':4,'issues':['en:/blog:article_cards_missing']}):
+            result=delivery.inspect_delivery(self.config,self.root,self.db,DAY)
+        self.assertFalse(result['success'])
+        self.assertTrue(result['needs_attention'])
+        self.assertEqual(result['business_status'],'publication_surface_mismatch')
+
 if __name__=='__main__':
     unittest.main()

@@ -1,7 +1,7 @@
 {
   "id": "daily-blog-delivery-audit",
   "name": "每日研究博客：发布结果核对",
-  "description": "校验当天文章及双语内容哈希；缺文时记录失败原因、检查点和处理建议，不自动重写。",
+  "description": "校验当天双语文章及内容哈希，并通过本机 HTTP 核对首页、文章库和内页导航；失败记录差异，不自动重写或重新采集。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
@@ -29,6 +29,13 @@
     "blog_task_id": "daily-blog-agy-codex",
     "mode": "delivery",
     "network_requests": 0,
-    "model_calls": 0
+    "model_calls": 0,
+    "delivery_surfaces": {
+      "enabled": true,
+      "origin": "http://127.0.0.1:3000",
+      "external_requests": 0,
+      "max_response_bytes": 8000000
+    },
+    "local_http_checks": true
   }
 }
