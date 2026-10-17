@@ -33,7 +33,7 @@ class WatchdogIntegrationTests(unittest.TestCase):
             runner('draft', 'Offline fixture', schema, fixture.directory)
             self.assertEqual(runner.calls[0]['provider'], 'codex')
 
-    def run_recovery(self, reject=False):
+    def run_recovery(self, reject=False, locator_failure=False):
         fixture = fixtures.DailyBlogTests()
         # Reuse the installed fixture's read-only DB backup and schema/media config.
         # All article, run and database writes are in fixture.root, a TemporaryDirectory.
@@ -41,6 +41,12 @@ class WatchdogIntegrationTests(unittest.TestCase):
             fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         saved, _ = fixture.recovery_fixture()
+        if locator_failure:
+            watch.blog.atomic_json(saved / 'result.json', {
+                'success': False, 'error': 'Fact check locator does not exist in the evidence packet'})
+            broken = watch.blog.read_json(saved / '02b-codex-correction/response.json')
+            broken['article']['fact_checks'][0]['locator'] += '#invented-heading'
+            watch.blog.atomic_json(saved / '02b-codex-correction/response.json', broken)
         if reject:
             fixture.responses['review'] = lambda value: value.update(approved=False, issues=['Still unsupported'])
         current = 'b' * 32
@@ -100,3 +106,6 @@ class WatchdogIntegrationTests(unittest.TestCase):
 
     def test_rejected_independent_review_cannot_publish(self):
         self.run_recovery(reject=True)
+
+    def test_invalid_locator_is_fixed_before_fresh_reviews_and_publication(self):
+        self.run_recovery(locator_failure=True)

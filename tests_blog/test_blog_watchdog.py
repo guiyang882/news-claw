@@ -127,6 +127,24 @@ class WatchdogTests(unittest.TestCase):
                    {'attempts': [{}, {}], 'enqueued': []})
         self.assertEqual(self.invoke(True)['business_status'], 'daily_recovery_limit')
 
+    def test_invalid_evidence_locator_is_recoverable_content(self):
+        self.failed('Fact check locator does not exist in the evidence packet')
+        self.assertEqual(self.invoke()['business_status'], 'would_repair')
+        self.factory.assert_not_called()
+
+    def test_draft_schema_limits_locators_to_exact_selected_evidence(self):
+        packet = {'evidence': [
+            {'source_ids': ['chosen'], 'locator': 'data/chosen.json'},
+            {'source_ids': ['other'], 'locator': 'data/other.json'}]}
+        with patch.object(watch.blog.editorial, 'selected_candidate', return_value={'source_ids': ['chosen']}):
+            path = watch.blog.draft_schema({}, self.root / 'schema.json', packet=packet)
+        locator = json.loads(path.read_text())['properties']['article']['properties']['fact_checks']['items']['properties']['locator']
+        self.assertEqual(locator['enum'], ['data/chosen.json'])
+        watch.blog.validate_shape('data/chosen.json', locator)
+        for bad in ('data/other.json', 'data/chosen.json — Chapter title', 'data/chosen.json#section'):
+            with self.subTest(locator=bad), self.assertRaises(ValueError):
+                watch.blog.validate_shape(bad, locator)
+
     def test_cooldown_prevents_immediate_retry(self):
         self.failed()
         self.write(self.root / 'data/runs/blog-watchdog-days/2026-10-16.json',

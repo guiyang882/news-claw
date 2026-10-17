@@ -579,12 +579,17 @@ def selected_packet(packet, plan):
     return scoped
 
 
-def draft_schema(plan, path):
+def draft_schema(plan, path, *, packet=None):
     schema = read_json(SCHEMAS / "daily-blog-draft.schema.json")
     ids = list(dict.fromkeys(editorial.selected_candidate(plan)["source_ids"]))
     article = schema["properties"]["article"]["properties"]
     article["used_source_ids"]["items"]["enum"] = ids
     article["fact_checks"]["items"]["properties"]["source_id"]["enum"] = ids
+    if packet is not None:
+        locators = sorted({item['locator'] for item in packet['evidence'] if set(ids).intersection(item['source_ids'])})
+        if not locators:
+            raise ValueError('Selected topic has no evidence locators')
+        article["fact_checks"]["items"]["properties"]["locator"]["enum"] = locators
     atomic_json(path, schema)
     return path
 
@@ -865,7 +870,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         final_budget_failure = (error == "Model invocation limit reached"
                                 and (saved / "03-codex-humanizer/response.json").is_file()
                                 and (saved / "reviewed-draft.json").is_file())
-        if not length_failure and not plan_repair and not final_budget_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped"}:
+        if not length_failure and not plan_repair and not final_budget_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped", "Fact check locator does not exist in the evidence packet"}:
             raise ValueError("Recovery only supports a saved editorial validation failure")
         filename = recovery.get("draft_filename", "")
         if not plan_repair and (not filename or Path(filename).name != filename or filename in {".", ".."}):
@@ -977,7 +982,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             atomic_json(directory / "blog-outline.json", plan)
             atomic_bytes(directory / "blog-outline.md", editorial.render_outline(plan, packet).encode())
             scoped_packet = selected_packet(packet, plan)
-            schema = draft_schema(plan, directory / "draft-source.schema.json")
+            schema = draft_schema(plan, directory / "draft-source.schema.json", packet=packet)
             outline_result = {"editorial_plan": editorial.summary(plan), "editorial_plan_sha256": digest(plan),
                               "outline_path": str(directory / "blog-outline.md"), "outline_json_path": str(directory / "blog-outline.json"),
                               "candidate_topics_path": str(directory / "topic-candidates.json")}
@@ -1024,6 +1029,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     "questions, not established explanations. Keep the planned central question and chapter arguments. "
                     "Use source IDs from the selected candidate only; remove out-of-scope claims rather than adding citations. "
                     "At least two distinct source URLs and two valid evidence locators are required. Return the original model draft schema. "
+                    "Copy each source_id/locator pair exactly from a selected evidence record; never append headings, excerpts or fragments to a locator. "
                     + length_prompt(settings) + presentation.writing_guidance(config) + "Do not include writing "
                     "or review credits. Return insufficient_evidence if a sound article "
                     "cannot be written. Preserve the existing tags exactly; they are validated website metadata. "
