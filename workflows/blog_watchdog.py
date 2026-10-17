@@ -83,7 +83,7 @@ def call_key(call):
 
 
 def saved_draft(saved):
-    for stage in ('04b-codex-final-correction', '03-codex-humanizer',
+    for stage in ('04b-codex-final-correction', '03b-humanizer-length-repair', '03-codex-humanizer',
                   '02b-codex-correction', '01-length-repair', '01-agy-draft'):
         path = saved / stage / 'response.json'
         if path.is_file():

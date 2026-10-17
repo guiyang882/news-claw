@@ -33,7 +33,7 @@ class WatchdogIntegrationTests(unittest.TestCase):
             runner('draft', 'Offline fixture', schema, fixture.directory)
             self.assertEqual(runner.calls[0]['provider'], 'codex')
 
-    def run_recovery(self, reject=False, locator_failure=False):
+    def run_recovery(self, reject=False, locator_failure=False, short_humanize=False, reject_repair=False):
         fixture = fixtures.DailyBlogTests()
         # Reuse the installed fixture's read-only DB backup and schema/media config.
         # All article, run and database writes are in fixture.root, a TemporaryDirectory.
@@ -49,6 +49,12 @@ class WatchdogIntegrationTests(unittest.TestCase):
             watch.blog.atomic_json(saved / '02b-codex-correction/response.json', broken)
         if reject:
             fixture.responses['review'] = lambda value: value.update(approved=False, issues=['Still unsupported'])
+        if short_humanize:
+            fixture.responses['humanize'] = lambda value: value['article']['en'].update(
+                body_markdown=value['article']['en']['body_markdown'].replace(
+                    'This synthetic example describes an offline fixture and keeps its stated evidence limits without making any real world research claim. ', 'Short fixture. '))
+        if reject_repair:
+            fixture.responses['review_humanize_repair'] = lambda value: value.update(approved=False, issues=['Unsupported repair'])
         current = 'b' * 32
         task = {'workflow': {'max_recoveries_per_day': 2, 'cooldown_seconds': 3600,
                             'max_total_model_calls_per_day': 16, 'delivery_surfaces': {'enabled': True}}}
@@ -67,7 +73,7 @@ class WatchdogIntegrationTests(unittest.TestCase):
                     raise ValueError('Model invocation limit reached')
                 calls.append(stage)
                 self.calls.append({'stage': stage})
-                value = fixture.draft() if stage == 'watchdog_repair' else fixture.model(stage, prompt, schema, directory)
+                value = fixture.draft() if stage in ('watchdog_repair', 'humanize_length_repair') else fixture.model(stage, prompt, schema, directory)
                 watch.blog.atomic_json(directory / 'response.json', value)
                 return value
 
@@ -84,21 +90,26 @@ class WatchdogIntegrationTests(unittest.TestCase):
             invoke = lambda: watch.supervise(task, fixture.config, fixture.root, fixture.db, fixture.directory,
                 execute=True, now=datetime(2026, 10, 10, 4, 15, tzinfo=timezone.utc), inspect=inspect,
                 enqueue_task=Mock(side_effect=AssertionError('No enqueue during recovery')), runner_factory=OfflineRunner)
-            if reject:
+            if reject or reject_repair:
                 with self.assertRaisesRegex(ValueError, 'Codex rejected'):
                     invoke()
                 self.assertFalse((fixture.site / 'manifest.json').exists())
-                self.assertEqual(calls, ['watchdog_repair', 'review'])
+                self.assertEqual(calls, ['watchdog_repair', 'review'] if reject else
+                    ['watchdog_repair', 'review', 'humanize', 'humanize_length_repair', 'review_humanize_repair'])
             else:
                 result = invoke()
                 self.assertEqual(result['business_status'], 'publication_verified')
-                self.assertEqual(calls, ['watchdog_repair', 'review', 'humanize', 'final_review'])
-                self.assertEqual(len(result['recovery']['model_calls']), 8)
+                expected = ['watchdog_repair', 'review', 'humanize']
+                if short_humanize:
+                    expected += ['humanize_length_repair', 'review_humanize_repair']
+                expected += ['final_review']
+                self.assertEqual(calls, expected)
+                self.assertEqual(len(result['recovery']['model_calls']), 4 + len(expected))
                 self.assertEqual(len(fixtures.load_runtime_articles(fixture.site)), 1)
                 proof = next((fixture.site / 'automation-reviews').glob('*.json'))
                 self.assertTrue(watch.blog.read_json(proof)['final_review']['approved'])
                 invoke()
-                self.assertEqual(len(calls), 4)
+                self.assertEqual(len(calls), len(expected))
         self.assertFalse(watch.blog.read_json(saved / 'result.json')['success'])
 
     def test_full_recovery_publishes_bilingual_content_once(self):
@@ -109,3 +120,9 @@ class WatchdogIntegrationTests(unittest.TestCase):
 
     def test_invalid_locator_is_fixed_before_fresh_reviews_and_publication(self):
         self.run_recovery(locator_failure=True)
+
+    def test_short_humanizer_is_repaired_then_independently_reviewed(self):
+        self.run_recovery(short_humanize=True)
+
+    def test_unsupported_post_humanizer_repair_cannot_publish(self):
+        self.run_recovery(short_humanize=True, reject_repair=True)

@@ -129,7 +129,7 @@ class DailyBlogTests(unittest.TestCase):
         if stage == "plan":
             self.assertIn("EDITORIAL_SKILL", prompt)
             value = self.plan(json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1]))
-        elif stage in ("draft", "revise", "repair_length", "revise_final"):
+        elif stage in ("draft", "revise", "repair_length", "revise_final", "humanize_length_repair"):
             self.assertTrue((self.directory / "blog-outline.md").is_file())
             self.assertTrue((self.directory / "topic-candidates.json").is_file())
             payload = json.loads(prompt.split("INPUT_DATA_JSON\n", 1)[1])
@@ -577,9 +577,21 @@ class DailyBlogTests(unittest.TestCase):
     def test_humanizer_cannot_shorten_below_long_form_target(self):
         self.responses["humanize"] = lambda value: value["article"]["en"].update(
             body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        self.responses["humanize_length_repair"] = self.responses["humanize"]
         with self.assertRaisesRegex(ValueError, "reading time"):
             self.run_blog()
-        self.assertEqual(self.calls, ["plan", "draft", "review", "humanize"])
+        self.assertEqual(self.calls, ["plan", "draft", "review", "humanize", "humanize_length_repair"])
+        self.assertFalse((self.site / "manifest.json").exists())
+
+    def test_humanizer_length_repair_preserves_fact_metadata(self):
+        self.responses["humanize"] = lambda value: value["article"]["en"].update(
+            body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
+        self.responses["humanize_length_repair"] = lambda value: value['article']['fact_checks'][0].update(
+            boundary='Changed evidence boundary without authorization.')
+        with self.assertRaisesRegex(ValueError, 'changed source or fact-check metadata'):
+            self.run_blog()
+        self.assertNotIn('final_review', self.calls)
+        self.assertFalse((self.site / "manifest.json").exists())
 
     def test_reading_estimate_excludes_url_and_code(self):
         policy = self.config["workflow"]["reading"]

@@ -15,11 +15,12 @@
 
 - Codex uses a **read-only sandbox**, no approval escalation, no shell tools, no web search and no subagents. It can produce content JSON, not operate the server. The existing Python validators/publisher perform the authorized runtime-content write.
 - No arbitrary repair commands; no code/configuration/credential edits, service restarts, provider-circuit resets, site rebuilds, synthetic evidence or changes to other tasks.
-- At most **two recovery attempts per Beijing day**, separated by **one hour**. Attempts are reserved durably before model work; enqueue requests are reserved before execution so uncertain results cannot cause a duplicate start.
+- At most **two recovery attempts per Beijing day**, separated by **ten minutes**. Scheduled checks still run hourly; an operator can enqueue a second check after the cooldown. Active-work and provider-denial guards still apply. Attempts are reserved durably before model work; enqueue requests are reserved before execution so uncertain results cannot cause a duplicate start.
 - At most **16 cumulative model calls** across the original writer, all recovery ancestors and all same-day watchdog attempts, including failed calls. Reused checkpoints are counted once. The regular writer's ten-call configuration remains unchanged. A repair needs room for four fresh calls; replanning needs five.
 - The watchdog and writer share the existing `model-cli` lock. A separate watchdog lock protects its state. The existing publisher's daily lock and one-article-per-day check remain in force.
 - The recovery config exists only in memory. It does not add persistent `manual_recovery` fields to the writer's task row or alter its schedule/enabled state. Existing failed-run evidence is retained.
 - Recovery results preserve the original workflow business status/error so subsequent runs can continue from the saved checkpoint rather than lose the failure cause inside a wrapper.
+- A humanizer length failure can receive one in-run repair using the same selected evidence and skill, followed by a fresh factual review and the normal final review. These extra calls share the existing daily cap; an unsupported, still-short or rejected repair cannot publish. Manual humanizer edits are not silently rewritten.
 
 ## Operations
 

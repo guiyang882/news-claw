@@ -1071,7 +1071,37 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             for key in ("used_source_ids", "tags", "fact_checks"):
                 if edited["article"][key] != generated["article"][key]:
                     raise ValueError("Humanizer changed source or fact-check metadata")
-            final = build_draft(edited, packet, config, day, plan=plan, humanized=True)
+            try:
+                final = build_draft(edited, packet, config, day, plan=plan, humanized=True)
+            except ReadingLengthError as error:
+                if manual_humanizer:
+                    raise
+                # One bounded repair, with the same invocation budget and fresh
+                # factual/final reviews. Never loop or relax the publication floor.
+                atomic_json(directory / "03-length-validation.json", {"error": str(error)})
+                repair_prompt = ("Repair the measured length failure in this already humanized bilingual draft. "
+                    "Use only the supplied selected evidence and outline. Do not use tools or fetch sources. "
+                    "Preserve tags, used_source_ids and fact_checks exactly. Preserve inline citations, dates, "
+                    "numbers, qualifications, availability distinctions and source maturity in both languages. "
+                    "Expand only distinct source-supported reasoning, conditional implications, counterarguments "
+                    "and practical verification criteria; never add unsupported facts or repetitive padding. "
+                    "Apply the supplied humanizer skill while repairing; do not compress below the required floor. "
+                    "Return insufficient_evidence if the evidence cannot support the required depth. "
+                    + length_prompt(settings) + "\nHUMANIZER_SKILL\n" + skill + "\nINPUT_DATA_JSON\n"
+                    + json.dumps({"model_draft": edited, "packet": scoped_packet, "editorial_plan": plan,
+                                  "validation_error": str(error)}, ensure_ascii=False))
+                repaired = runner("humanize_length_repair", repair_prompt, schema,
+                                  directory / "03b-humanizer-length-repair")
+                if repaired.get("status") != "ready":
+                    raise ValueError("Humanizer length repair needs more evidence")
+                for key in ("used_source_ids", "tags", "fact_checks"):
+                    if repaired["article"][key] != edited["article"][key]:
+                        raise ValueError("Humanizer length repair changed source or fact-check metadata")
+                final = build_draft(repaired, packet, config, day, plan=plan, humanized=True)
+                factual = runner("review_humanize_repair", review_prompt(final, packet),
+                                 SCHEMAS / "daily-blog-verdict.schema.json", directory / "03c-repair-fact-review")
+                require_verdict(factual, final, packet)
+                edited = repaired
             atomic_json(directory / "final-draft.json", final)
             # A rejected draft can be short; only the corrected publication must meet the length target.
             review_baseline = (build_draft(pre_edit, packet, config, day, plan=plan, comparison_baseline=True)
