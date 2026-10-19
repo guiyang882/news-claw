@@ -16,6 +16,7 @@ class Surface(HTMLParser):
         self.stack=[]
         self.cards=set()
         self.navigation=set()
+        self.next_page=None
         self.feed(html)
 
     def handle_starttag(self, tag, attrs):
@@ -23,6 +24,8 @@ class Surface(HTMLParser):
         classes=attrs.get('class','').split()
         if tag=='a':
             href=attrs.get('href','')
+            if 'next' in attrs.get('rel','').split() and any('library-pagination' in item[1] for item in self.stack):
+                self.next_page=href
             if any('article-card' in item[1] for item in self.stack):
                 self.cards.add(href)
             if any('site-nav' in item[1] for item in self.stack):
@@ -74,6 +77,22 @@ def inspect_surfaces(slugs, settings, fetch=None):
                 if path in ('/','/blog'):
                     cards={urlsplit(href).path.removeprefix('/blog/') for href in surface.cards
                            if (parse_qs(urlsplit(href).query).get('lang',['zh-CN'])[0]=='en')==(language=='en')}
+                    if path=='/blog':
+                        seen={path+suffix}
+                        while surface.next_page:
+                            target=surface.next_page
+                            parsed=urlsplit(target)
+                            query=parse_qs(parsed.query)
+                            if (parsed.scheme or parsed.netloc or parsed.path!='/blog' or parsed.fragment
+                                    or set(query)-{'lang','page'} or len(query.get('page',[]))!=1
+                                    or not query['page'][0].isdigit() or int(query['page'][0])<2
+                                    or query.get('lang',['zh-CN'])!=[language]
+                                    or target in seen or len(seen)>=200):
+                                raise ValueError('invalid or repeated blog pagination link')
+                            seen.add(target)
+                            surface=Surface(read(target))
+                            cards.update(urlsplit(href).path.removeprefix('/blog/') for href in surface.cards
+                                if (parse_qs(urlsplit(href).query).get('lang',['zh-CN'])[0]=='en')==(language=='en'))
                     required=featured if path=='/' else expected
                     if not required.issubset(cards):
                         issues.append(f'{language}:{path}:article_cards_missing')

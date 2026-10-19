@@ -33,7 +33,7 @@ class WatchdogIntegrationTests(unittest.TestCase):
             runner('draft', 'Offline fixture', schema, fixture.directory)
             self.assertEqual(runner.calls[0]['provider'], 'codex')
 
-    def run_recovery(self, reject=False, locator_failure=False, short_humanize=False, reject_repair=False):
+    def run_recovery(self, reject=False, locator_failure=False, short_humanize=False, reject_repair=False, reject_once=False):
         fixture = fixtures.DailyBlogTests()
         # Reuse the installed fixture's read-only DB backup and schema/media config.
         # All article, run and database writes are in fixture.root, a TemporaryDirectory.
@@ -47,8 +47,10 @@ class WatchdogIntegrationTests(unittest.TestCase):
             broken = watch.blog.read_json(saved / '02b-codex-correction/response.json')
             broken['article']['fact_checks'][0]['locator'] += '#invented-heading'
             watch.blog.atomic_json(saved / '02b-codex-correction/response.json', broken)
-        if reject:
+        if reject or reject_once:
             fixture.responses['review'] = lambda value: value.update(approved=False, issues=['Still unsupported'])
+        if reject:
+            fixture.responses['review_revised'] = lambda value: value.update(approved=False, issues=['Still unsupported'])
         if short_humanize:
             fixture.responses['humanize'] = lambda value: value['article']['en'].update(
                 body_markdown=value['article']['en']['body_markdown'].replace(
@@ -94,12 +96,15 @@ class WatchdogIntegrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'Codex rejected'):
                     invoke()
                 self.assertFalse((fixture.site / 'manifest.json').exists())
-                self.assertEqual(calls, ['watchdog_repair', 'review'] if reject else
+                self.assertEqual(calls, ['watchdog_repair', 'review', 'revise', 'review_revised'] if reject else
                     ['watchdog_repair', 'review', 'humanize', 'humanize_length_repair', 'review_humanize_repair'])
             else:
                 result = invoke()
                 self.assertEqual(result['business_status'], 'publication_verified')
-                expected = ['watchdog_repair', 'review', 'humanize']
+                expected = ['watchdog_repair', 'review']
+                if reject_once:
+                    expected += ['revise', 'review_revised']
+                expected += ['humanize']
                 if short_humanize:
                     expected += ['humanize_length_repair', 'review_humanize_repair']
                 expected += ['final_review']
@@ -126,3 +131,6 @@ class WatchdogIntegrationTests(unittest.TestCase):
 
     def test_unsupported_post_humanizer_repair_cannot_publish(self):
         self.run_recovery(short_humanize=True, reject_repair=True)
+
+    def test_one_factual_correction_is_reviewed_within_existing_budget(self):
+        self.run_recovery(reject_once=True)

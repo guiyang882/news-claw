@@ -84,7 +84,7 @@ def call_key(call):
 
 def saved_draft(saved):
     for stage in ('04b-codex-final-correction', '03b-humanizer-length-repair', '03-codex-humanizer',
-                  '02b-codex-correction', '01-length-repair', '01-agy-draft'):
+                  '02b-codex-correction', '01-length-repair', '01-agy-draft', '00-watchdog-repair'):
         path = saved / stage / 'response.json'
         if path.is_file():
             value = blog.read_json(path)
@@ -211,7 +211,14 @@ def supervise(task, writer, root, db, directory, *, execute=False, now=None,
     workflow.pop('manual_replan', None)
     workflow['network_policy'] = {**workflow['network_policy'], 'max_cli_invocations_per_day': cap}
     workflow['network_policy'].pop('max_cli_invocations_per_run', None)
-    workflow.update(max_draft_revisions=0, max_final_revisions=0, max_length_repairs=0)
+    # Reserve the normal repair/review/humanizer/final-review path first.
+    # Use remaining budget for at most one factual correction and one length repair.
+    # ModelRunner remains the hard cap, including every ancestor and failed call.
+    spare = cap - len(calls) - minimum
+    draft_revisions = int(spare >= 2)
+    length_repairs = int(spare - 2 * draft_revisions >= 1)
+    workflow.update(max_draft_revisions=draft_revisions, max_final_revisions=0,
+                    max_length_repairs=length_repairs)
     runner = runner_factory(config, root)
     runner.calls.extend(calls.values())
     if replan:
@@ -226,6 +233,8 @@ def supervise(task, writer, root, db, directory, *, execute=False, now=None,
                   'Preserve source maturity, uncertainty, numerical scope and monetary units in both languages. '
                   'Remove unsupported claims; never manufacture facts or evidence to satisfy publication. '
                   'Keep the central question, section arguments, inline citations and valid source locators. '
+                  'Each fact_checks entry has ONE locator: split multi-source claims into separate entries, each fully supported by its locator. '
+                  'Review titles and summaries: shared components do not prove identical implementations or delivered capabilities. '
                   'Copy source_id/locator pairs exactly from the selected evidence; never append headings, excerpts or fragments. '
                   'Preserve tags exactly. Return the draft schema; use insufficient_evidence if a supported repair is impossible. '
                   + blog.length_prompt(workflow) + blog.presentation.writing_guidance(config) +

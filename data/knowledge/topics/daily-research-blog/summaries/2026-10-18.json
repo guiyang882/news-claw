@@ -1,0 +1,44 @@
+{
+  "approval_kind": "model_review",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-18/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-18/zh.md"
+  },
+  "article_sha256": "2a9b384b3b237572a335f0d67421062438d9da1a1fdd733c5255bd53a573e551",
+  "day": "2026-10-18",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "当两家车企宣布采用相近的NVIDIA计算、传感器及驾驶软件架构时，这能为购车者提供什么信息，还需要哪些证据才能判断具体车辆的功能和安全性？",
+    "section_count": 7,
+    "selected_candidate_id": "candidate-driving",
+    "target_reading_minutes": 20,
+    "title": "奔驰与沃尔沃采用相近的自动驾驶技术，购车者能据此相信什么？"
+  },
+  "editorial_plan_sha256": "ece1c1fb8dd303d8e48c654f17c201008c53b30499fcc4d24d3166daa7872c55",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "b6273cb18f90dfc24150ef4bf3538775fdb7d0fe0c56fb4f7b1d6bdf53876574",
+  "publication_kind": "original",
+  "reading_estimates": {
+    "en": {
+      "minutes": 18,
+      "rate": 200,
+      "units": 3403
+    },
+    "zh": {
+      "minutes": 20,
+      "rate": 300,
+      "units": 5798
+    }
+  },
+  "slug": "buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-18",
+  "source_urls": [
+    "https://nvidianews.nvidia.com/news/mercedes-benz-and-nvidia-expand-strategic-partnership-to-advance-safe-highly-automated-driving-in-the-next-decade",
+    "https://nvidianews.nvidia.com/news/volvo-cars-and-nvidia-expand-partnership-to-advance-safe-automated-driving"
+  ],
+  "summary": "奔驰与沃尔沃宣布扩大NVIDIA合作，计划采用若干同名驾驶技术。公告说明了研发方向，但具体车辆的交付功能、运行条件、乘员义务和安全结果仍未确定。购车者需要核对将这些计划连接到所购车辆的功能文件、验证材料和交付记录。",
+  "summary_en": "Mercedes-Benz and Volvo Cars have announced expanded NVIDIA partnerships involving similarly named driving technologies. The announcements describe development plans but leave vehicle-specific functions, operating conditions, occupant obligations and safety outcomes unresolved. Buyers need documents and evidence connecting those plans to the vehicle they intend to purchase.",
+  "title": "奔驰与沃尔沃计划采用相近驾驶技术，购车者能据此判断什么？",
+  "title_en": "Mercedes-Benz and Volvo plan to use similar driving technologies. What can buyers infer?",
+  "url": "https://growthyoung.com/blog/buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-18",
+  "version": 1
+}

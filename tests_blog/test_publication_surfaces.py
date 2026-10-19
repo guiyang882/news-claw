@@ -52,4 +52,30 @@ class PublicationSurfacesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             inspect_surfaces(['latest'],{'origin':'https://example.com'},lambda _:self.fail('network'))
 
+    def test_paginated_library_is_checked_in_both_languages(self):
+        seen=[]
+        def fetch(path):
+            seen.append(path)
+            text=fixture(path)
+            suffix='?lang=en' if 'lang=en' in path else ''
+            if path in ('/blog','/blog?lang=en'):
+                text=text.replace(f'<article class="article-card"><a href="/blog/older{suffix}">Title</a></article>','')
+                next_url='/blog?lang=en&amp;page=2' if suffix else '/blog?page=2'
+                text+=f'<nav class="library-pagination"><a rel="next" href="{next_url}">Next</a></nav>'
+            return text
+        self.assertTrue(inspect_surfaces(['latest'],{},fetch)['success'])
+        self.assertIn('/blog?page=2',seen)
+        self.assertIn('/blog?lang=en&page=2',seen)
+
+    def test_external_pagination_is_rejected_without_fetching(self):
+        seen=[]
+        def fetch(path):
+            seen.append(path)
+            text=fixture(path)
+            if path=='/blog':
+                text+='<nav class="library-pagination"><a rel="next" href="https://example.com/blog?page=2">Next</a></nav>'
+            return text
+        self.assertFalse(inspect_surfaces(['latest'],{},fetch)['success'])
+        self.assertFalse(any(path.startswith('https:') for path in seen))
+
 if __name__=='__main__':unittest.main()

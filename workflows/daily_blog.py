@@ -868,8 +868,9 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                                   ("01-agy-draft", "01-length-repair", "02b-codex-correction", "03-codex-humanizer")))
         plan_repair = recovery.get("resume_stage") == "plan" and error == "Outline evidence locator does not exist in the source packet"
         final_budget_failure = (error == "Model invocation limit reached"
-                                and (saved / "03-codex-humanizer/response.json").is_file()
-                                and (saved / "reviewed-draft.json").is_file())
+                                and (saved / "original-draft.json").is_file()
+                                and any((saved / stage / "response.json").is_file() for stage in
+                                        ("01-agy-draft", "02b-codex-correction", "03-codex-humanizer")))
         if not length_failure and not plan_repair and not final_budget_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped", "Fact check locator does not exist in the evidence packet"}:
             raise ValueError("Recovery only supports a saved editorial validation failure")
         filename = recovery.get("draft_filename", "")
@@ -992,7 +993,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             "写出具体机制、反证条件和下一步可验证的观察点，不要用空话填字数。"
             "逐章落实大纲中的论点、来源、最强反论证及未决问题；只使用所选候选题列出的source_ids。"
             "引用至少两个不同来源 URL，used_source_ids 只选择真正使用的资料，两个版本均在相关论断旁用Markdown链接。"
-            "fact_checks 至少2条，source_id 和 locator 必须准确指向 evidence 中对应记录；claim 和 boundary 各不少于15字符。"
+            "fact_checks 至少2条，source_id 和 locator 必须准确指向 evidence 中对应记录；claim 和 boundary 各不少于15字符。每条claim必须完全由该条唯一locator支持；跨公告陈述拆成独立条目。标题和摘要同样受证据约束，共用组件不等于实现相同或能力已交付。"
             "双语表述不得提高原文确定性：in development 只表示开发中，不等于已开工、在建或已投产。"
             "核对每个数量修饰的对象与范围；平台可用性不能从模型和数据集扩展至所有软件项目。"
             "新闻标题和 RSS 摘要仅为待核验线索，不能写成已核验事实。已有研究快照的数字要写明截止日、公司披露口径和材料边界，"
@@ -1030,6 +1031,8 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     "Use source IDs from the selected candidate only; remove out-of-scope claims rather than adding citations. "
                     "At least two distinct source URLs and two valid evidence locators are required. Return the original model draft schema. "
                     "Copy each source_id/locator pair exactly from a selected evidence record; never append headings, excerpts or fragments to a locator. "
+                    "Each fact_checks entry must be fully supported by its ONE locator. Split claims about multiple announcements into separate entries. "
+                    "Audit titles and summaries too: shared component names do not establish identical implementations or delivered capabilities. "
                     + length_prompt(settings) + presentation.writing_guidance(config) + "Do not include writing "
                     "or review credits. Return insufficient_evidence if a sound article "
                     "cannot be written. Preserve the existing tags exactly; they are validated website metadata. "
@@ -1161,6 +1164,14 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             raise
 
 
+def recoverable_run(connection, run_id, task_id):
+    """Manual writer recovery can continue its own or the blog watchdog's checkpoint."""
+    owners = (task_id, "daily-blog-watchdog") if task_id == "daily-blog-agy-codex" else (task_id, task_id)
+    return connection.execute(
+        "SELECT 1 FROM task_runs WHERE id=? AND task_id IN (?,?) AND status='failed'",
+        (run_id, *owners)).fetchone() is not None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task", default=os.environ.get("NEWS_CLAW_TASK_ID", "daily-blog-agy-codex"))
@@ -1204,10 +1215,8 @@ def main():
                 config["workflow"].pop("manual_recovery")
                 recovery = None
             if recovery:
-                if not connection.execute(
-                        "SELECT 1 FROM task_runs WHERE id=? AND task_id=? AND status='failed'",
-                        (recovery.get("run_id"), args.task)).fetchone():
-                    parser.error("Recovery requires a manually queued run and a failed run of this task")
+                if not recoverable_run(connection, recovery.get("run_id"), args.task):
+                    parser.error("Recovery requires a manual run and a failed writer or blog-watchdog checkpoint")
     directory = Path(os.environ["NEWS_CLAW_RESULT_PATH"]).parent if os.environ.get("NEWS_CLAW_RESULT_PATH") else root / "data/runs/daily-blog-preview"
     signal.signal(signal.SIGTERM, terminate_model)
     signal.signal(signal.SIGINT, terminate_model)

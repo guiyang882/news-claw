@@ -208,7 +208,9 @@ class WatchdogTests(unittest.TestCase):
         passed = self.publish.call_args.args[0]['workflow']
         self.assertEqual(passed['manual_recovery']['run_id'], PRIOR)
         self.assertEqual(passed['network_policy']['max_cli_invocations_per_day'], 16)
-        self.assertEqual(passed['max_draft_revisions'], 0)
+        self.assertEqual(passed['max_draft_revisions'], 1)
+        self.assertEqual(passed['max_length_repairs'], 1)
+        self.assertEqual(passed['max_final_revisions'], 0)
         self.assertEqual(self.writer, original_writer)
         self.assertEqual(self.inspect.call_count, 2)
 
@@ -222,3 +224,8 @@ class WatchdogTests(unittest.TestCase):
         state = json.loads((self.root / 'data/runs/blog-watchdog-days/2026-10-16.json').read_text())
         self.assertEqual(len(state['attempts']), 1)
         self.assertEqual(state['attempts'][0]['run_id'], CURRENT)
+
+    def test_repair_checkpoint_survives_prepublication_length_failure(self):
+        value = {"status": "ready", "article": {"tags": ["test"]}}
+        self.write(self.saved / "00-watchdog-repair/response.json", value)
+        self.assertEqual(watch.saved_draft(self.saved), value)

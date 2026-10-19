@@ -1,0 +1,44 @@
+{
+  "approval_kind": "model_review",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-19/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-19/zh.md"
+  },
+  "article_sha256": "19fc2a04d0894dc20f6d0dc7946a110c24cdf252e1779d4bec1f28e9cd15099b",
+  "day": "2026-10-19",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "共享自动驾驶技术架构为安全提供了哪些可解释的机制，又为什么仍不足以决定某款车在具体道路上允许驾驶员交出多少控制与注意责任？",
+    "section_count": 7,
+    "selected_candidate_id": "c1",
+    "target_reading_minutes": 20,
+    "title": "奔驰与沃尔沃采用同一自动驾驶技术栈，消费者能据此相信什么？"
+  },
+  "editorial_plan_sha256": "ce0cc388a046ff72358a0fa9b320da732e62a380a9d3b8c3fa9004b4af2b5020",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "04005575ae6f9f5a2213437d450b118e9a449160369e3c22fdb4a613df852ec8",
+  "publication_kind": "original",
+  "reading_estimates": {
+    "en": {
+      "minutes": 17,
+      "rate": 200,
+      "units": 3290
+    },
+    "zh": {
+      "minutes": 18,
+      "rate": 300,
+      "units": 5383
+    }
+  },
+  "slug": "buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-19",
+  "source_urls": [
+    "https://nvidianews.nvidia.com/news/mercedes-benz-and-nvidia-expand-strategic-partnership-to-advance-safe-highly-automated-driving-in-the-next-decade",
+    "https://nvidianews.nvidia.com/news/volvo-cars-and-nvidia-expand-partnership-to-advance-safe-automated-driving"
+  ],
+  "summary": "NVIDIA于2026年10月15日、16日发布的沃尔沃与奔驰合作公告列出相近组件，但功能表述和开发阶段不同。架构可能为安全提供什么，平行安全栈何时能发挥作用，又需要哪些车型证据，才能支持驾驶任务的转移？",
+  "summary_en": "NVIDIA's October 15 and 16, 2026 announcements for Volvo and Mercedes-Benz name related components but describe different functions and development stages. What could the architecture contribute to safety, when might a parallel safety stack help, and what vehicle-specific evidence would support handing over driving tasks?",
+  "title": "多一套驾驶安全栈，需要什么证据证明它增加了保护？",
+  "title_en": "What evidence would show that an extra driving safety stack adds protection?",
+  "url": "https://growthyoung.com/blog/buyers-infer-from-mercedes-benz-volvo-sharing-automated-2026-10-19",
+  "version": 1
+}
