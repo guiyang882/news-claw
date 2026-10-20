@@ -1,0 +1,44 @@
+{
+  "approval_kind": "model_review",
+  "article_paths": {
+    "en": "data/knowledge/topics/daily-research-blog/articles/control-should-organizations-retain-when-agents-handle-internal-2026-10-20/en.md",
+    "zh": "data/knowledge/topics/daily-research-blog/articles/control-should-organizations-retain-when-agents-handle-internal-2026-10-20/zh.md"
+  },
+  "article_sha256": "f7fb400ca7f65dfc7b9939de4ccd5fbed90c4d17522c8b099071e2efed52ced8",
+  "day": "2026-10-20",
+  "editorial_plan": {
+    "candidate_count": 2,
+    "central_question": "面对能够检索内部资料和调用工具的智能体，组织应如何分别判断数据与部署控制、行动权限和人工审核，并据此决定可授权的任务范围？",
+    "section_count": 7,
+    "selected_candidate_id": "agent-control",
+    "target_reading_minutes": 20,
+    "title": "让智能体处理内部资料，组织需要保留哪些控制权？"
+  },
+  "editorial_plan_sha256": "9dae9e3ff5eb304f815d085b7a6253b498628c0258a16ce7742f8ca68990e2aa",
+  "humanizer_skill_sha256": "e8269e236bed06ed0fe4824c274112e54950b0cb46b0bafe5e1576ef7c9f93d5",
+  "packet_sha256": "f38beb1cbe08800447ab221120495239ca34822706ab8082fb31a93e947f543c",
+  "publication_kind": "original",
+  "reading_estimates": {
+    "en": {
+      "minutes": 18,
+      "rate": 200,
+      "units": 3523
+    },
+    "zh": {
+      "minutes": 20,
+      "rate": 300,
+      "units": 5955
+    }
+  },
+  "slug": "control-should-organizations-retain-when-agents-handle-internal-2026-10-20",
+  "source_urls": [
+    "https://aws.amazon.com/blogs/aws/aws-weekly-roundup-aws-lambda-web-functions-amazon-s3-on-the-vercel-marketplace-and-more-october-19-2026/",
+    "https://blogs.nvidia.com/blog/media-agentic-security-european-public-service-broadcasting-global-content-production/"
+  ],
+  "summary": "英伟达媒体公告与2026年10月19日AWS周报描述了不同的智能体控制机制。本文围绕具体任务，讨论部署、模型评估、动作权限与人工审核分别能证明什么。两篇来源均未证明完整系统的实际运行效果。",
+  "summary_en": "NVIDIA's media announcement and AWS's October 19, 2026 roundup describe different controls for agents that search internal material and call tools. This analysis asks what deployment, model evaluation, permissions and human review can establish for a defined task. Neither source demonstrates a complete system's operational effectiveness.",
+  "title": "让智能体处理内部资料，组织需要保留哪些控制权？",
+  "title_en": "What control should organizations retain when agents handle internal material?",
+  "url": "https://growthyoung.com/blog/control-should-organizations-retain-when-agents-handle-internal-2026-10-20",
+  "version": 1
+}

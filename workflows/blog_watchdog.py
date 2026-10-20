@@ -105,7 +105,8 @@ def review_issues(saved):
 
 
 def repairable(error):
-    return (error in {'Codex rejected the article; publication stopped',
+    return (error in {'Article metadata exceeds website limits',
+                      'Codex rejected the article; publication stopped',
                       'Fact check locator does not exist in the evidence packet',
                       'Article uses sources outside the selected topic plan', 'Model invocation limit reached'}
             or bool(re.match(r'^(zh|en) article does not meet the approximate reading time target:', error or '')))

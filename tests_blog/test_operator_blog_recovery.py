@@ -33,3 +33,24 @@ class OperatorRecoveryTests(unittest.TestCase):
         result=blog.run(fixture.config,fixture.root,fixture.db,fixture.directory,execute=True,model_runner=runner,day=fixtures.DAY)
         self.assertEqual(result['business_status'],'published')
         self.assertEqual(fixture.calls,['review','humanize','final_review'])
+
+    def test_metadata_failure_recovery_keeps_fresh_reviews_and_matching_site_limits(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        from tests_blog import test_daily_blog as fixtures
+        from workflows import daily_blog as blog
+        from web.blog_runtime import ARTICLE_METADATA_LIMITS
+        self.assertEqual(blog.ARTICLE_METADATA_LIMITS, ARTICLE_METADATA_LIMITS)
+        fixture = fixtures.DailyBlogTests()
+        with patch.object(blog, 'ROOT', Path('/mnt/quant/news-claw')):
+            fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        saved, runner = fixture.recovery_fixture()
+        blog.atomic_json(saved/'result.json', {'success':False, 'error':'Article metadata exceeds website limits'})
+        result = blog.run(fixture.config,fixture.root,fixture.db,fixture.directory,execute=True,model_runner=runner,day=fixtures.DAY)
+        self.assertEqual(result['business_status'], 'published')
+        self.assertEqual(fixture.calls, ['review','humanize','final_review'])
+        guidance = blog.length_prompt(fixture.config['workflow'])
+        self.assertIn('summary <= 1200', guidance)
+        self.assertIn('home_note <= 600', guidance)
+        self.assertIn('INCLUDING Markdown and URLs', guidance)

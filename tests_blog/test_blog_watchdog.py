@@ -127,6 +127,13 @@ class WatchdogTests(unittest.TestCase):
                    {'attempts': [{}, {}], 'enqueued': []})
         self.assertEqual(self.invoke(True)['business_status'], 'daily_recovery_limit')
 
+    def test_metadata_overflow_is_repairable_but_not_other_validation_failures(self):
+        self.failed('Article metadata exceeds website limits')
+        self.assertEqual(self.invoke()['business_status'], 'would_repair')
+        self.factory.assert_not_called()
+        self.assertFalse(watch.repairable('Invalid runtime blog source'))
+        self.assertFalse(watch.repairable('Model response has an invalid string length'))
+
     def test_invalid_evidence_locator_is_recoverable_content(self):
         self.failed('Fact check locator does not exist in the evidence packet')
         self.assertEqual(self.invoke()['business_status'], 'would_repair')

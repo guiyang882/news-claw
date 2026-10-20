@@ -29,6 +29,7 @@ from . import blog_presentation as presentation
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "config/schemas"
 DENIAL = re.compile(r"\b(?:HTTP\s*(?:401|403|429)|(?:status|status_code)[\s:=]+(?:401|403|429)|429\s+Too\s+Many\s+Requests|403\s+Forbidden|unauthorized|authentication failed|permission.denied|rate.limit|quota.exceeded|resource.exhausted)\b", re.I)
+ARTICLE_METADATA_LIMITS = {"title": 220, "summary": 1200, "home_note": 600}
 _model_process = None
 
 
@@ -480,7 +481,7 @@ def build_draft(result, packet, config, day, *, plan, humanized=False, compariso
         if any(url not in body for url in urls):
             raise ValueError("Both languages must cite every declared evidence URL")
         presentation.validate_markup(body, media, urls)
-        if len(item["title"]) > 220 or len(item["summary"]) > 600 or len(item["home_note"]) > 220:
+        if any(len(item[field]) > limit for field, limit in ARTICLE_METADATA_LIMITS.items()):
             raise ValueError("Article metadata exceeds website limits")
         if humanized and presentation_settings.get("references", "source_based_appendix") != "none":
             item["body_markdown"] = presentation.with_references(body, [sources[sid] for sid in ids], language)
@@ -684,7 +685,10 @@ def planning_prompt(packet, history, settings, skill):
 
 def length_prompt(settings):
     lengths = editorial.length_requirements(settings["reading"])
-    return (f"Target about {settings['reading']['target_minutes']} minutes per language: "
+    return ("In BOTH languages, metadata limits count all raw characters INCLUDING Markdown and URLs: "
+            + ", ".join(f"{field} <= {limit}" for field, limit in ARTICLE_METADATA_LIMITS.items())
+            + ". Keep summaries and homepage notes concise; use short linked labels and preserve inline citations in the body. "
+            f"Target about {settings['reading']['target_minutes']} minutes per language: "
             f"Chinese {lengths['zh']['minimum']}–{lengths['zh']['maximum']} reading units "
             "(one Han character or one Latin word/number counts as one unit, excluding URLs and code); "
             f"English {lengths['en']['minimum']}–{lengths['en']['maximum']} words. "
@@ -871,7 +875,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                                 and (saved / "original-draft.json").is_file()
                                 and any((saved / stage / "response.json").is_file() for stage in
                                         ("01-agy-draft", "02b-codex-correction", "03-codex-humanizer")))
-        if not length_failure and not plan_repair and not final_budget_failure and error not in {"Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped", "Fact check locator does not exist in the evidence packet"}:
+        if not length_failure and not plan_repair and not final_budget_failure and error not in {"Article metadata exceeds website limits", "Article uses sources outside the selected topic plan", "Codex rejected the article; publication stopped", "Fact check locator does not exist in the evidence packet"}:
             raise ValueError("Recovery only supports a saved editorial validation failure")
         filename = recovery.get("draft_filename", "")
         if not plan_repair and (not filename or Path(filename).name != filename or filename in {".", ".."}):
@@ -1001,7 +1005,7 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
             "不要借通用知识补入资料中没有的公司、技术、财务或合同细节。收入不能换称现金流，交易目标日期不能写成监管期限，"
             "工程延期不能直接断言制造缺陷；分析机制必须用条件句标明假设。金额翻译要核对 million/billion 与万/亿的换算。"
             "不杜撰最新变化、报价、时间、出处、量化关注度或个人经历；没有足够材料时返回 insufficient_evidence。"
-            "避免大段复制来源，用原创分析；元数据 title/home_note/category/reading_time不超过220字符，summary不超过600字符，"
+            "避免大段复制来源，用原创分析；元数据长度按下述限制（包含引用链接）控制，"
             "keywords 1至12个，每个不超过60字符。tags 只能从允许标签选择。\nINPUT_DATA_JSON\n" +
             json.dumps({"packet": scoped_packet, "editorial_plan": plan, "recent_articles": history,
                         "allowed_tags": list(TAGS_BY_ID)}, ensure_ascii=False))
