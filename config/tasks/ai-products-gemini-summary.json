@@ -1,7 +1,7 @@
 {
   "id": "ai-products-gemini-summary",
-  "name": "AI产品反馈：Gemini整理、Codex校验",
-  "description": "读取本地缓存，整理主题摘要、时间线、推理与关系；Codex校验通过才进入knowledge供博客选题使用。相同输入不重复调用，失败不自动重试。",
+  "name": "AI产品反馈：DeepSeek整理、Codex校验",
+  "description": "OpenCode DeepSeek免费模型整理本地缓存，Codex独立审核通过才入库。保持每日两次调度和证据去重；工作流每天最多3次OpenCode调用，拒绝访问熔断，无付费回退。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
@@ -13,7 +13,7 @@
   ],
   "options": {
     "start_jitter_seconds": 420,
-    "model_permissions": "full_no_interactive_approval"
+    "model_permissions": "noninteractive_ask_auto_reject"
   },
   "execution": {
     "command": [
@@ -34,10 +34,11 @@
   "workflow": {
     "kind": "reviewed-topic-summary-v1",
     "writer": {
-      "executable": "/root/.local/bin/agy",
-      "model": "gemini-3.8-flash-high",
-      "timeout_seconds": 900,
-      "permissions": "full"
+      "executable": "/usr/local/bin/opencode",
+      "model": "opencode/deepseek-v4.1-flash-free",
+      "timeout_seconds": 600,
+      "permissions": "noninteractive-ask-auto-reject",
+      "max_calls_per_day": 3
     },
     "reviewer": {
       "executable": "/usr/local/bin/codex",
@@ -60,7 +61,7 @@
       "snapshot_companies": {}
     },
     "stages": [
-      "agy_summary",
+      "opencode_summary",
       "codex_review",
       "codex_correction_if_needed",
       "codex_re_review_if_corrected",
@@ -70,7 +71,8 @@
       "source_web_requests": 0,
       "max_cli_invocations_per_run": 4,
       "automatic_retries": 0,
-      "provider_denial": "persistent_circuit_requires_explicit_reset"
+      "provider_denial": "persistent_circuit_requires_explicit_reset",
+      "paid_fallback": false
     },
     "outputs": [
       "data/runs/<run_id>/source-packet.json",
@@ -167,6 +169,7 @@
       "frontend_build_required": false,
       "restart_required": false
     },
-    "max_summary_revisions": 1
+    "max_summary_revisions": 1,
+    "writer_provider": "opencode"
   }
 }

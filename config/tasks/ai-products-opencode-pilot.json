@@ -1,7 +1,7 @@
 {
   "id": "ai-products-opencode-pilot",
-  "name": "AI产品反馈：OpenCode DeepSeek试点（访问拒绝后暂停）",
-  "description": "复用AI产品缓存证据，由DeepSeek整理、Codex审核。2026-10-20真实任务返回403，保留熔断并默认关闭；排查后显式恢复。",
+  "name": "AI产品反馈：OpenCode DeepSeek独立试点（备用关闭）",
+  "description": "正式AI产品摘要任务已使用修正后的OpenCode配置；本任务保持关闭以免重复处理。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": false,
@@ -13,7 +13,7 @@
   ],
   "options": {
     "start_jitter_seconds": 420,
-    "model_permissions": "full_no_interactive_approval"
+    "model_permissions": "noninteractive_ask_auto_reject"
   },
   "execution": {
     "command": [
@@ -37,7 +37,7 @@
       "executable": "/usr/local/bin/opencode",
       "model": "opencode/deepseek-v4.1-flash-free",
       "timeout_seconds": 600,
-      "permissions": "deny-tools",
+      "permissions": "noninteractive-ask-auto-reject",
       "max_calls_per_day": 3
     },
     "reviewer": {
@@ -172,10 +172,10 @@
     "max_summary_revisions": 1,
     "writer_provider": "opencode",
     "pilot": {
-      "state": "paused_after_provider_denial",
+      "state": "standby_to_avoid_duplicate_processing",
       "baseline_task": "ai-products-gemini-summary",
-      "failed_run_id": "349dbe9add4fddc390e9dca8c3964974",
-      "resume_policy": "Explicit operator re-evaluation and circuit reset; never auto-reset."
+      "historical_failed_run_id": "349dbe9add4fddc390e9dca8c3964974",
+      "configuration_fix": "Native ask permissions with non-interactive auto-rejection; no --auto"
     }
   }
 }

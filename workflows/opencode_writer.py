@@ -19,11 +19,13 @@ def invocation(settings, prompt, schema):
     env["OPENCODE_CONFIG_CONTENT"] = json.dumps({
         "model": FREE_MODEL, "small_model": FREE_MODEL,
         "enabled_providers": ["opencode"], "autoupdate": False, "share": "disabled",
-        "permission": {"*": "deny"},
+        # Keep the native agent's tool declarations. In non-interactive run,
+        # ask requests are auto-rejected unless --auto is explicitly supplied.
+        "permission": {"*": "ask"},
         "agent": {"title": {"disable": True}, "summary": {"disable": True},
                   "compaction": {"disable": True}},
     })
-    env["OPENCODE_PERMISSION"] = '{"*":"deny"}'
+    env["OPENCODE_PERMISSION"] = '{"*":"ask"}'
     return ([settings["executable"], "run", "--model", FREE_MODEL, "--agent", "build",
              "--format", "json", "--title", "Reviewed AI products summary"],
             env, prompt.encode())

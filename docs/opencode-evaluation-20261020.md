@@ -2,7 +2,7 @@
 
 **Latest result:** standard OpenCode 1.19.3 interactive and non-interactive invocations on Singapore both successfully returned `OK` with `opencode/deepseek-v4.1-flash-free` and reported cost 0. Earlier isolated probe failures below remain historical evidence, not the current availability conclusion. See the final follow-up for commands and scope.
 
-**Production-workflow follow-up:** the later 18:17 China-time AI-products summary pilot (16 cached sources, text-only permissions and JSON contract) returned 403 / FreeTierError in 5.105 seconds. The original agy task was restored; the separate OpenCode pilot is registered but disabled with its circuit retained. Minimal CLI connectivity remains verified; actual summary quality and sustained stability are not. See [pilot results and controls](opencode-topic-pilot.md).
+**Latest workflow result:** after the 18:17 failure, a controlled change from global `deny` to native `ask` permissions (non-interactive run, no `--auto`) succeeded with the same saved evidence and prompt in 48.140 seconds. A subsequent Go-engine run on fresh evidence also succeeded in 8.765 seconds, reporting insufficient evidence rather than inventing conclusions. Both reported cost 0. The production AI-products task now uses this corrected writer; the duplicate pilot remains disabled. Historical denial and explicit reset audit are retained. Long-term stability still needs observation. See [pilot results and controls](opencode-topic-pilot.md).
 
 ## Installation and scope
 

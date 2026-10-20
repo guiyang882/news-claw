@@ -53,7 +53,9 @@ class OpenCodeWriterTests(unittest.TestCase):
         command = process.call_args.args[0]
         self.assertNotIn("--pure", command)
         self.assertEqual(command[command.index("--model") + 1], writer.FREE_MODEL)
-        self.assertEqual(process.call_args.kwargs["env"]["OPENCODE_PERMISSION"], '{"*":"deny"}')
+        self.assertEqual(process.call_args.kwargs["env"]["OPENCODE_PERMISSION"], '{"*":"ask"}')
+        self.assertNotIn("--auto", command)
+        self.assertNotIn("--dangerously-skip-permissions", command)
 
     def test_incomplete_truncated_non_json_or_multiple_turns_rejected(self):
         for raw in (events(reason="length"), events(text='{"ok":'), events() + "\n" + events(),
