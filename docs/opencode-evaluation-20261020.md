@@ -35,3 +35,25 @@ Reviewed up to 1,500 recent task runs created since October 18, plus recent serv
 Therefore no blanket reduction or provider switch was applied to active tasks. Existing cache reuse, serialized model-cli work, provider circuits and budgets remain in force. No trading or paused data-download tasks were enabled.
 
 If supported free access becomes available, the first candidate workloads are cached-source extraction/topic summaries and draft generation. Keep factual/final reviews on the existing reviewer and preserve JSON validation, source binding and publication gates. Validate representative bilingual long output before routing real drafts. Use serial requests, at least 10 seconds apart, explicit per-run/day caps, stop on 429/denial, and no paid fallback. Connectivity alone is not sufficient to enable automatic daily publication.
+
+## Follow-up: connection state and user-provided Jev example
+
+`opencode auth list` reports zero saved credentials. Starting the supported `opencode auth login --provider opencode` flow (the CLI counterpart of `/connect`) prompts for an API key from `https://opencode.ai/auth`. The prompt was cancelled without adding credentials. This establishes only that no account is connected; it does not prove that every free model requires authentication or that authentication fixes the earlier DeepSeek 403.
+
+At the user's explicit request, ran their separate Jev example once on Singapore, without an Authorization header:
+
+```sh
+curl https://opencode.ai/inference/systemone/v1/systemone \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"jev-1.13-free","state":"生产服务持续返回 500 错误。","questions":{"is_urgent":{"type":"noul","instructions":"是否需要紧急处理？"}}}'
+```
+
+Result: HTTP 200 in 0.802345 seconds, with 292 input tokens and 23 output tokens:
+
+```json
+{"model":"jev-1.13-free","answers":{"is_urgent":{"type":"noul","noul":0.93}},"usage":{"input_tokens":292,"output_tokens":23}}
+```
+
+Jev's anonymous structured-decision endpoint is therefore usable in this test. The example state was synthetic, not a report of an actual production outage. The output is a model judgment, not a verified incident probability. This is a different model and protocol from DeepSeek's chat/completions endpoint; it neither confirms nor disproves that separate free-tier access restriction. Jev supports typed questions and scores rather than long-form article generation (https://opencode.ai/v2/docs/console/models/#jev), so it was not substituted for the blog writer. No login is needed to reproduce the successful Jev test as observed today; broader availability and quotas remain unverified.
+
+Prior installation/evaluation commit `041cf00` was already pushed; the local branch and origin/main matched before this follow-up. Preserve the successful Jev request/response under the evaluation playground rather than repeatedly probing either provider.
