@@ -1,5 +1,7 @@
 # OpenCode free-model evaluation — 2026-10-20
 
+**Latest result:** standard OpenCode 1.19.3 interactive and non-interactive invocations on Singapore both successfully returned `OK` with `opencode/deepseek-v4.1-flash-free` and reported cost 0. Earlier isolated probe failures below remain historical evidence, not the current availability conclusion. See the final follow-up for commands and scope.
+
 ## Installation and scope
 
 Installed the official npm package `opencode-ai@1.19.3` on the Singapore ECS under `/opt/opencode/1.19.3`; `/usr/local/bin/opencode` points to its CLI. `opencode --version` reports `1.19.3`. No existing OpenCode command was present. No web or news-claw service restart, task schedule change, credential migration or paid-provider setup was performed.
@@ -57,3 +59,27 @@ Result: HTTP 200 in 0.802345 seconds, with 292 input tokens and 23 output tokens
 Jev's anonymous structured-decision endpoint is therefore usable in this test. The example state was synthetic, not a report of an actual production outage. The output is a model judgment, not a verified incident probability. This is a different model and protocol from DeepSeek's chat/completions endpoint; it neither confirms nor disproves that separate free-tier access restriction. Jev supports typed questions and scores rather than long-form article generation (https://opencode.ai/v2/docs/console/models/#jev), so it was not substituted for the blog writer. No login is needed to reproduce the successful Jev test as observed today; broader availability and quotas remain unverified.
 
 Prior installation/evaluation commit `041cf00` was already pushed; the local branch and origin/main matched before this follow-up. Preserve the successful Jev request/response under the evaluation playground rather than repeatedly probing either provider.
+
+## Follow-up: standard DeepSeek invocations succeed
+
+At the user's request to reproduce their exact startup command, used the existing Singapore environment and standard OpenCode configuration, without `--pure`, isolated XDG directories, or custom agent configuration:
+
+```sh
+opencode -m opencode/deepseek-v4.1-flash-free
+```
+
+Entered `Do not use any tools or read files. Reply only OK.` The standard Build agent returned `OK`; the UI reported 5.7 seconds. Exported session `ses_ea756b6a2ffeVZztMUrDbuelFp` confirms model `deepseek-v4.1-flash-free`, cost 0, 8,208 total tokens (including 1,664 cached input tokens), 2 output tokens, and no tool calls. Exited the TUI normally.
+
+After more than ten seconds, checked the standard non-interactive invocation once:
+
+```sh
+opencode run -m opencode/deepseek-v4.1-flash-free --format json \
+  --title "Standard CLI connectivity check" \
+  "Do not use tools or read files. Reply only OK."
+```
+
+This also exited 0 and returned `OK`, with 7,825 total tokens, 2 output tokens, and cost 0. Session: `ses_ea75291e1ffeb3dylyK7ku0HkZ`. Evidence: `playground/opencode-recheck-20261020/tui-success.json` and `run-standard.jsonl`.
+
+Thus the model is currently usable on Singapore through both normal invocation modes. No login, credentials, client-header edits, proxy changes or software upgrade were applied for these successful tests. The earlier isolated default-Build probe still returned 403 at 16:42 China time; these later tests changed both configuration context and time, so the exact cause is not isolated. Do not claim that Singapore egress is blocked, that `/connect` is required, or that the custom agent alone caused the rejection.
+
+These are minimal connectivity checks, not validation of sustained quota, bilingual article quality or production task integration. Scheduled tasks and provider routing remain unchanged. Use normal supported invocation as the baseline for future controlled evaluation, retaining existing serialization, budgets and stop-on-denial behavior.
