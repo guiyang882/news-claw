@@ -1,33 +1,38 @@
-"""Bounded, text-only OpenCode pilot; normal CLI, no alternate endpoint or fallback."""
+"""Bounded OpenCode writer with native full tool permissions; normal CLI, no alternate endpoint or fallback."""
 from datetime import datetime
 import json
 import os
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 FREE_MODEL = "opencode/deepseek-v4.1-flash-free"
 
 
-def invocation(settings, prompt, schema):
+def invocation(settings, prompt, schema, *, directory):
     if settings["model"] != FREE_MODEL:
         raise ValueError("OpenCode pilot only permits the explicitly evaluated free model")
+    if settings.get("permissions") != "full":
+        raise ValueError("OpenCode writer requires explicit full permissions")
     prompt += "\nOUTPUT_CONTRACT_JSON_SCHEMA\n" + json.dumps(schema, ensure_ascii=False)
     prompt += "\nReturn exactly one complete JSON object matching this schema. No Markdown fences or commentary."
     if len(prompt.encode()) > 120_000:
         raise ValueError("OpenCode writer input exceeds the pilot budget")
+    directory = str(Path(directory).resolve())
     env = os.environ.copy()
+    # Native CLI may consult inherited PWD; pin both it and --dir to the stage.
+    env["PWD"] = directory
     # Use the standard agent and existing runtime, not --pure or a custom system prompt.
     env["OPENCODE_CONFIG_CONTENT"] = json.dumps({
         "model": FREE_MODEL, "small_model": FREE_MODEL,
         "enabled_providers": ["opencode"], "autoupdate": False, "share": "disabled",
-        # Keep the native agent's tool declarations. In non-interactive run,
-        # ask requests are auto-rejected unless --auto is explicitly supplied.
-        "permission": {"*": "ask"},
-        "agent": {"title": {"disable": True}, "summary": {"disable": True},
+        # Explicit task authorization; also override agent-specific defaults.
+        "permission": {"*": "allow"},
+        "agent": {"build": {"permission": {"*": "allow"}}, "title": {"disable": True}, "summary": {"disable": True},
                   "compaction": {"disable": True}},
     })
-    env["OPENCODE_PERMISSION"] = '{"*":"ask"}'
+    env["OPENCODE_PERMISSION"] = '{"*":"allow"}'
     return ([settings["executable"], "run", "--model", FREE_MODEL, "--agent", "build",
-             "--format", "json", "--title", "Reviewed AI products summary"],
+             "--auto", "--dir", directory, "--format", "json", "--title", "Reviewed AI products summary"],
             env, prompt.encode())
 
 
@@ -49,8 +54,18 @@ def reserve(settings, policy, models):
 
 
 def parse_events(raw, call):
-    """Only a complete single text turn can pass; CLI exit 0 alone is insufficient."""
-    chunks, finishes, sessions = [], [], set()
+    """Accept completed tool rounds and only parse the final assistant step as JSON."""
+    chunks, finishes, sessions, tools = [], [], set(), []
+    active, stopped = False, False
+    usage = {}
+
+    def add_usage(target, source):
+        for key, value in source.items():
+            if isinstance(value, dict):
+                add_usage(target.setdefault(key, {}), value)
+            elif type(value) in (int, float):
+                target[key] = target.get(key, 0) + value
+
     for line in raw.splitlines():
         if not line.strip():
             continue
@@ -75,23 +90,38 @@ def parse_events(raw, call):
         part = event.get("part", {})
         if not isinstance(part, dict):
             raise ValueError("Malformed OpenCode event part")
-        if kind == "tool_use" or part.get("type") == "tool":
-            raise ValueError("Text-only OpenCode stage attempted a tool action")
-        if kind == "text":
+        if stopped:
+            raise ValueError("Unexpected OpenCode events after terminal step")
+        if kind == "step_start":
+            if active:
+                raise ValueError("OpenCode step started before previous step finished")
+            active, chunks = True, []
+        elif not active:
+            raise ValueError("OpenCode event outside an active step")
+        elif kind == "tool_use":
+            state = part.get("state", {})
+            if state.get("status") not in {"completed", "error"}:
+                raise ValueError("OpenCode tool action incomplete")
+            tools.append({"tool": part.get("tool"), "status": state["status"]})
+            call["tool_calls"] = tools
+        elif kind == "text":
             if not isinstance(part.get("text"), str):
                 raise ValueError("Invalid OpenCode text")
             chunks.append(part["text"])
         elif kind == "step_finish":
+            if part.get("cost") != 0:
+                raise PermissionError("OpenCode free pilot reported a nonzero or missing cost")
+            if part.get("reason") not in {"tool-calls", "stop"}:
+                raise ValueError("OpenCode response incomplete or truncated")
             finishes.append(part)
-            call["usage"] = part.get("tokens", {})
-            call["reported_cost"] = part.get("cost")
-        elif kind not in {"step_start", "reasoning"}:
+            add_usage(usage, part.get("tokens", {}))
+            call.update(usage=usage, reported_cost=0, model_steps=len(finishes))
+            active, stopped = False, part["reason"] == "stop"
+        elif kind != "reasoning":
             raise ValueError("Unexpected OpenCode event type")
-    if len(sessions) != 1 or len(finishes) != 1 or finishes[0].get("reason") != "stop":
-        raise ValueError("OpenCode response incomplete or multiple model turns detected")
+    if len(sessions) != 1 or not finishes or active or not stopped:
+        raise ValueError("OpenCode response incomplete")
     call["session_id"] = next(iter(sessions))
-    if call.get("reported_cost") != 0:
-        raise PermissionError("OpenCode free pilot reported a nonzero or missing cost")
     text = "".join(chunks).strip()
     if text.startswith("```json\n") and text.endswith("\n```"):
         text = text[8:-4]

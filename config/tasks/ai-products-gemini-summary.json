@@ -13,7 +13,7 @@
   ],
   "options": {
     "start_jitter_seconds": 420,
-    "model_permissions": "noninteractive_ask_auto_reject"
+    "model_permissions": "full"
   },
   "execution": {
     "command": [
@@ -37,7 +37,7 @@
       "executable": "/usr/local/bin/opencode",
       "model": "opencode/deepseek-v4.1-flash-free",
       "timeout_seconds": 600,
-      "permissions": "noninteractive-ask-auto-reject",
+      "permissions": "full",
       "max_calls_per_day": 3
     },
     "reviewer": {

@@ -44,6 +44,15 @@ class TopicSummaryTests(unittest.TestCase):
         self.approve_correction = False
         self.runner.side_effect = self.model
 
+    def test_full_writer_tools_do_not_change_evidence_or_reviewer_scope(self):
+        text = summary.prompt("draft", {}, allow_tools=True)
+        self.assertIn("full permissions", text)
+        self.assertNotIn("Use no tools", text)
+        self.assertIn("cached sources only", text)
+        self.assertIn("Cite only provided evidence", text)
+        self.assertIn("Use no tools", summary.prompt("review", {}, allow_tools=True))
+        self.assertIn("Use no tools", summary.prompt("draft", {}))
+
     def add_document(self, name, topic="ai-products-attention-feedback", stamp="2026-10-12", kind="feed_item"):
         record = {"record_type": kind, "text": "An attributed synthetic headline; not a verified real event.",
                   "title": name, "canonical_url": "https://example.org/" + name, "published_at": stamp}

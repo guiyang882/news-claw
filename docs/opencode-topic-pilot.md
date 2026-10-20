@@ -1,12 +1,24 @@
 # OpenCode DeepSeek 主题整理试点
 
-## 当前状态：权限配置已修复（2026-10-20）
+## 当前状态：完整权限与工作目录已验证（2026-10-20）
+
+根据用户明确要求，正式 AI 产品整理任务及关闭状态的备用任务均配置 `permissions: full`。适配器使用 OpenCode 1.19.3 原生 `permission: {"*":"allow"}`、Build agent 覆盖和 `--auto`，不再自动拒绝工具请求。通过原生 `debug agent build` 核对读取、编辑、命令、外部目录等规则的最终匹配结果为 allow。
+
+真实测试还发现仅设置子进程 `cwd` 时，CLI 使用了继承的 `/root` 工作目录；现显式设置 `--dir` 与子进程 `PWD` 为任务阶段目录。首次测试保留为失败记录，未将目录错误写成权限成功。
+
+修复后通过**实际 ModelRunner 与免费 DeepSeek 模型**完成读文件 → bash 计算 SHA-256 / 字节数 → write 写入 output.json → 返回 JSON。独立校验文件和最终 JSON 一致，3 轮模型步骤、3 个成功工具调用（read/bash/write），未等待授权，CLI 费用 0。会话：`ses_ea6ad1ad7ffe6WqwAUNg7mmI4y`。记录在 `playground/opencode-full-permissions/live-tool-check-fixed-directory/verification.json`，首次失败在同目录的 `live-tool-check/`。测试文件只在独立目录，未修改生产内容或服务。
+
+用户追加要求真实验证时，正式每日额度已用完；这次修复前后各一次工具诊断独立记账并保留原始日志，未清空正式计数，也未提高正式任务每天 3 次的上限。无访问拒绝重试、无付费回退。
+
+解析器现在接受完整工具轮次，仅使用最终 stop 步骤的文本解析 JSON，累计所有轮次的 tokens 并记录工具名/状态。中间步骤说明不混入最终 JSON。截断、未完成工具、缺失终止步骤、多个会话、结束后追加事件、非零或缺失费用仍拒收。每个正式摘要继续经过原有 schema、证据定位和独立 Codex 审核，工具权限不代替发布审核。
+
+## 此前的 ask 配置对照（2026-10-20，历史记录）
 
 修正适配器后，真实证据输入已连续两次成功返回。正式 `ai-products-gemini-summary` 任务现使用 OpenCode DeepSeek 免费模型，仍由 Codex 审核；11:47、19:47 的北京时间调度及随机延迟保持不变。独立 `ai-products-opencode-pilot` 继续关闭，避免重复处理。
 
 旧适配器同时设置 `OPENCODE_CONFIG_CONTENT.permission` 和 `OPENCODE_PERMISSION` 为 `{"*":"deny"}`。对照验证保留原失败运行的同一份证据、提示词、schema、模型和其余配置，只把权限策略改为 `{"*":"ask"}`，完整摘要成功返回并通过结构和引用定位校验。该差异指向权限配置与免费模型调用的兼容问题；服务端具体拒绝判定未公开，不能据此断言其内部校验机制。
 
-`opencode run` 的默认非交互模式不带 `--auto` 时，会对权限请求自动回复 `reject`，不会等待人工输入；这是 CLI 1.19.3 的原生行为，并没有放开工具执行或修改客户端身份。模型仍被要求不用工具，适配器仍拒收任何工具调用事件。参见[官方版本源码的 permission.asked 分支](https://raw.githubusercontent.com/anomalyco/opencode/v1.19.3/packages/opencode/src/cli/cmd/run.ts)。
+`opencode run` 的默认非交互模式不带 `--auto` 时，会对权限请求自动回复 `reject`，不会等待人工输入；这是 CLI 1.19.3 的原生行为，并没有放开工具执行或修改客户端身份。当时模型被要求不用工具，适配器拒收工具调用事件；该限制现已按用户要求移除。参见[官方版本源码的 permission.asked 分支](https://raw.githubusercontent.com/anomalyco/opencode/v1.19.3/packages/opencode/src/cli/cmd/run.ts)。
 
 | 验证 | 结果 | 耗时 | CLI 报告费用 |
 | --- | --- | --- | --- |
@@ -49,8 +61,8 @@
 - 限定免费模型 ID，无其他模型或付费回退。
 - 每天最多 3 次 OpenCode 工作流调用（包括失败和手动调用），按北京时间计日并持久化。使用共享 `model-cli` 互斥和至少 10 秒间隔。
 - 单次超时 600 秒，进程上限 615 秒。工作流不对 OpenCode 自动重试。
-- 使用全局 `ask` 配合非交互自动拒绝；不传 `--auto`、`--pure` 或自定义系统提示。禁用分享与自动升级，保留标准 OpenCode agent；收到工具事件时拒绝入库。
-- 只接收完整单轮 JSON；拒绝错误事件、截断、缺失结束事件、多轮调用、非法 schema 和非零/缺失费用记录。
+- 显式 full 权限：全局和 Build agent 的 allow 配合 `--auto`；固定 `--dir` 和 PWD。禁用分享与自动升级，保留标准 agent。来源范围仍限原证据包，本任务不抓取新来源或修改生产文件。
+- 支持多轮工具执行，仅解析最终 JSON，累计每轮用量；拒绝错误事件、截断、缺失结束事件、非法 schema 和非零/缺失费用记录。
 - 401 / 403 / 429 打开独立 `opencode.blocked.json` 熔断；不影响 agy / Codex 的熔断状态。
 - 保留每次调用的模型、时间、状态、用量、CLI 报告费用、会话 ID；失败保留原始事件，不把失败费用当作零。
 
@@ -72,7 +84,7 @@ bin/news-claw tasks
 
 ## 验证记录
 
-OpenCode 适配的 10 项测试、主题摘要的 21 项测试通过。扩大执行至 92 项测试时，90 项通过；两项原有博客测试失败，在改动前的 HEAD 代码上同样复现：
+本次 OpenCode 适配与主题摘要共 33 项回归测试通过，包含 full 参数、工作目录、工具轮次、最终 JSON、累计用量及证据范围。此前扩大执行至 92 项测试时，90 项通过；两项原有博客测试失败，在当时改动前的 HEAD 代码上同样复现：
 
 - `test_budget_failure_after_approved_revision_resumes_exact_final_review`
 - `test_discovered_page_is_retained_beyond_feed_window_and_not_truncated`

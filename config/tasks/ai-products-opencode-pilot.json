@@ -13,7 +13,7 @@
   ],
   "options": {
     "start_jitter_seconds": 420,
-    "model_permissions": "noninteractive_ask_auto_reject"
+    "model_permissions": "full"
   },
   "execution": {
     "command": [
@@ -37,7 +37,7 @@
       "executable": "/usr/local/bin/opencode",
       "model": "opencode/deepseek-v4.1-flash-free",
       "timeout_seconds": 600,
-      "permissions": "noninteractive-ask-auto-reject",
+      "permissions": "full",
       "max_calls_per_day": 3
     },
     "reviewer": {
@@ -175,7 +175,7 @@
       "state": "standby_to_avoid_duplicate_processing",
       "baseline_task": "ai-products-gemini-summary",
       "historical_failed_run_id": "349dbe9add4fddc390e9dca8c3964974",
-      "configuration_fix": "Native ask permissions with non-interactive auto-rejection; no --auto"
+      "configuration_fix": "Native full permissions (allow) with --auto; completed tool rounds supported"
     }
   }
 }

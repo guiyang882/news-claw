@@ -1,6 +1,6 @@
 # 主题整理与 Codex 校验
 
-2026-10-20 已修复 OpenCode 权限配置兼容问题：AI 产品任务使用 DeepSeek 免费模型，其余主题保持 Gemini，均经 Codex 审核。独立试点配置保持关闭以免重复。详见[验证结果与限制](opencode-topic-pilot.md)。
+2026-10-20 已修复 OpenCode 权限与工作目录配置，实测通过读取、命令、写文件和多轮 JSON：AI 产品任务使用 DeepSeek 免费模型，其余主题保持 Gemini，均经 Codex 审核。独立试点配置保持关闭以免重复。详见[验证结果与限制](opencode-topic-pilot.md)。
 
 Go 调度器运行 `workflows.topic_summary`，执行 **本地证据 → 配置的模型整理 → Codex 校验 → knowledge 入库**。同一执行协议支持这些任务，不增加数据库表或调度器专用分支。
 
@@ -21,7 +21,7 @@ AI 产品的两个槽位现由 DeepSeek 执行；加上原每日博客写稿，G
 模型、执行权限、推理强度、时间与材料预算直接保存在 `config/tasks/*gemini-summary.json`，复制示例为 [topic-summary.json](../config/templates/topic-summary.json)。修改后 `make init` 同步 SQLite，常驻 engine 自动读取。
 
 - `workflow.writer`：`gemini-3.8-flash-high`，agy，900 秒，full 权限。
-- AI 产品例外：`writer_provider: opencode`、`opencode/deepseek-v4.1-flash-free`、600 秒、非交互 `ask` 自动拒绝权限请求；每天最多 3 次（包括失败和手动验证），没有付费回退。
+- AI 产品例外：`writer_provider: opencode`、`opencode/deepseek-v4.1-flash-free`、600 秒、`permissions: full`（原生 allow + `--auto`）；每天最多 3 次（包括失败和手动验证），没有付费回退。
 - `workflow.reviewer`：`gpt-6.1-sol`，medium，`service_tier: default`，420 秒，full 权限。
 - `workflow.inputs`：回看 3 天、最多 16 个归属当前主题的文档、每条最多 1,400 字符；至少两个不同来源 URL。机器人／航天任务还读取明确配置公司的现有研究快照，标注快照日期和证据限制。
 - `workflow.network_policy`：通常每轮两次 CLI 调用；`max_summary_revisions: 1` 允许一次 Codex 内容修订和独立复核，整轮最多四次。CLI／供应方失败无自动重试，不请求新网页；整轮超时 40 分钟。

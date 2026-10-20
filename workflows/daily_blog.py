@@ -318,7 +318,7 @@ class ModelRunner:
         stdin = prompt.encode() if provider == "codex" else b""
         if provider == "opencode":
             from . import opencode_writer
-            command, environment, stdin = opencode_writer.invocation(settings, prompt, read_json(schema))
+            command, environment, stdin = opencode_writer.invocation(settings, prompt, read_json(schema), directory=directory)
         elif provider == "agy":
             if len(prompt.encode()) > 120_000:
                 raise ValueError("Writer input is too large; reduce the configured document/text limits")

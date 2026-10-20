@@ -27,7 +27,7 @@ class OpenCodeWriterTests(unittest.TestCase):
         self.config = {"workflow": {
             "writer_provider": "opencode",
             "writer": {"executable": "opencode", "model": writer.FREE_MODEL,
-                       "timeout_seconds": 10, "max_calls_per_day": 3},
+                       "timeout_seconds": 10, "max_calls_per_day": 3, "permissions": "full"},
             "reviewer": {"executable": "codex", "model": "review-model", "service_tier": "default",
                          "timeout_seconds": 10},
             "min_model_interval_seconds": 0,
@@ -53,8 +53,10 @@ class OpenCodeWriterTests(unittest.TestCase):
         command = process.call_args.args[0]
         self.assertNotIn("--pure", command)
         self.assertEqual(command[command.index("--model") + 1], writer.FREE_MODEL)
-        self.assertEqual(process.call_args.kwargs["env"]["OPENCODE_PERMISSION"], '{"*":"ask"}')
-        self.assertNotIn("--auto", command)
+        self.assertEqual(process.call_args.kwargs["env"]["OPENCODE_PERMISSION"], '{"*":"allow"}')
+        self.assertIn("--auto", command)
+        self.assertEqual(command[command.index("--dir") + 1], str(self.root / "stage"))
+        self.assertEqual(process.call_args.kwargs["env"]["PWD"], str(self.root / "stage"))
         self.assertNotIn("--dangerously-skip-permissions", command)
 
     def test_incomplete_truncated_non_json_or_multiple_turns_rejected(self):
@@ -64,9 +66,35 @@ class OpenCodeWriterTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     writer.parse_events(raw, {})
 
-    def test_tool_actions_rejected(self):
-        with self.assertRaisesRegex(ValueError, "tool action"):
-            writer.parse_events('{"type":"tool_use","part":{"type":"tool"}}', {})
+    def test_tool_rounds_parse_final_json_and_sum_usage(self):
+        tool = json.dumps({"type": "tool_use", "sessionID": "test", "part": {
+            "type": "tool", "tool": "bash", "state": {"status": "completed"}}})
+        first = events(text="I will inspect the file.", reason="tool-calls").splitlines()
+        first.insert(2, tool)
+        raw = "\n".join(first) + "\n" + events()
+        call = {}
+        self.assertEqual(writer.parse_events(raw, call), {"ok": True})
+        self.assertEqual(call["usage"], {"input": 24, "output": 8})
+        self.assertEqual(call["model_steps"], 2)
+        self.assertEqual(call["tool_calls"], [{"tool": "bash", "status": "completed"}])
+        self.assertEqual(writer.parse_events(raw.replace('"completed"', '"error"'), {}), {"ok": True})
+        for status in ("running", "pending"):
+            with self.assertRaisesRegex(ValueError, "tool action incomplete"):
+                writer.parse_events(raw.replace('"completed"', json.dumps(status)), {})
+        with self.assertRaises(PermissionError):
+            writer.parse_events(raw.replace('"cost": 0', '"cost": 0.1', 1), {})
+        with self.assertRaises(ValueError):
+            writer.parse_events("\n".join(first), {})
+
+    def test_permissions_are_explicit_and_native(self):
+        settings = self.config["workflow"]["writer"]
+        command, env, _ = writer.invocation(settings, "test", {}, directory=self.root)
+        config = json.loads(env["OPENCODE_CONFIG_CONTENT"])
+        self.assertEqual(config["permission"], {"*": "allow"})
+        self.assertEqual(config["agent"]["build"]["permission"], {"*": "allow"})
+        for permission in (None, "ask", "deny", "ful"):
+            with self.assertRaisesRegex(ValueError, "explicit full"):
+                writer.invocation({**settings, "permissions": permission}, "test", {}, directory=self.root)
 
     def test_denial_even_with_exit_zero_opens_circuit(self):
         for code in (401, 403, 429):
@@ -87,7 +115,7 @@ class OpenCodeWriterTests(unittest.TestCase):
             writer.parse_events(events(cost=0.1), {})
         settings = {**self.config["workflow"]["writer"], "model": "opencode/deepseek-v4.1-flash"}
         with self.assertRaises(ValueError):
-            writer.invocation(settings, "test", {})
+            writer.invocation(settings, "test", {}, directory=self.root)
 
     def test_schema_failure_is_not_accepted_or_retried(self):
         with self.assertRaises(ValueError):
