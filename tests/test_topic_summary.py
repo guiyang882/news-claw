@@ -293,6 +293,7 @@ class TopicSummaryTests(unittest.TestCase):
         self.assertTrue(all(item["source_ids"] == [sid] for item in selected["evidence"]))
 
     def test_provider_denial_remains_shared_with_daily_blog(self):
+        self.config["workflow"]["writer_provider"] = "agy"
         runner = blog.ModelRunner(self.config, self.root)
         blog.atomic_json(self.root / "data/runs/blog-provider-policy/agy.blocked.json", {"reason": "quota denial"})
         with patch.object(blog.subprocess, "Popen", side_effect=AssertionError("must not invoke")):
@@ -317,6 +318,9 @@ class TopicSummaryTests(unittest.TestCase):
             runner("review", "offline", schema, self.directory)
 
     def test_agy_uses_full_permissions_and_records_reported_usage(self):
+        self.config["workflow"]["writer_provider"] = "agy"
+        self.config["workflow"]["writer"] = {
+            "executable": "agy", "model": "gemini-3.8-flash-high", "timeout_seconds": 900}
         schema = self.root / "schema.json"
         blog.atomic_json(schema, {"type": "object", "properties": {}, "required": []})
         runner = blog.ModelRunner(self.config, self.root)

@@ -1,5 +1,7 @@
 # Gemini 主题整理与 Codex 校验
 
+OpenCode DeepSeek 的独立试点配置已登记但默认关闭；2026-10-20 的真实摘要调用返回 403，原 AI 产品任务已恢复 Gemini。详见[试点结果与限制](opencode-topic-pilot.md)。
+
 Go 调度器运行 `workflows.topic_summary`，执行 **本地证据 → Gemini 整理 → Codex 校验 → knowledge 入库**。同一执行协议支持这些任务，不增加数据库表或调度器专用分支。
 
 ## 启用的任务

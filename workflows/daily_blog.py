@@ -275,7 +275,8 @@ class ModelRunner:
     def __call__(self, stage, prompt, schema, directory):
         policy = self.settings.get("transient_retry", {})
         # Opt-in AGY retry only; every attempt still consumes the shared run budget.
-        retry_limit = min(1, max(0, int(policy.get("max_retries", 0)))) if stage == "draft" else 0
+        retry_limit = (min(1, max(0, int(policy.get("max_retries", 0))))
+                       if stage == "draft" and self.settings.get("writer_provider", "agy") == "agy" else 0)
         retryable = {"provider_internal_error", "provider_stream_interrupted",
                      "provider_reported_timeout", "local_process_timeout"}
         for attempt in range(retry_limit + 1):
@@ -300,8 +301,10 @@ class ModelRunner:
         limit = limits.get("max_cli_invocations_per_run", limits.get("max_cli_invocations_per_day", 0))
         if len(self.calls) >= limit:
             raise ValueError("Model invocation limit reached")
-        provider = "agy" if stage == "draft" and self.settings.get("writer_provider", "agy") == "agy" else "codex"
-        settings = self.settings["writer" if provider == "agy" else "planner" if stage == "plan" else "reviewer"]
+        provider = self.settings.get("writer_provider", "agy") if stage == "draft" else "codex"
+        if provider not in {"agy", "codex", "opencode"}:
+            raise ValueError("Unsupported writer provider")
+        settings = self.settings["writer" if provider in {"agy", "opencode"} else "planner" if stage == "plan" else "reviewer"]
         policy = self.root / "data/runs/blog-provider-policy"
         blocked = policy / (provider + ".blocked.json")
         if blocked.exists():
@@ -311,7 +314,12 @@ class ModelRunner:
         directory.mkdir(parents=True, exist_ok=True)
         atomic_bytes(directory / "prompt.txt", prompt.encode())
         timeout = self.settings.get("stage_timeout_seconds", {}).get(stage, settings["timeout_seconds"])
-        if provider == "agy":
+        environment = None
+        stdin = prompt.encode() if provider == "codex" else b""
+        if provider == "opencode":
+            from . import opencode_writer
+            command, environment, stdin = opencode_writer.invocation(settings, prompt, read_json(schema))
+        elif provider == "agy":
             if len(prompt.encode()) > 120_000:
                 raise ValueError("Writer input is too large; reduce the configured document/text limits")
             command = [settings["executable"], "--model", settings["model"],
@@ -347,18 +355,20 @@ class ModelRunner:
         with locked(policy / (provider + ".lock")), stdout.open("wb") as out, stderr.open("wb") as err:
             if blocked.exists():
                 raise PermissionError(f"{provider} provider circuit is open")
+            if provider == "opencode":
+                opencode_writer.reserve(settings, policy, sys.modules[__name__])
             call = None
             envelope = {}
             started_monotonic = time.monotonic()
             try:
                 _model_process = subprocess.Popen(command, cwd=directory, stdin=subprocess.PIPE,
-                    stdout=out, stderr=err, start_new_session=True, pass_fds=inherited)
+                    stdout=out, stderr=err, start_new_session=True, pass_fds=inherited, env=environment)
                 call = {"stage": stage, "provider": provider, "model": settings["model"],
                         "started_at": now(), "status": "started", "timeout_seconds": timeout, "process_timeout_seconds": timeout + 15}
                 self.calls.append(call)
                 atomic_json(directory / "call.json", call)
                 try:
-                    _model_process.communicate(input=prompt.encode() if provider == "codex" else b"", timeout=timeout + 15)
+                    _model_process.communicate(input=stdin, timeout=timeout + 15)
                 except subprocess.TimeoutExpired:
                     call["failure_kind"] = "local_process_timeout"
                     # Do not copy argv (which contains the full prompt) into tracked SQLite errors.
@@ -368,6 +378,13 @@ class ModelRunner:
                 if DENIAL.search(diagnostics) or (code and DENIAL.search(stdout.read_text(errors="replace")[-16_000:])):
                     atomic_json(blocked, {"provider": provider, "stage": stage, "blocked_at": now(), "reason": "provider access or quota denial"})
                     raise PermissionError(f"{provider} provider denied access; circuit opened")
+                if provider == "opencode":
+                    try:
+                        result = opencode_writer.parse_events(stdout.read_text(), call)
+                    except PermissionError:
+                        atomic_json(blocked, {"provider": provider, "stage": stage, "blocked_at": now(),
+                                              "reason": "provider access, quota or free-cost policy denial"})
+                        raise
                 if code:
                     raise RuntimeError(f"{provider} exited with status {code}; see private run logs")
                 if provider == "agy":
@@ -381,7 +398,7 @@ class ModelRunner:
                             raise ValueError("agy output was truncated by its token limit; no partial summary accepted")
                         raise ValueError("agy did not return a successful structured response")
                     result = envelope["structured_output"]
-                else:
+                elif provider == "codex":
                     for line in stdout.read_text().splitlines():
                         event = json.loads(line)
                         if event.get("type") in {"error", "turn.failed"}:
@@ -1180,7 +1197,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task", default=os.environ.get("NEWS_CLAW_TASK_ID", "daily-blog-agy-codex"))
     parser.add_argument("--check", action="store_true", help="Inspect local evidence and configuration without calling models")
-    parser.add_argument("--reset-provider", choices=("agy", "codex"))
+    parser.add_argument("--reset-provider", choices=("agy", "codex", "opencode"))
     args = parser.parse_args()
     root = Path(os.environ.get("NEWS_CLAW_ROOT", ROOT)).resolve()
     if args.reset_provider:

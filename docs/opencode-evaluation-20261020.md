@@ -2,6 +2,8 @@
 
 **Latest result:** standard OpenCode 1.19.3 interactive and non-interactive invocations on Singapore both successfully returned `OK` with `opencode/deepseek-v4.1-flash-free` and reported cost 0. Earlier isolated probe failures below remain historical evidence, not the current availability conclusion. See the final follow-up for commands and scope.
 
+**Production-workflow follow-up:** the later 18:17 China-time AI-products summary pilot (16 cached sources, text-only permissions and JSON contract) returned 403 / FreeTierError in 5.105 seconds. The original agy task was restored; the separate OpenCode pilot is registered but disabled with its circuit retained. Minimal CLI connectivity remains verified; actual summary quality and sustained stability are not. See [pilot results and controls](opencode-topic-pilot.md).
+
 ## Installation and scope
 
 Installed the official npm package `opencode-ai@1.19.3` on the Singapore ECS under `/opt/opencode/1.19.3`; `/usr/local/bin/opencode` points to its CLI. `opencode --version` reports `1.19.3`. No existing OpenCode command was present. No web or news-claw service restart, task schedule change, credential migration or paid-provider setup was performed.
