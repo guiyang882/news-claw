@@ -1,5 +1,6 @@
 """Extract and independently review dated dependencies using cached official text only."""
 import argparse
+from copy import deepcopy
 from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
@@ -16,7 +17,7 @@ from workflows import daily_blog as models
 
 REPO = Path('/mnt/quant/strategies/stocks-quant')
 sys.path.insert(0, str(REPO))
-from web.company_dependencies import COMPANIES, validate
+from web.company_dependencies import COMPANIES, MAX_RELATIONSHIPS_PER_COMPANY, validate
 
 
 def digest(value):
@@ -83,6 +84,29 @@ def bind(rows, documents, today):
     return result
 
 
+def merge_reviewed(snapshot, bound, today):
+    """Preserve all prior evidence; a full company cannot block its peers' updates."""
+    merged = deepcopy(validate(snapshot))
+    published, deferred = 0, []
+    for company, row in bound:
+        current = merged['companies'][company]
+        same = [r for r in current['relationships'] if r['direction'] == row['direction']
+                and r['entity']['en'].casefold() == row['entity']['en'].casefold()]
+        newest = max((e['date'] for r in same for e in r['evidence']), default='')
+        if newest > max(e['date'] for e in row['evidence']):
+            continue
+        retained = [r for r in current['relationships'] if not (
+            r['kind'] == row['kind'] and r['direction'] == row['direction']
+            and r['entity']['en'].casefold() == row['entity']['en'].casefold())]
+        if len(retained) >= MAX_RELATIONSHIPS_PER_COMPANY:
+            deferred.append({'company': company, 'relationship': row, 'reason': 'company_capacity'})
+            continue
+        current['relationships'] = [*retained, row]
+        current['reviewed_on'] = max(current['reviewed_on'], today)
+        published += 1
+    return validate(merged), published, deferred
+
+
 def run(config, root, db, directory, execute=False, runner=None):
     documents = cached_documents(config, root, db)
     if not execute:
@@ -121,29 +145,21 @@ def run(config, root, db, directory, execute=False, runner=None):
             'Echo both hashes exactly; approved=false for any error.\n' + json.dumps(review_input, ensure_ascii=False),
             root/'config/schemas/dependencies-review.schema.json', directory/'02-review')
         models.atomic_json(directory/'review-packet.json', review_input)
-        if review['source_sha256'] != digest(documents) or review['candidate_sha256'] != digest(raw) or not review['approved']:
+        if (review['source_sha256'] != digest(documents) or review['candidate_sha256'] != digest(raw)
+                or review['approved'] is not True or review.get('issues') != []):
             raise ValueError('Dependency review rejected; published snapshot preserved')
-        published = 0
-        for company, row in bound:
-            current = old['companies'][company]
-            # Never regress a newer disclosure, including supplier-to-internal acquisitions.
-            same = [r for r in current['relationships'] if r['direction'] == row['direction'] and r['entity']['en'].casefold() == row['entity']['en'].casefold()]
-            newest = max((e['date'] for r in same for e in r['evidence']), default='')
-            if newest > max(e['date'] for e in row['evidence']):
-                continue
-            published += 1
-            # Same counterparty/type/direction replaces its prior evidence, never duplicates it.
-            current['relationships'] = [r for r in current['relationships'] if not (
-                r['kind'] == row['kind'] and r['direction'] == row['direction'] and r['entity']['en'].casefold() == row['entity']['en'].casefold())]
-            current['relationships'].append(row)
-            current['reviewed_on'] = today
-        validate(old)
+        old, published, deferred = merge_reviewed(old, bound, today)
+        if deferred:
+            models.atomic_json(directory/'deferred-relationships.json', {'source_sha256': digest(documents),
+                'candidate_sha256': digest(raw), 'relationships': deferred})
         if published:
             owner = pwd.getpwnam('quant-web')
             models.atomic_json(output, old, site_owner=(owner.pw_uid, owner.pw_gid))
         models.atomic_json(directory/'publication.json', {'source_sha256': digest(documents), 'snapshot_sha256': digest(old), 'relationships': published})
-        return {'success': True, 'business_status': 'published' if published else 'no_newer_supported_relationships',
-                'items_new': published, 'source_requests': 0, 'model_calls': runner.calls}
+        return {'success': not deferred, 'business_status': 'capacity_needs_review' if deferred else
+                'published' if published else 'no_newer_supported_relationships',
+                'items_new': published, 'deferred_count': len(deferred), 'needs_attention': bool(deferred),
+                'source_requests': 0, 'model_calls': runner.calls}
 
 
 def main():
