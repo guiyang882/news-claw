@@ -4,6 +4,32 @@ import math
 import re
 
 
+def reading_options(policy):
+    """Only explicitly configured formats may be selected by the planner."""
+    options = policy.get('formats') or [{
+        'target_minutes': policy['target_minutes'], 'tolerance_minutes': policy['tolerance_minutes']}]
+    seen = set()
+    for option in options:
+        target, tolerance = option['target_minutes'], option['tolerance_minutes']
+        if (type(target) is not int or type(tolerance) is not int
+                or not 1 <= target <= 60 or not 0 <= tolerance < target
+                or target in seen):
+            raise ValueError('Invalid or duplicate reading format')
+        seen.add(target)
+    if policy['target_minutes'] not in seen:
+        raise ValueError('Default reading target is not an allowed format')
+    return [{**policy, 'target_minutes': option['target_minutes'],
+             'tolerance_minutes': option['tolerance_minutes']} for option in options]
+
+
+def reading_for_plan(settings, plan):
+    target = plan['outline']['target_reading_minutes']
+    for option in reading_options(settings['reading']):
+        if type(target) is int and target == option['target_minutes']:
+            return option
+    raise ValueError('Outline does not target an allowed reading format')
+
+
 def reading_metrics(body, language, policy):
     """Exclude URLs and code; count Han characters/words or English words."""
     text = re.sub(r"```.*?```", "", body, flags=re.S)
@@ -83,8 +109,7 @@ def validate_plan(plan, packet, settings, *, packet_sha256):
     if not any(sources[sid]["evidence_level"] in {"cached_webpage", "existing_research_snapshot"} for sid in chosen_ids):
         raise ValueError("Headline-only evidence cannot support a long-form article")
     outline = plan["outline"]
-    if outline["target_reading_minutes"] != settings["reading"]["target_minutes"]:
-        raise ValueError("Outline does not target the configured reading time")
+    reading = reading_for_plan(settings, plan)
     for field in ("title_zh", "title_en", "central_question", "working_thesis", "scope", "reader_takeaway"):
         if not outline[field].strip():
             raise ValueError("Editorial outline is incomplete")
@@ -109,7 +134,7 @@ def validate_plan(plan, packet, settings, *, packet_sha256):
                     reference["source_id"] in item["source_ids"] and reference["locator"] == item["locator"]
                     for item in packet["evidence"]):
                 raise ValueError("Outline evidence locator does not exist in the source packet")
-    lengths = length_requirements(settings["reading"])
+    lengths = length_requirements(reading)
     for language, field in (("zh", "zh_units_budget"), ("en", "en_words_budget")):
         if any(section[field] <= 0 for section in sections):
             raise ValueError("Outline section lacks a length budget")

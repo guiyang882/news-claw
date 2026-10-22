@@ -1,7 +1,7 @@
 {
   "id": "daily-blog-agy-codex",
   "name": "每日研究博客：Gemini写稿、Codex复核与发布",
-  "description": "每日07:30写作，09:30仅补启动尚未进入模型的任务；先检查当日正文采集及材料供给，独立复核后每日最多发布一篇。",
+  "description": "每日07:30写作，09:30补启动；按证据深度选择约20分钟长文或8–12分钟双语研究短文，独立复核后每日最多发布一篇。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
@@ -119,7 +119,11 @@
       "target_minutes": 20,
       "tolerance_minutes": 3,
       "zh_units_per_minute": 300,
-      "en_words_per_minute": 200
+      "en_words_per_minute": 200,
+      "formats": [
+        {"target_minutes": 20, "tolerance_minutes": 3},
+        {"target_minutes": 10, "tolerance_minutes": 2}
+      ]
     },
     "stage_timeout_seconds": {
       "revise": 900,

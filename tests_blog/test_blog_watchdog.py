@@ -32,6 +32,7 @@ class WatchdogTests(unittest.TestCase):
         self.task = {'workflow': {'delivery_surfaces': {'enabled': True}, 'max_recoveries_per_day': 2,
                                  'cooldown_seconds': 3600, 'max_total_model_calls_per_day': 16}}
         self.writer = {'timezone': 'Asia/Shanghai', 'execution': {'timeout_seconds': 4500}, 'workflow': {
+            'reading': {'target_minutes': 20, 'tolerance_minutes': 3},
             'network_policy': {'max_cli_invocations_per_day': 10}, 'max_draft_revisions': 1}}
         self.missing = {'business_status': 'daily_publication_missing', 'attempt': None,
                         'readiness': {'success': True}}
@@ -57,7 +58,7 @@ class WatchdogTests(unittest.TestCase):
         self.write(self.saved / 'result.json', {'error': error})
         self.write(self.saved / '01-agy-draft/response.json', {'status': 'ready', 'article': {'tags': ['test']}})
         self.write(self.saved / 'source-packet.json', {'day': '2026-10-16', 'sources': [], 'evidence': []})
-        self.write(self.saved / 'blog-outline.json', {'plan': 'saved'})
+        self.write(self.saved / 'blog-outline.json', {'outline': {'target_reading_minutes': 20}})
         self.write(self.saved / '02-codex-review/response.json', {'approved': False, 'issues': ['Fix maturity language']})
         self.missing['attempt'] = {'status': 'failed', 'run_id': PRIOR}
 

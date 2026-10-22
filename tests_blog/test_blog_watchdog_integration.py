@@ -33,13 +33,16 @@ class WatchdogIntegrationTests(unittest.TestCase):
             runner('draft', 'Offline fixture', schema, fixture.directory)
             self.assertEqual(runner.calls[0]['provider'], 'codex')
 
-    def run_recovery(self, reject=False, locator_failure=False, short_humanize=False, reject_repair=False, reject_once=False):
+    def run_recovery(self, reject=False, locator_failure=False, short_humanize=False, reject_repair=False, reject_once=False, brief=False):
         fixture = fixtures.DailyBlogTests()
         # Reuse the installed fixture's read-only DB backup and schema/media config.
         # All article, run and database writes are in fixture.root, a TemporaryDirectory.
         with patch.object(watch.blog, 'ROOT', Path('/mnt/quant/news-claw')):
             fixture.setUp()
         self.addCleanup(fixture.doCleanups)
+        if brief:
+            from tests_blog.test_flexible_reading import enable_brief
+            enable_brief(fixture)
         saved, _ = fixture.recovery_fixture()
         if locator_failure:
             watch.blog.atomic_json(saved / 'result.json', {
@@ -71,6 +74,8 @@ class WatchdogIntegrationTests(unittest.TestCase):
                 fixture.assertEqual(self.settings['reviewer']['permissions'], 'read-only')
 
             def __call__(self, stage, prompt, schema, directory):
+                if brief and stage == 'watchdog_repair':
+                    fixture.assertIn('Target about 10 minutes per language', prompt)
                 if len(self.calls) >= self.settings['network_policy']['max_cli_invocations_per_day']:
                     raise ValueError('Model invocation limit reached')
                 calls.append(stage)
@@ -111,6 +116,11 @@ class WatchdogIntegrationTests(unittest.TestCase):
                 self.assertEqual(calls, expected)
                 self.assertEqual(len(result['recovery']['model_calls']), 4 + len(expected))
                 self.assertEqual(len(fixtures.load_runtime_articles(fixture.site)), 1)
+                if brief:
+                    import re
+                    article = fixtures.load_runtime_articles(fixture.site)[0]
+                    for label in (article['reading_time'], article['en']['reading_time']):
+                        self.assertTrue(8 <= int(re.search(r'\d+', label).group()) <= 12, label)
                 proof = next((fixture.site / 'automation-reviews').glob('*.json'))
                 self.assertTrue(watch.blog.read_json(proof)['final_review']['approved'])
                 invoke()
@@ -119,6 +129,12 @@ class WatchdogIntegrationTests(unittest.TestCase):
 
     def test_full_recovery_publishes_bilingual_content_once(self):
         self.run_recovery()
+
+    def test_brief_checkpoint_keeps_selected_length_during_watchdog_recovery(self):
+        self.run_recovery(brief=True)
+
+    def test_brief_humanizer_repair_keeps_format_and_gets_fresh_fact_review(self):
+        self.run_recovery(brief=True, short_humanize=True)
 
     def test_rejected_independent_review_cannot_publish(self):
         self.run_recovery(reject=True)

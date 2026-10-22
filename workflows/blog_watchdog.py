@@ -228,6 +228,7 @@ def supervise(task, writer, root, db, directory, *, execute=False, now=None,
     else:
         packet = blog.read_json(saved / 'source-packet.json')
         plan = blog.read_json(saved / 'blog-outline.json')
+        workflow['reading'] = blog.editorial.reading_for_plan(workflow, plan)
         schema = blog.draft_schema(plan, directory / 'recovery-draft.schema.json', packet=packet)
         prompt = ('Repair this saved bilingual blog using only the supplied selected-topic evidence. '
                   'Do not use tools, fetch sources, change code or configuration, or publish. '

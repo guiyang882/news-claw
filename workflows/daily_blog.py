@@ -502,7 +502,8 @@ def build_draft(result, packet, config, day, *, plan, humanized=False, compariso
         if not any(check["source_id"] in item["source_ids"] and check["locator"] == item["locator"] for item in packet["evidence"]):
             raise ValueError("Fact check locator does not exist in the evidence packet")
     reading = {}
-    lengths = editorial.length_requirements(config["workflow"]["reading"])
+    reading_policy = editorial.reading_for_plan(config['workflow'], plan)
+    lengths = editorial.length_requirements(reading_policy)
     for language in ("zh", "en"):
         item = article[language]
         if not 1 <= len(item["keywords"]) <= 12 or any(not 1 <= len(word.strip()) <= 60 for word in item["keywords"]):
@@ -517,7 +518,7 @@ def build_draft(result, packet, config, day, *, plan, humanized=False, compariso
         item["body_markdown"] = body
         if len(body) > 90_000 or len(re.findall(r"(?m)^##\s+", body)) < config["workflow"]["planning"]["min_sections"]:
             raise ValueError("Article is too short or lacks sections")
-        reading[language] = editorial.reading_metrics(body, language, config["workflow"]["reading"])
+        reading[language] = editorial.reading_metrics(body, language, reading_policy)
         if not comparison_baseline and not lengths[language]["minimum"] <= reading[language]["units"] <= lengths[language]["maximum"]:
             raise ReadingLengthError(
                 f"{language} article does not meet the approximate reading time target: "
@@ -710,23 +711,34 @@ def record_publication(root, db, result, draft, packet):
 
 
 def planning_prompt(packet, history, settings, skill):
+    formats = [{'target_minutes': policy['target_minutes'],
+                'minimum_minutes': policy['target_minutes'] - policy['tolerance_minutes'],
+                'maximum_minutes': policy['target_minutes'] + policy['tolerance_minutes'],
+                'length_requirements': editorial.length_requirements(policy)}
+               for policy in editorial.reading_options(settings['reading'])]
     return ("你是研究博客的选题编辑。只使用输入的本地证据，不使用任何工具、读文件、联网或发布。"
             f"先提出最多{settings['planning']['max_candidates']}个问题不同的候选题，说明各自的读者价值、时效、已有来源和证据缺口，再选择最值得写的一题。"
             "优先证据深度、明确的读者问题、可解释的机制和近期文章没有展开过的角度。资料不足可以少提出候选；"
-            "不能仅凭新闻标题支撑长文，不为每日数量或篇幅拼凑题目。选不出可支持的长文时返回 insufficient_evidence。"
+            "不能仅凭新闻标题支撑文章，不为每日数量或篇幅拼凑题目。"
+            "从输入reading_formats中按证据深度选择篇幅：材料足够支撑深入长文时选长文；"
+            "若只能支撑范围明确但完整的研究短文，应选择获准的短文格式，不能仅因不足20分钟而停稿。"
+            "短文仍必须有两个实质相关来源、具体证据、机制、反论证、未决问题和适合的图表；"
+            "同一发布者的多个页面不等于独立验证。连短文都无法得到证据支持时才返回 insufficient_evidence。"
             "evidence_refs中的locator必须逐字复制资料包中的locator，不能添加段落说明或text注释；说明放argument或boundaries。"
             "选中题目必须至少有两个不同来源URL，使用source_id和精确的evidence locator做逐章引用。"
             "大纲必须依次展开读者利害与核心问题、证据或案例、机制分析、最强反论证与证伪条件、判断的影响和未决问题。"
             "各章给出具体论点、证据边界、中英标题和两种语言的篇幅预算。所有章节必须能追溯到所选来源；"
             "机制、假设和场景均标明条件，不能把缺少原文的历史快照或RSS标题说成刚核实的事实。"
             "reviewed_topic_summaries仅供选题参考，不能把模型整理结果当成原始来源；所有论点仍须引用packet中的原始证据。"
-            f"目标是每种语言约{settings['reading']['target_minutes']}分钟的实质阅读，不是通过重复、空泛背景或反复重述凑篇幅。"
-            "遵守下列research-blog-editor skill以及输入的reading和planning配置，只返回规定JSON。"
+            "outline.target_reading_minutes必须是选定格式的target_minutes，两种语言选择同一格式；"
+            "各章篇幅预算使用该格式的length_requirements，不是通过重复、空泛背景或反复重述凑篇幅。"
+            "输入reading_formats是用户批准的篇幅政策，优先于skill中的通用长文建议；"
+            "其余research-blog-editor质量标准以及planning配置仍须遵守，只返回规定JSON。"
             "规划适合本题的对照表与概念关系图，避免装饰性或暗示未证实事件顺序的图表。"
             "packet_sha256必须照抄。\nEDITORIAL_SKILL\n" + skill + "\nINPUT_DATA_JSON\n" +
             json.dumps({"packet": packet, "packet_sha256": digest(packet), "recent_articles": history,
                         "planning": settings["planning"], "reading": settings["reading"],
-                        "length_requirements": editorial.length_requirements(settings["reading"])}, ensure_ascii=False))
+                        "reading_formats": formats}, ensure_ascii=False))
 
 
 def length_prompt(settings):
@@ -750,7 +762,7 @@ def prepare_draft(generated, packet, config, day, plan, runner, directory, repai
     except ArticleFormatError as error:
         if repair_budget["remaining"] <= 0:
             raise
-        settings = config["workflow"]
+        settings = {**config['workflow'], 'reading': editorial.reading_for_plan(config['workflow'], plan)}
         required = editorial.length_requirements(settings["reading"])
         metrics = {language: {**editorial.reading_metrics(generated["article"][language]["body_markdown"],
                                                        language, settings["reading"]), **required[language]}
@@ -930,6 +942,9 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         packet = read_json(saved / "source-packet.json")
         plan = (editorial.canonicalize_locators(read_json(saved / "00-codex-plan/response.json"), packet)
                 if plan_repair else read_json(saved / "blog-outline.json"))
+        config = deepcopy(config)
+        settings = config['workflow']
+        settings['reading'] = editorial.reading_for_plan(settings, plan)
         if packet["day"] != day.isoformat():
             raise ValueError("Recovery publication day does not match the saved packet")
         editorial.validate_plan(plan, packet, settings, packet_sha256=digest(packet))
@@ -1036,6 +1051,9 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(), "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
                 return missing_publication(day, stage="planning", reason=plan["reason"],
                                            candidate_topics_path=str(directory / "topic-candidates.json"))
+            config = deepcopy(config)
+            settings = config['workflow']
+            settings['reading'] = editorial.reading_for_plan(settings, plan)
             atomic_json(directory / "blog-outline.json", plan)
             atomic_bytes(directory / "blog-outline.md", editorial.render_outline(plan, packet).encode())
             scoped_packet = selected_packet(packet, plan)
