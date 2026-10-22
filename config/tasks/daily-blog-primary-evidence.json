@@ -1,11 +1,11 @@
 {
   "id": "daily-blog-primary-evidence",
   "name": "研究博客：官方新文章正文缓存",
-  "description": "每日选题前，从已缓存官方RSS发现最多6篇新正文；白名单、去重、保留来源日期、robots和限流，不递归抓取。",
+  "description": "每日06:55准备官方正文；当天尚未发布时，12:55和18:55限量补采。每次最多6篇，缓存去重、robots和限流保持不变，不递归抓取。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
   "enabled": true,
-  "schedule": "55 6 * * *",
+  "schedule": "55 6,12,18 * * *",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
   "topic_ids": [
@@ -72,6 +72,8 @@
     "lock_group": "web-fetch"
   },
   "workflow": {
+    "skip_when_blog_published": true,
+    "website_state": "/mnt/quant-state/quant-web/blog",
     "website_repo": "/mnt/quant/strategies/stocks-quant",
     "website_runtime": {
       "stack": "nginx-nextjs-python",

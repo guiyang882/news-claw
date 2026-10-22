@@ -95,12 +95,14 @@ def saved_draft(saved):
 
 def review_issues(saved):
     for stage in ('04c-codex-final-re-review', '04-codex-final-review',
+                  '03c-repair-fact-review',
                   '02c-codex-re-review', '02-codex-review'):
         path = saved / stage / 'response.json'
         if path.is_file():
             verdict = blog.read_json(path)
-            if not verdict.get('approved'):
-                return verdict.get('issues', [])
+            # A passed newer review supersedes old rejected drafts. Include the
+            # post-humanizer fact check, or recovery misses the actual failure.
+            return verdict.get('issues', []) if not verdict.get('approved') else []
     return []
 
 

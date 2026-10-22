@@ -142,7 +142,7 @@ class DailyBlogTests(unittest.TestCase):
             self.assertEqual(payload["editorial_plan"]["selected_candidate_id"], "candidate-0")
             if stage == "repair_length":
                 self.assertIn("measured_lengths", payload)
-                self.assertLess(payload["measured_lengths"]["en"]["units"], payload["measured_lengths"]["en"]["minimum"])
+                self.assertIn("validation_error", payload)
             value = self.draft()
         elif stage == "humanize":
             self.assertIn("HUMANIZER_SKILL", prompt)
@@ -568,6 +568,44 @@ class DailyBlogTests(unittest.TestCase):
             body_markdown="".join(f"## Section {i}\nShort text.\n" for i in range(6)))
         self.assertEqual(self.run_blog()["business_status"], "published")
         self.assertEqual(self.calls, ["plan", "draft", "repair_length", "review", "humanize", "final_review"])
+
+    def test_metadata_overflow_is_repaired_before_factual_review(self):
+        self.responses['draft'] = lambda value: value['article']['en'].update(summary='x' * 1201)
+        self.assertEqual(self.run_blog()['business_status'], 'published')
+        self.assertEqual(self.calls, ['plan', 'draft', 'repair_length', 'review', 'humanize', 'final_review'])
+        self.assertEqual(self.payloads['repair_length']['validation_error'], 'Article metadata exceeds website limits')
+        original = blog.read_json(self.directory / 'original-draft.json')
+        self.assertLessEqual(len(original['article']['en']['summary']), 1200)
+
+    def test_humanizer_metadata_overflow_requires_fresh_fact_and_final_review(self):
+        self.responses['humanize'] = lambda value: value['article']['en'].update(home_note='x' * 601)
+        self.assertEqual(self.run_blog()['business_status'], 'published')
+        self.assertEqual(self.calls, ['plan', 'draft', 'review', 'humanize',
+                                     'humanize_length_repair', 'review_humanize_repair', 'final_review'])
+
+    def test_metadata_repair_cannot_publish_unsupported_changes(self):
+        self.responses['humanize'] = lambda value: value['article']['en'].update(summary='x' * 1201)
+        self.responses['review_humanize_repair'] = lambda value: value.update(approved=False, issues=['Unsupported revised claim'])
+        with self.assertRaisesRegex(ValueError, 'Codex rejected'):
+            self.run_blog()
+        self.assertFalse((self.site / 'manifest.json').exists())
+
+    def test_metadata_repair_does_not_loop_or_silently_truncate(self):
+        overflow = lambda value: value['article']['en'].update(summary='x' * 1201)
+        self.responses.update(draft=overflow, repair_length=overflow)
+        with self.assertRaisesRegex(ValueError, 'metadata exceeds'):
+            self.run_blog()
+        self.assertEqual(self.calls, ['plan', 'draft', 'repair_length'])
+        self.assertFalse((self.site / 'manifest.json').exists())
+
+    def test_humanizer_repair_needing_evidence_waits_for_new_sources(self):
+        self.responses['humanize'] = lambda value: value['article']['en'].update(summary='x' * 1201)
+        self.responses['humanize_length_repair'] = lambda value: value.update(status='insufficient_evidence', reason='No supported expansion')
+        result = self.run_blog()
+        self.assertEqual(result['business_status'], 'insufficient_evidence')
+        marker = blog.read_json(self.root / 'data/runs/daily-blog-days' / (DAY.isoformat() + '.json'))
+        self.assertEqual(marker['status'], 'insufficient_evidence')
+        self.assertFalse((self.site / 'manifest.json').exists())
 
     def test_length_repair_is_bounded_and_cannot_change_evidence(self):
         shorten = lambda value: value["article"]["en"].update(

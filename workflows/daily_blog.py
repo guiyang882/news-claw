@@ -467,7 +467,11 @@ class ModelRunner:
                 self.previous_finished = time.monotonic()
 
 
-class ReadingLengthError(ValueError):
+class ArticleFormatError(ValueError):
+    """A bounded formatting repair is possible without changing evidence policy."""
+
+
+class ReadingLengthError(ArticleFormatError):
     """A ready article needs a bounded content edit before factual review."""
 
 
@@ -524,7 +528,7 @@ def build_draft(result, packet, config, day, *, plan, humanized=False, compariso
             raise ValueError("Both languages must cite every declared evidence URL")
         presentation.validate_markup(body, media, urls)
         if any(len(item[field]) > limit for field, limit in ARTICLE_METADATA_LIMITS.items()):
-            raise ValueError("Article metadata exceeds website limits")
+            raise ArticleFormatError("Article metadata exceeds website limits")
         if humanized and presentation_settings.get("references", "source_based_appendix") != "none":
             item["body_markdown"] = presentation.with_references(body, [sources[sid] for sid in ids], language)
     metadata = {**article["zh"], "en": article["en"], "slug": presentation.topic_slug(plan, day, config["workflow"].get("presentation")),
@@ -740,10 +744,10 @@ def length_prompt(settings):
 
 
 def prepare_draft(generated, packet, config, day, plan, runner, directory, repair_budget, label):
-    """Repair length once across draft/correction, then apply all normal checks."""
+    """Repair measured length/metadata once, before independent factual review."""
     try:
         return generated, build_draft(generated, packet, config, day, plan=plan)
-    except ReadingLengthError:
+    except ArticleFormatError as error:
         if repair_budget["remaining"] <= 0:
             raise
         settings = config["workflow"]
@@ -753,7 +757,8 @@ def prepare_draft(generated, packet, config, day, plan, runner, directory, repai
                    for language in ("zh", "en")}
         atomic_json(directory / f"{label}-length-validation.json", metrics)
         repair_budget["remaining"] -= 1
-        prompt = ("Edit this bilingual draft to meet the measured length requirements before factual review. "
+        prompt = ("Edit this bilingual draft to fix the supplied length or metadata validation failure before factual review. "
+            "If only metadata exceeds its limit, shorten that metadata and preserve the body exactly. "
             "Do not use tools, fetch sources, add facts or change the selected topic. "
             "Preserve used_source_ids, tags and fact_checks exactly. Preserve the corrected evidence boundaries, "
             "dates, figures, issuer attribution, inline citations and uncertainty in BOTH languages. "
@@ -764,8 +769,8 @@ def prepare_draft(generated, packet, config, day, plan, runner, directory, repai
             "Return insufficient_evidence if the material cannot support the required depth. "
             + length_prompt(settings) + "Return the original draft JSON schema.\nINPUT_DATA_JSON\n"
             + json.dumps({"model_draft": generated, "packet": selected_packet(packet, plan), "editorial_plan": plan,
-                          "measured_lengths": metrics}, ensure_ascii=False))
-        schema = draft_schema(plan, directory / "draft-source.schema.json")
+                          "validation_error": str(error), "measured_lengths": metrics}, ensure_ascii=False))
+        schema = draft_schema(plan, directory / "draft-source.schema.json", packet=packet)
         repaired = runner("repair_length", prompt, schema,
                           directory / f"{label}-length-repair")
         if repaired["status"] != "ready":
@@ -1127,13 +1132,14 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                     raise ValueError("Humanizer changed source or fact-check metadata")
             try:
                 final = build_draft(edited, packet, config, day, plan=plan, humanized=True)
-            except ReadingLengthError as error:
+            except ArticleFormatError as error:
                 if manual_humanizer:
                     raise
                 # One bounded repair, with the same invocation budget and fresh
                 # factual/final reviews. Never loop or relax the publication floor.
                 atomic_json(directory / "03-length-validation.json", {"error": str(error)})
-                repair_prompt = ("Repair the measured length failure in this already humanized bilingual draft. "
+                repair_prompt = ("Repair the supplied length or metadata validation failure in this already humanized bilingual draft. "
+                    "If only metadata exceeds its limit, shorten that metadata and preserve the body exactly. "
                     "Use only the supplied selected evidence and outline. Do not use tools or fetch sources. "
                     "Preserve tags, used_source_ids and fact_checks exactly. Preserve inline citations, dates, "
                     "numbers, qualifications, availability distinctions and source maturity in both languages. "
@@ -1147,7 +1153,10 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 repaired = runner("humanize_length_repair", repair_prompt, schema,
                                   directory / "03b-humanizer-length-repair")
                 if repaired.get("status") != "ready":
-                    raise ValueError("Humanizer length repair needs more evidence")
+                    atomic_json(day_path, {"status": "insufficient_evidence", "finished_at": now(),
+                                           "run_id": os.environ.get("NEWS_CLAW_RUN_ID")})
+                    return missing_publication(day, **outline_result, stage="humanizer_repair",
+                                               reason=repaired.get("reason", ""))
                 for key in ("used_source_ids", "tags", "fact_checks"):
                     if repaired["article"][key] != edited["article"][key]:
                         raise ValueError("Humanizer length repair changed source or fact-check metadata")

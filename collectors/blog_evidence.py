@@ -12,6 +12,19 @@ import sqlite3
 import subprocess
 import sys
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
+
+
+def publication_complete(task, now):
+    """Late collection slots are for missing publications, not extra crawling."""
+    workflow = task.get('workflow', {})
+    if not workflow.get('skip_when_blog_published'):
+        return False
+    sys.path.insert(0, workflow['website_repo'])
+    from web.blog_runtime import load_runtime_articles
+    day = now.astimezone(ZoneInfo(task['timezone'])).date().isoformat()
+    return any(article['published_at'] == day
+               for article in load_runtime_articles(Path(workflow['website_state'])))
 
 
 def permitted(url, prefixes):
@@ -82,9 +95,11 @@ def main():
     db=Path(os.environ.get('NEWS_CLAW_DB',root/'data/db/news.sqlite3'))
     snapshot=os.environ.get('NEWS_CLAW_TASK_CONFIG_PATH')
     config=json.loads(Path(snapshot or root/'config/tasks/daily-blog-primary-evidence.json').read_text())
-    selected=select_sources(config,root,db,datetime.now(timezone.utc))
+    now=datetime.now(timezone.utc)
+    published=publication_complete(config,now)
+    selected=[] if published else select_sources(config,root,db,now)
     if args.check:
-        print(json.dumps({'sources':selected,'network_requests':0},ensure_ascii=False))
+        print(json.dumps({'sources':selected,'publication_complete':published,'network_requests':0},ensure_ascii=False))
         return 0
     run_id=os.environ.get('NEWS_CLAW_RUN_ID','')
     with closing(sqlite3.connect(db)) as connection:
@@ -95,7 +110,8 @@ def main():
     path=root/'data/runs'/run_id/'resolved-evidence-task.json'
     path.write_text(json.dumps(resolved,ensure_ascii=False,indent=2)+'\n')
     if not selected:
-        result={'success':True,'business_status':'no_new_official_pages','items_seen':0,'items_new':0,'requests_made':0}
+        result={'success':True,'business_status':'already_published' if published else 'no_new_official_pages',
+                'items_seen':0,'items_new':0,'requests_made':0}
         Path(os.environ['NEWS_CLAW_RESULT_PATH']).write_text(json.dumps(result)+'\n')
         print(json.dumps(result))
         return 0

@@ -239,3 +239,14 @@ class WatchdogTests(unittest.TestCase):
         value = {"status": "ready", "article": {"tags": ["test"]}}
         self.write(self.saved / "00-watchdog-repair/response.json", value)
         self.assertEqual(watch.saved_draft(self.saved), value)
+
+    def test_post_humanizer_fact_failure_reaches_the_repair_prompt(self):
+        self.failed()
+        self.write(self.saved / '03c-repair-fact-review/response.json',
+                   {'approved': False, 'issues': ['Repair introduced an unsupported claim']})
+        self.assertEqual(watch.review_issues(self.saved), ['Repair introduced an unsupported claim'])
+
+    def test_new_approved_review_supersedes_old_rejection(self):
+        self.failed()
+        self.write(self.saved / '02c-codex-re-review/response.json', {'approved': True, 'issues': []})
+        self.assertEqual(watch.review_issues(self.saved), [])
