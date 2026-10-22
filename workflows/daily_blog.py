@@ -141,14 +141,16 @@ def collect_packet(config, root, db, day, *, include_media=True):
         connection.row_factory = sqlite3.Row
         placeholders = ",".join("?" for _ in config["topic_ids"])
         rows = list(connection.execute(f"""SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=?
+            AND substr(COALESCE(published_at,fetched_at),1,10)<=?
             AND EXISTS (SELECT 1 FROM json_each(documents.topic_links_json) link
               WHERE json_extract(link.value,'$.topic_id') IN ({placeholders}))
             ORDER BY COALESCE(published_at,fetched_at) DESC LIMIT ?""",
-            (cutoff.isoformat(), *config["topic_ids"], inputs["max_documents"])))
+            (cutoff.isoformat(), day.isoformat(), *config["topic_ids"], inputs["max_documents"])))
         # Pull first-party page caches independently of the short feed window.
         # Discovery pages are fetched by the preceding bounded crawl task, never here.
         page_cutoff = (day - timedelta(days=inputs.get("primary_page_lookback_days", 14))).isoformat()
-        page_rows = connection.execute("SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=? AND source_json LIKE '%discovery_document_id%' ORDER BY COALESCE(published_at,fetched_at) DESC, fetched_at DESC LIMIT 100", (page_cutoff,)).fetchall()
+        # Bound by the target day before LIMIT: later pages must not crowd out a backfill's evidence.
+        page_rows = connection.execute("SELECT * FROM documents WHERE COALESCE(published_at,fetched_at)>=? AND substr(COALESCE(published_at,fetched_at),1,10)<=? AND source_json LIKE '%discovery_document_id%' ORDER BY COALESCE(published_at,fetched_at) DESC, fetched_at DESC LIMIT 100", (page_cutoff, day.isoformat())).fetchall()
         dynamic_urls, page_seen = [], set()
         for row in page_rows:
             source = json.loads(row["source_json"])
@@ -193,7 +195,7 @@ def collect_packet(config, root, db, day, *, include_media=True):
     pulses = Path(inputs["company_pulses"])
     if pulses.is_file():
         data = read_json(pulses)
-        if data.get("as_of", "") >= (day - timedelta(days=inputs["max_snapshot_age_days"])).isoformat():
+        if (day - timedelta(days=inputs["max_snapshot_age_days"])).isoformat() <= data.get("as_of", "")[:10] <= day.isoformat():
             source_map = {s["id"]: {**s, "evidence_level": "existing_research_snapshot",
                                     "snapshot_as_of": data.get("as_of")} for s in data.get("sources", [])}
             for name, company in data.get("companies", {}).items():
@@ -238,6 +240,29 @@ def collect_packet(config, root, db, day, *, include_media=True):
             "reviewed_topic_summaries": reviewed,
             "approved_media": presentation.load_media(config, root) if include_media else [],
             "policy": "Local cached material only. Preserve source dates, issuer attribution, uncertainty and headline-only limitations. No new web requests."}
+
+
+def substantive_evidence(packet):
+    """Stable content identities: feed churn and fetch metadata cannot justify a replan."""
+    sources = {source['id']: source for source in packet['sources']}
+    identities = set()
+    for item in packet['evidence']:
+        for sid in item.get('source_ids', []):
+            source = sources.get(sid, {})
+            level = source.get('evidence_level')
+            if level == 'cached_webpage' and item.get('record_type') == 'webpage' and item.get('text', '').strip():
+                content = ' '.join(item['text'].split())
+            elif level == 'existing_research_snapshot' and isinstance(item.get('record'), dict) and item['record']:
+                content = {key: value for key, value in item['record'].items() if key != 'source_ids'}
+            else:
+                continue
+            identities.add(digest({'url': source['url'], 'level': level, 'content': content}))
+    return identities
+
+
+def has_new_evidence(previous, current):
+    # Removing old records, reordering, relabeling or refetching them is not new evidence.
+    return bool(substantive_evidence(current) - substantive_evidence(previous))
 
 
 def terminate_model(signum=None, frame=None):
@@ -921,8 +946,13 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
         prior_packet = read_json(replan_saved / "source-packet.json")
         if prior_result.get("business_status") != "insufficient_evidence" or prior_packet.get("day") != day.isoformat():
             raise ValueError("Replanning requires an insufficient-evidence result for this day")
-        if digest({key: packet[key] for key in ("sources", "evidence")}) == digest({key: prior_packet[key] for key in ("sources", "evidence")}):
+        if not has_new_evidence(prior_packet, packet):
             raise ValueError("Replanning requires changed source evidence")
+        config = deepcopy(config)
+        settings = config['workflow']
+        settings['recovery_updated_at'] = datetime.now(ZoneInfo(config['timezone'])).date().isoformat()
+        if day.isoformat() > settings['recovery_updated_at']:
+            raise ValueError('Cannot recover a future publication day')
     atomic_json(directory / "source-packet.json", packet)
     # Check actual source readiness, not just the relative cron times. This gate
     # is before the model/day reservation, so a delayed crawl can use a later slot.
@@ -1158,7 +1188,9 @@ def run(config, root, db, directory, *, execute=False, model_runner=None, day=No
                 last = runner("final_review_revised", review_prompt(final, packet, original=original, skill=skill),
                               SCHEMAS / "daily-blog-verdict.schema.json", directory / "04c-codex-final-re-review")
             require_verdict(last, final, packet, final=True)
-            if model_runner is None and not recovery and datetime.now(ZoneInfo(config["timezone"])).date() != day:
+            # Validated operator backfills preserve their archive day. Scheduled
+            # attempts must still stop if writing runs past the publication day.
+            if model_runner is None and not (recovery or replan) and datetime.now(ZoneInfo(config["timezone"])).date() != day:
                 raise ValueError("Publication day expired while preparing the article")
             outcome = publish(final, packet, first, last, original, skill_hash, site, day,
                               os.environ.get("NEWS_CLAW_RUN_ID", "manual"))
@@ -1193,6 +1225,15 @@ def recoverable_run(connection, run_id, task_id):
         (run_id, *owners)).fetchone() is not None
 
 
+def replannable_run(connection, run_id, task_id):
+    """A writer may continue its watchdog's insufficient-evidence checkpoint too."""
+    owners = (task_id, 'daily-blog-watchdog') if task_id == 'daily-blog-agy-codex' else (task_id, task_id)
+    row = connection.execute(
+        "SELECT metadata_json FROM task_runs WHERE id=? AND task_id IN (?,?) AND status IN ('failed','succeeded')",
+        (run_id, *owners)).fetchone()
+    return bool(row and json.loads(row[0] or '{}').get('result', {}).get('business_status') == 'insufficient_evidence')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task", default=os.environ.get("NEWS_CLAW_TASK_ID", "daily-blog-agy-codex"))
@@ -1225,9 +1266,7 @@ def main():
                 config["workflow"].pop("manual_replan")
                 replan = None
             if replan:
-                prior = connection.execute("SELECT metadata_json FROM task_runs WHERE id=? AND task_id=? AND status IN ('succeeded','failed')",
-                                           (replan.get("run_id"), args.task)).fetchone()
-                if not prior or json.loads(prior[0]).get("result", {}).get("business_status") != "insufficient_evidence":
+                if not replannable_run(connection, replan.get('run_id'), args.task):
                     parser.error("Replanning requires a manual run after insufficient evidence")
             recovery = config["workflow"].get("manual_recovery")
             if recovery and json.loads(active[0]).get("trigger") != "manual":

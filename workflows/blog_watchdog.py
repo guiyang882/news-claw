@@ -176,8 +176,7 @@ def supervise(task, writer, root, db, directory, *, execute=False, now=None,
     if replan:
         previous_packet = blog.read_json(saved / 'source-packet.json')
         fresh_packet = blog.collect_packet(config, root, db, day, include_media=False)
-        changed = blog.digest({key: fresh_packet[key] for key in ('sources', 'evidence')}) != blog.digest(
-            {key: previous_packet[key] for key in ('sources', 'evidence')})
+        changed = blog.has_new_evidence(previous_packet, fresh_packet)
         if not readiness.get('success') or not changed:
             return outcome('awaiting_new_verified_evidence', attention=True, readiness=readiness)
     if len(state['attempts']) >= settings['max_recoveries_per_day']:

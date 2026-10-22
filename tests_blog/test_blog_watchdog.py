@@ -189,6 +189,9 @@ class WatchdogTests(unittest.TestCase):
         with patch.object(watch.blog, 'collect_packet', return_value={'sources': [], 'evidence': [], 'approved_media': []}) as collect:
             self.assertEqual(self.invoke(True)['business_status'], 'awaiting_new_verified_evidence')
             collect.return_value = {'sources': [{'id': 'new'}], 'evidence': []}
+            self.assertEqual(self.invoke(True)['business_status'], 'awaiting_new_verified_evidence')
+            collect.return_value = {'sources': [{'id': 'new', 'url': 'https://example.org/full', 'evidence_level': 'cached_webpage'}],
+                                    'evidence': [{'source_ids': ['new'], 'record_type': 'webpage', 'text': 'New full source text'}]}
             self.assertEqual(self.invoke()['business_status'], 'would_replan')
 
     def test_repair_uses_reviews_budget_and_post_publication_verification(self):

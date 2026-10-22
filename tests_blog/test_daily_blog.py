@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 from contextlib import closing
-from datetime import date
+from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -86,6 +86,12 @@ class DailyBlogTests(unittest.TestCase):
         for sid,loc in [('other','data/source.json；text → paragraph'),('s1','data/source.json.evil；text → paragraph')]:
             plan={'outline':{'sections':[{'evidence_refs':[{'source_id':sid,'locator':loc}]}]}}
             self.assertEqual(canonicalize_locators(plan,packet),plan)
+
+    def test_backfill_does_not_use_a_later_company_snapshot(self):
+        self.pulses['as_of'] = '2026-10-11'
+        (self.root/'company_pulses.json').write_text(json.dumps(self.pulses))
+        packet = blog.collect_packet(self.config, self.root, self.db, DAY)
+        self.assertFalse(any(source.get('evidence_level') == 'existing_research_snapshot' for source in packet['sources']))
 
     def draft(self):
         article = {"tags": ["primary-sources"], "used_source_ids": ["source-a", "source-b"],
@@ -382,6 +388,8 @@ class DailyBlogTests(unittest.TestCase):
         review = blog.read_json(saved / "02-codex-review/response.json")
         review.update(approved=True, citations_valid=True, issues=[], article_sha256=blog.digest(original))
         blog.atomic_json(saved / "02c-codex-re-review/response.json", review)
+        # A real budget checkpoint retains the exact pre-humanizer draft too.
+        blog.atomic_json(saved / "original-draft.json", original)
         blog.atomic_json(saved / "reviewed-draft.json", original)
         blog.atomic_json(saved / "03-codex-humanizer/response.json", self.draft())
         blog.atomic_json(saved / "result.json", {"error": "Model invocation limit reached"})
@@ -416,12 +424,27 @@ class DailyBlogTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.pulses["companies"]["test"]["metrics"][0]["value"] = "Additional cached evidence"
         (self.root / "company_pulses.json").write_text(json.dumps(self.pulses))
-        result = blog.run(self.config, self.root, self.db, self.directory, execute=True, model_runner=live, day=DAY)
+        # Exercise the production clock guard with a historical publication day;
+        # injecting model_runner directly bypasses that guard in offline tests.
+        with patch.object(blog, 'ModelRunner', return_value=live), patch.object(blog, 'datetime') as clock:
+            clock.now.return_value = datetime(2026, 10, 11, 12, tzinfo=timezone.utc)
+            result = blog.run(self.config, self.root, self.db, self.directory, execute=True, day=DAY)
         self.assertEqual(result["business_status"], "published")
+        article = load_runtime_articles(self.site)[0]
+        self.assertEqual(article['published_at'], DAY.isoformat())
+        self.assertEqual(article['updated_at'], '2026-10-11')
         self.assertEqual(result["recovered_from"], saved.name)
         self.assertEqual(len(result["model_calls"]), 9)
         self.assertEqual(blog.read_json(saved / "result.json")["business_status"], "insufficient_evidence")
         self.assertEqual(blog.read_json(self.directory / "recovery-audit.json")["kind"], "manual_evidence_replan")
+
+    def test_scheduled_attempt_cannot_publish_after_its_day_expires(self):
+        with patch.object(blog, 'ModelRunner', return_value=self.model), patch.object(blog, 'datetime') as clock:
+            clock.now.return_value = datetime(2026, 10, 11, 12, tzinfo=timezone.utc)
+            with self.assertRaisesRegex(ValueError, 'Publication day expired'):
+                blog.run(self.config, self.root, self.db, self.directory, execute=True, day=DAY)
+        self.assertIn('final_review', self.calls)
+        self.assertFalse((self.site / 'manifest.json').exists())
 
     def test_pinned_primary_disclosure_keeps_fuller_text_and_its_original_date(self):
         url = "https://example.org/quarterly-report"

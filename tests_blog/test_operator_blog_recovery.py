@@ -1,9 +1,37 @@
 import sqlite3
 import unittest
-from workflows.daily_blog import recoverable_run
+from workflows.daily_blog import recoverable_run, replannable_run, has_new_evidence
 
 
 class OperatorRecoveryTests(unittest.TestCase):
+    def test_replan_accepts_only_terminal_insufficient_evidence_blog_checkpoints(self):
+        import json
+        with sqlite3.connect(':memory:') as db:
+            db.execute('CREATE TABLE task_runs(id TEXT,task_id TEXT,status TEXT,metadata_json TEXT)')
+            for task in ('daily-blog-agy-codex', 'daily-blog-watchdog', 'unrelated-task'):
+                for status in ('failed', 'succeeded', 'running', 'queued'):
+                    for result in ('insufficient_evidence', 'published', 'failed'):
+                        key = task + status + result
+                        db.execute('INSERT INTO task_runs VALUES (?,?,?,?)', (key, task, status, json.dumps({'result': {'business_status': result}})))
+                        self.assertEqual(replannable_run(db, key, 'daily-blog-agy-codex'),
+                                         task != 'unrelated-task' and status in ('failed', 'succeeded') and result == 'insufficient_evidence')
+            self.assertFalse(replannable_run(db, 'missing', 'daily-blog-agy-codex'))
+
+    def test_replan_ignores_headlines_metadata_order_and_removed_sources(self):
+        from copy import deepcopy
+        old = {'sources': [{'id': 'body', 'url': 'https://example.org/body', 'evidence_level': 'cached_webpage'}],
+               'evidence': [{'source_ids': ['body'], 'record_type': 'webpage', 'text': 'A complete source body', 'fetched_at': '2026-10-20', 'locator': 'old.json'}]}
+        fresh = deepcopy(old)
+        fresh['evidence'][0].update(fetched_at='2026-10-21', locator='new.json', text='A  complete\nsource body')
+        fresh['sources'].append({'id': 'headline', 'url': 'https://example.org/news', 'evidence_level': 'headline_discovery'})
+        fresh['evidence'].append({'source_ids': ['headline'], 'text': 'A new RSS headline', 'record_type': 'feed_entry'})
+        self.assertFalse(has_new_evidence(old, fresh))
+        self.assertFalse(has_new_evidence(old, {'sources': [], 'evidence': []}))
+        fresh['evidence'].reverse()
+        self.assertFalse(has_new_evidence(old, fresh))
+        fresh['evidence'][-1]['text'] += ' with a new disclosed result'
+        self.assertTrue(has_new_evidence(old, fresh))
+
     def test_only_failed_blog_checkpoints_can_be_recovered_by_writer(self):
         with sqlite3.connect(':memory:') as db:
             db.execute('CREATE TABLE task_runs(id TEXT,task_id TEXT,status TEXT)')
