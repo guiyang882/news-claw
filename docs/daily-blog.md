@@ -1,18 +1,20 @@
-# 每日研究博客
+# 每周两期研究博客
+
+当前排期见 [每周发布运行说明](blog-weekly-schedule.md)。自 2026-10-27 起替代旧的每日排期；下方带日期的历史记录不代表当前日程。任务 ID 与历史路径保留，避免丢失审核、防重复和调用预算记录。
 
 任务定义：[daily-blog-agy-codex.json](../config/tasks/daily-blog-agy-codex.json)。执行程序：[workflows/daily_blog.py](../workflows/daily_blog.py)。由 Go 调度，不创建新的 systemd timer。
 
 | 配置 | 当前值 |
 | --- | --- |
 | 任务 ID / 类型 | daily-blog-agy-codex / workflow |
-| 频率 | 每日北京时间 07:30；09:30 仅补启动尚未进入模型的任务，随机延迟 0–420 秒 |
+| 频率 | 周五、周日北京时间 19:30；21:30 仅补启动尚未进入模型的当期，随机延迟 0–420 秒 |
 | 候选题与大纲 | Codex，gpt-6.1-sol；最多 3 个候选，自动选择一题并生成 6–9 节大纲 |
-| 阅读目标 | 中英文各约 20 分钟；默认允许约 17–23 分钟的篇幅区间 |
+| 阅读目标 | 证据充分时选 17–23 分钟长文；范围明确的选题可用 8–12 分钟双语短文 |
 | 写稿 | agy，gemini-3.8-flash-high（Gemini 3.8 Flash High） |
 | 事实复核、修订、最终复核 | Codex，gpt-6.1-sol |
 | Codex 推理与速度 | planner/reviewer 的 reasoning_effort=null，沿用模型默认；service_tier=fast |
 | 修订规则 | /root/.codex/skills/humanizer/SKILL.md；保留实质信息，合并重复结尾；保存完整副本与 SHA256 |
-| 输入 | 近两天 SQLite 文档与 normalized 文件、已有公司研究快照、新闻标题线索、通过校验的 Gemini 主题整理及其原始证据 |
+| 输入 | 周五看本周大事件，周日优先周末内容、可选本周未展开的专题；完整正文保留来源日期，更早资料仅作背景对照 |
 | 发布位置 | /mnt/quant-state/quant-web/blog；网站代码在 /mnt/quant/strategies/stocks-quant |
 | 模型调用 | 通常 5 次；各允许一次事实纠错、篇幅修订和终稿纠错，最多 10 次；串行，相邻调用完成后至少间隔 10 秒 |
 | 超时与互斥 | 整轮 75 分钟；agy 1200 秒、Codex 写作修订各 900 秒、规划与复核各 300 秒；model-cli 与本地新闻分析互斥 |
@@ -152,7 +154,7 @@ bin/news-claw enqueue --task daily-blog-agy-codex
 /mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.daily_blog --reset-provider codex
 ```
 
-频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。make init 后常驻 engine 自动重读。每日博客在北京时间 07:30 开始，09:30 仅在尚未进入模型阶段时补启动；保留最多七分钟随机延迟，整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
+频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。仅定向同步获准修改的任务行，常驻 engine 自动重读；不要全量 init 以免覆盖其他任务的暂停状态。博客仅在周五、周日北京时间 19:30 开始，21:30 仅在尚未进入模型阶段时补启动；保留最多七分钟随机延迟，整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
 
 CLI 参数已在本机 --help 核对；Codex 结构化响应方式参考 [非交互模式](https://learn.chatgpt.com/docs/non-interactive-mode)，模型标识参考 [GPT-6.1 Sol 文档](https://developers.openai.com/api/docs/models/gpt-6.1-sol)，推理与速度字段参考 [OpenAI 配置说明](https://learn.chatgpt.com/docs/config-file/config-reference)。
 

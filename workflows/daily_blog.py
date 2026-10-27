@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo
 
 from . import blog_planning as editorial
 from . import blog_presentation as presentation
+from . import blog_schedule
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -121,7 +122,9 @@ def collect_packet(config, root, db, day, *, include_media=True):
     sources = {}
     evidence = []
     inputs = config["workflow"]["inputs"]
-    cutoff = day - timedelta(days=inputs["lookback_days"])
+    issue = blog_schedule.edition(config, day)
+    cutoff = (date.fromisoformat(issue['source_window_start']) if issue
+              else day - timedelta(days=inputs["lookback_days"]))
 
     def add(source, item):
         try:
@@ -230,13 +233,14 @@ def collect_packet(config, root, db, day, *, include_media=True):
         from .topic_summary import reviewed_context
         reviewed, prior_sources, prior_evidence = reviewed_context(
             root, db, day, config["topic_ids"], max_summaries=inputs["max_reviewed_topic_summaries"],
-            lookback_days=inputs["reviewed_topic_lookback_days"])
+            lookback_days=(day - cutoff).days if issue else inputs["reviewed_topic_lookback_days"])
         prior_by_id = {source["id"]: source for source in prior_sources}
         for item in prior_evidence:
             for sid in item["source_ids"]:
                 add(prior_by_id[sid], item)
     evidence = list({digest(item): item for item in evidence}.values())
     return {"version": 1, "day": day.isoformat(), "sources": list(sources.values()), "evidence": evidence,
+            **({'edition': issue} if issue else {}),
             "reviewed_topic_summaries": reviewed,
             "approved_media": presentation.load_media(config, root) if include_media else [],
             "policy": "Local cached material only. Preserve source dates, issuer attribution, uncertainty and headline-only limitations. No new web requests."}
@@ -719,7 +723,13 @@ def planning_prompt(packet, history, settings, skill):
     return ("你是研究博客的选题编辑。只使用输入的本地证据，不使用任何工具、读文件、联网或发布。"
             f"先提出最多{settings['planning']['max_candidates']}个问题不同的候选题，说明各自的读者价值、时效、已有来源和证据缺口，再选择最值得写的一题。"
             "优先证据深度、明确的读者问题、可解释的机制和近期文章没有展开过的角度。资料不足可以少提出候选；"
-            "不能仅凭新闻标题支撑文章，不为每日数量或篇幅拼凑题目。"
+            "不能仅凭新闻标题支撑文章，不为发布数量或篇幅拼凑题目。"
+            "若packet有edition，按其focus和覆盖日期选题：周五聚焦本周重大变化及其影响；"
+            "周日聚焦周末有研究价值的新内容或进展，避免重复周五已讲清的结论；"
+            "若周末新材料不足，可从本周尚未展开的资料做周末专题，明确原始日期与选题价值。"
+            "选中题目必须实际引用至少一篇source_window_start至window_end内发布的完整正文；更早资料仅用于背景、基线或对照。"
+            "来源抓取日期不等于事件日期，不能将旧闻包装为本周或周末新进展。可围绕最有价值的一件事深入展开，"
+            "也可整合少量相互关联的大事件，不必拼成新闻清单。"
             "从输入reading_formats中按证据深度选择篇幅：材料足够支撑深入长文时选长文；"
             "若只能支撑范围明确但完整的研究短文，应选择获准的短文格式，不能仅因不足20分钟而停稿。"
             "短文仍必须有两个实质相关来源、具体证据、机制、反论证、未决问题和适合的图表；"
@@ -905,10 +915,12 @@ def missing_publication(day, **details):
 
 def run(config, root, db, directory, *, execute=False, model_runner=None, day=None):
     settings = config["workflow"]
+    day = day or datetime.now(ZoneInfo(config["timezone"])).date()
+    if skipped := blog_schedule.off_day(config, day):
+        return skipped
     sys.path.insert(0, settings["website_repo"])
     from web.blog_runtime import load_runtime_articles
     from web.blog_taxonomy import TAGS_BY_ID
-    day = day or datetime.now(ZoneInfo(config["timezone"])).date()
     site = Path(settings["website_state"])
     directory.mkdir(parents=True, exist_ok=True)
     if any(item["published_at"] == day.isoformat() for item in load_runtime_articles(site)):

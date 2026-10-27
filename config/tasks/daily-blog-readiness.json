@@ -1,11 +1,11 @@
 {
   "id": "daily-blog-readiness",
-  "name": "每日研究博客：写作前材料检查",
-  "description": "本地检查正文数量、来源日期、近期未使用资料和上游运行结果，不调用模型、不联网。",
+  "name": "每周研究博客：写作前材料检查",
+  "description": "周五、周日19:20与21:20核对当期材料，非发布日直接跳过；本地检查完整正文、覆盖日期、未使用来源及上游结果，不调用模型。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
-  "schedule": "20 7,9 * * *",
+  "schedule": "20 19,21 * * 0,5",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
   "topic_ids": [

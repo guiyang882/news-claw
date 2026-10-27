@@ -36,7 +36,7 @@ class EvidenceRefreshTests(unittest.TestCase):
 
     def test_refresh_configuration_keeps_existing_request_limits(self):
         task = json.loads((Path(__file__).parents[1] / 'config/tasks/daily-blog-primary-evidence.json').read_text())
-        self.assertEqual(task['schedule'], '55 6,12,18 * * *')
+        self.assertEqual(task['schedule'], '55 18 * * *')
         policy = task['collector']['request_policy']
         self.assertEqual(policy['max_requests_per_run'], 12)
         self.assertGreaterEqual(policy['min_interval_seconds_global'], 10)

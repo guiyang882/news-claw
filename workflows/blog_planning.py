@@ -108,6 +108,8 @@ def validate_plan(plan, packet, settings, *, packet_sha256):
         raise ValueError("Selected topic needs at least two distinct source URLs")
     if not any(sources[sid]["evidence_level"] in {"cached_webpage", "existing_research_snapshot"} for sid in chosen_ids):
         raise ValueError("Headline-only evidence cannot support a long-form article")
+    from .blog_schedule import validate_edition_plan
+    validate_edition_plan(plan, packet)
     outline = plan["outline"]
     reading = reading_for_plan(settings, plan)
     for field in ("title_zh", "title_en", "central_question", "working_thesis", "scope", "reader_takeaway"):

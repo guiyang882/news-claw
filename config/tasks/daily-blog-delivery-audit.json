@@ -1,11 +1,11 @@
 {
   "id": "daily-blog-delivery-audit",
-  "name": "每日研究博客：发布结果核对",
-  "description": "校验当天双语文章及内容哈希，并通过本机 HTTP 核对首页、文章库和内页导航；失败记录差异，不自动重写或重新采集。",
+  "name": "每周研究博客：当期发布结果核对",
+  "description": "周五、周日22:55与23:55核对当期双语文章、哈希及本机页面。非发布日跳过；失败记录差异，不自动重写或重新采集。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
-  "schedule": "55 10 * * *",
+  "schedule": "55 22,23 * * 0,5",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
   "topic_ids": [

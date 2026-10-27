@@ -1,28 +1,43 @@
 {
   "id": "daily-blog-watchdog",
-  "name": "每日研究博客：推进巡检与 Codex 内容恢复",
-  "description": "北京时间08:15至22:15每小时巡检；等待在途任务、补启动漏跑任务、用Codex修复保存的稿件并重新复核，最终验证双语文章和首页列表。每天最多两次内容恢复，权限或基础设施问题保留失败报告，不修改服务器。",
+  "name": "每周研究博客：当期推进巡检与内容恢复",
+  "description": "仅周五、周日20:15至22:15每小时巡检当期；等待在途任务，补启动漏跑任务，有界修复保存稿并独立复核。非发布日不催稿、不补发。每期最多两次恢复，保留限流与熔断。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
-  "schedule": "15 8-22 * * *",
+  "schedule": "15 20-22 * * 0,5",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
-  "topic_ids": ["daily-research-blog"],
-  "options": {"start_jitter_seconds": 0},
+  "topic_ids": [
+    "daily-research-blog"
+  ],
+  "options": {
+    "start_jitter_seconds": 0
+  },
   "execution": {
-    "command": ["/mnt/quant/strategies/stocks-quant/web/.venv/bin/python", "-m", "workflows.blog_watchdog"],
+    "command": [
+      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      "-m",
+      "workflows.blog_watchdog"
+    ],
     "working_dir": ".",
     "timeout_seconds": 4500,
     "stop_grace_seconds": 15,
     "lock_group": "model-cli",
-    "env": {"PYTHONDONTWRITEBYTECODE": "1", "HOME": "/root", "CODEX_HOME": "/root/.codex"}
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "HOME": "/root",
+      "CODEX_HOME": "/root/.codex"
+    }
   },
   "workflow": {
     "max_recoveries_per_day": 2,
     "cooldown_seconds": 600,
     "max_total_model_calls_per_day": 16,
-    "delivery_surfaces": {"enabled": true, "origin": "http://127.0.0.1:3000"},
-    "policy": "Scope is daily blog content only. Reuse cached evidence; fresh factual and bilingual final review are mandatory. Count all writer/watchdog calls, including failures. Do not reset denials, restart services, change code/config/credentials, fetch sources through Codex, or alter other tasks. Missing upstream can be enqueued once under its existing collection policy."
+    "delivery_surfaces": {
+      "enabled": true,
+      "origin": "http://127.0.0.1:3000"
+    },
+    "policy": "Scope is the current Friday/Sunday blog edition only; non-publication days must skip before inspection/enqueue/model calls. Reuse cached evidence; fresh factual and bilingual final review are mandatory. Count all writer/watchdog calls, including failures. Do not reset denials, restart services, change code/config/credentials, fetch sources through Codex, or alter other tasks. Missing upstream can be enqueued once under its existing collection policy."
   }
 }

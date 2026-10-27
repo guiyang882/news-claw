@@ -1,11 +1,11 @@
 {
   "id": "daily-blog-agy-codex",
-  "name": "每日研究博客：Gemini写稿、Codex复核与发布",
-  "description": "每日07:30写作，09:30补启动；按证据深度选择约20分钟长文或8–12分钟双语研究短文，独立复核后每日最多发布一篇。",
+  "name": "每周两期研究博客：周五大事件与周日周末观察",
+  "description": "北京时间周五、周日19:30写作，21:30仅补启动尚未进入模型的当期；周五聚焦本周大事件，周日聚焦周末有价值的新内容。保留双语、证据审核与8–12分钟短文选项，每期最多一篇。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
   "enabled": true,
-  "schedule": "30 7,9 * * *",
+  "schedule": "30 19,21 * * 0,5",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
   "topic_ids": [
@@ -67,9 +67,9 @@
       "max_reviewed_topic_summaries": 5,
       "reviewed_topic_lookback_days": 2,
       "primary_source_urls": [],
-      "primary_max_text_chars": 20000,
+      "primary_max_text_chars": 12000,
       "primary_page_lookback_days": 14,
-      "max_primary_pages": 8
+      "max_primary_pages": 14
     },
     "stages": [
       "codex_topics_and_outline",
@@ -84,7 +84,7 @@
       "codex_final_re_review_if_corrected",
       "offline_publish"
     ],
-    "publication_policy": "Readiness gate before model reservation; 09:30 is a second start slot only for preflight-blocked days. One automatic model attempt and one article per day; no automatic retry of failed model/editorial stages. Preserve evidence dates and independent review.",
+    "publication_policy": "Publish only on Friday and Sunday in Asia/Shanghai from 2026-10-27. Readiness before model reservation; 21:30 only starts an edition that has not entered a model stage. One article per edition date, with bounded same-day watchdog recovery. Off-days are successful no-ops, never missing daily publications. Preserve source dates, bilingual independent review, per-day model caps and provider circuits.",
     "network_policy": {
       "source_web_requests": 0,
       "max_cli_invocations_per_day": 10,
@@ -113,7 +113,7 @@
       "max_candidates": 3,
       "min_sections": 6,
       "max_sections": 9,
-      "selection_policy": "Evidence depth, concrete reader value, distinct angle, and no repetition of recent articles; no padding to meet length."
+      "selection_policy": "Use packet.edition dates and focus. Friday: significant events from Monday to Friday. Sunday: prioritize weekend developments; if sparse, select an unused substantive topic from the same week with explicit original dates, without repeating Friday or calling old material weekend news. Cite at least one complete primary body from source_window_start through window_end; older sources are background. Evidence depth and reader value determine long article or supported brief."
     },
     "reading": {
       "target_minutes": 20,
@@ -121,8 +121,14 @@
       "zh_units_per_minute": 300,
       "en_words_per_minute": 200,
       "formats": [
-        {"target_minutes": 20, "tolerance_minutes": 3},
-        {"target_minutes": 10, "tolerance_minutes": 2}
+        {
+          "target_minutes": 20,
+          "tolerance_minutes": 3
+        },
+        {
+          "target_minutes": 10,
+          "tolerance_minutes": 2
+        }
       ]
     },
     "stage_timeout_seconds": {
@@ -236,6 +242,24 @@
       "min_body_chars": 1000,
       "max_source_age_days": 14,
       "recent_publication_days": 7
+    },
+    "publication_calendar": {
+      "effective_from": "2026-10-27",
+      "editions": [
+        {
+          "id": "friday-week-review",
+          "weekday": 5,
+          "window_start_weekday": 1,
+          "focus": "本周大事件：从周一至周五的重大变化中选择最有证据和读者价值的核心问题，解释影响、机制、反证条件与后续观察点。"
+        },
+        {
+          "id": "sunday-weekend-notes",
+          "weekday": 7,
+          "window_start_weekday": 6,
+          "source_window_start_weekday": 1,
+          "focus": "周末观察：优先周六至周日有价值的新内容或进展；若周末新材料不足，可从本周尚未展开的材料做周末专题，明确来源日期与读者价值，不冒充周末新事件，避免重复周五主题和结论。"
+        }
+      ]
     }
   }
 }

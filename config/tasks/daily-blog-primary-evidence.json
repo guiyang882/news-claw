@@ -1,11 +1,11 @@
 {
   "id": "daily-blog-primary-evidence",
-  "name": "研究博客：官方新文章正文缓存",
-  "description": "每日06:55准备官方正文；当天尚未发布时，12:55和18:55限量补采。每次最多6篇，缓存去重、robots和限流保持不变，不递归抓取。",
+  "name": "研究博客：每日官方正文缓存",
+  "description": "每日北京时间18:55少量缓存官方正文，积累周五与周日选题材料；已发布日跳过。每次最多6篇，缓存去重、robots、拒绝熔断与限流保持不变，不递归抓取。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
   "enabled": true,
-  "schedule": "55 6,12,18 * * *",
+  "schedule": "55 18 * * *",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
   "topic_ids": [

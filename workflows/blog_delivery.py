@@ -8,6 +8,7 @@ from pathlib import Path
 import sqlite3
 import sys
 from zoneinfo import ZoneInfo
+from . import blog_schedule
 
 
 def assess_packet(packet, articles, settings, day):
@@ -35,6 +36,11 @@ def assess_packet(packet, articles, settings, day):
         reasons.append('not_enough_recent_full_bodies')
     if len(unused)<settings['min_unused_sources']:
         reasons.append('no_unused_recent_full_body')
+    if packet.get('edition'):
+        period_ids = blog_schedule.period_source_ids(packet, min_body_chars=settings['min_body_chars'])
+        period_urls = {source['url'] for source in packet['sources'] if source['id'] in period_ids}
+        if not period_urls.intersection(unused):
+            reasons.append('no_unused_full_body_in_edition_window')
     return {'ready':not reasons,'reasons':reasons,'complete_source_count':len(urls),
             'unused_source_count':len(unused),'source_urls':sorted(urls),'unused_source_urls':sorted(unused)}
 
@@ -58,6 +64,8 @@ def upstream_state(db, task_id, day, zone):
     return {'ready':False,'reason':'upstream_not_run_today','task_id':task_id}
 
 def preflight(config, root, db, day, *, packet=None):
+    if skipped := blog_schedule.off_day(config, day):
+        return skipped
     from . import daily_blog as blog
     sys.path.insert(0,config['workflow']['website_repo'])
     from web.blog_runtime import load_runtime_articles
@@ -77,6 +85,8 @@ def preflight(config, root, db, day, *, packet=None):
                            'Inspect upstream run and cached bodies; scheduled second slot may start only before any model attempt. Do not reset denials or fabricate evidence.')}
 
 def inspect_delivery(config, root, db, day):
+    if skipped := blog_schedule.off_day(config, day):
+        return skipped
     from . import daily_blog as blog
     sys.path.insert(0,config['workflow']['website_repo'])
     from web.blog_runtime import load_runtime_articles

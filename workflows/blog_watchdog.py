@@ -17,6 +17,7 @@ import subprocess
 from zoneinfo import ZoneInfo
 
 from . import blog_delivery as delivery, daily_blog as blog
+from . import blog_schedule
 
 
 TASK_ID = 'daily-blog-watchdog'
@@ -128,6 +129,8 @@ def supervise(task, writer, root, db, directory, *, execute=False, now=None,
     now = now or datetime.now(timezone.utc)
     zone = ZoneInfo(writer['timezone'])
     day = now.astimezone(zone).date()
+    if skipped := blog_schedule.off_day(writer, day):
+        return skipped
     settings = task['workflow']
     config = deepcopy(writer)
     config['workflow']['delivery_surfaces'] = settings['delivery_surfaces']

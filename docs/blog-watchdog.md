@@ -1,6 +1,6 @@
-# Daily blog progress watchdog
+# Research blog edition watchdog
 
-`daily-blog-watchdog` runs at **08:15–22:15, every hour, Asia/Shanghai**. It complements the existing 07:30 writer, 09:30 preflight retry slot and 10:55 publication audit. The scheduler reads its own task row; enabling this task requires no service restart.
+`daily-blog-watchdog` runs only on **Friday and Sunday at 20:15, 21:15 and 22:15, Asia/Shanghai**. It complements the 19:30 writer, 21:30 conditional second start and 22:55/23:55 delivery audits. Since 2026-10-27, other weekdays return `not_publication_day` before inspecting, enqueuing or calling any model. See [the publication calendar](blog-weekly-schedule.md). The scheduler reads its own task row; enabling this task requires no service restart.
 
 ## Scope and decisions
 
@@ -15,7 +15,7 @@
 
 - Codex uses a **read-only sandbox**, no approval escalation, no shell tools, no web search and no subagents. It can produce content JSON, not operate the server. The existing Python validators/publisher perform the authorized runtime-content write.
 - No arbitrary repair commands; no code/configuration/credential edits, service restarts, provider-circuit resets, site rebuilds, synthetic evidence or changes to other tasks.
-- At most **two recovery attempts per Beijing day**, separated by **ten minutes**. Scheduled checks still run hourly; an operator can enqueue a second check after the cooldown. Active-work and provider-denial guards still apply. Attempts are reserved durably before model work; enqueue requests are reserved before execution so uncertain results cannot cause a duplicate start.
+- At most **two recovery attempts per Beijing day**, separated by **ten minutes**. Scheduled checks run hourly only within the edition evening; an operator can enqueue a second check after the cooldown. Active-work and provider-denial guards still apply. Attempts are reserved durably before model work; enqueue requests are reserved before execution so uncertain results cannot cause a duplicate start.
 - At most **16 cumulative model calls** across the original writer, all recovery ancestors and all same-day watchdog attempts, including failed calls. Reused checkpoints are counted once. The regular writer's ten-call configuration remains unchanged. A repair needs room for four fresh calls; replanning needs five.
 - The watchdog and writer share the existing `model-cli` lock. A separate watchdog lock protects its state. The existing publisher's daily lock and one-article-per-day check remain in force.
 - The recovery config exists only in memory. It does not add persistent `manual_recovery` fields to the writer's task row or alter its schedule/enabled state. Existing failed-run evidence is retained.
