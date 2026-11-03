@@ -4,7 +4,7 @@
   "description": "每日北京时间18:55少量缓存官方正文，积累周五与周日选题材料；已发布日跳过。每次最多6篇，缓存去重、robots、拒绝熔断与限流保持不变，不递归抓取。",
   "scheduler_engine": "news-claw",
   "task_type": "crawl",
-  "enabled": true,
+  "enabled": false,
   "schedule": "55 18 * * *",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
@@ -58,7 +58,13 @@
   "options": {
     "start_jitter_seconds": 0,
     "lookback_hours": 8760,
-    "max_items_per_run": 6
+    "max_items_per_run": 6,
+    "publication_pause": {
+      "since": "2026-11-03",
+      "reason": "User requested a market-pulse-focused website; article automation paused.",
+      "resume": "explicit_user_request_only",
+      "retain_published_content": true
+    }
   },
   "execution": {
     "command": [

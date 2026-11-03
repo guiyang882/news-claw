@@ -140,8 +140,8 @@
         "frontend_port": 3000,
         "https_port": 443,
         "content_path": "/healthz",
-        "frontend_path": "/blog",
-        "frontend_body_marker": "RESEARCH LIBRARY",
+        "frontend_path": "/",
+        "frontend_body_marker": "data-market-pulse=\"v1\"",
         "timeout_seconds": 10
       },
       "command_timeout_seconds": 30,
@@ -168,7 +168,8 @@
       "missing_evidence": "show_unavailable_never_fill_with_invented_values",
       "connections": "research_navigation_not_inferred_causation_or_business_relationship",
       "content_updates_require_build": false,
-      "dependencies": "Separate company-dependencies-review task; never infer supply ties from peer similarity"
+      "dependencies": "Separate company-dependencies-review task; never infer supply ties from peer similarity",
+      "homepage": "market_pulse: dated sources, company-scoped briefs, operating evidence; no article promotion"
     }
   }
 }

@@ -1,0 +1,118 @@
+{
+  "id": "market-pulse-coverage-audit",
+  "name": "市场脉冲：八家公司覆盖与首页巡检",
+  "description": "每小时只读检查来源与简报覆盖，以及本机内容服务、Next.js 和 HTTPS 首页；无新披露不视为采集故障，不发起补稿或模型调用。",
+  "scheduler_engine": "news-claw",
+  "task_type": "workflow",
+  "enabled": true,
+  "schedule": "45 * * * *",
+  "timezone": "Asia/Shanghai",
+  "schedule_format": "cron",
+  "topic_ids": [],
+  "options": {
+    "start_jitter_seconds": 30
+  },
+  "execution": {
+    "command": [
+      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      "-m",
+      "workflows.market_pulse_audit"
+    ],
+    "working_dir": ".",
+    "timeout_seconds": 60,
+    "stop_grace_seconds": 5,
+    "lock_group": "market-pulse-audit",
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  },
+  "workflow": {
+    "kind": "market-pulse-coverage-audit-v1",
+    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "state_root": "/mnt/quant-state/quant-web",
+    "website_runtime": {
+      "stack": "nginx-nextjs-python",
+      "proxy": "nginx",
+      "frontend_service": "quant-next-web.service",
+      "content_service": "quant-web.service",
+      "proxy_service": "nginx.service",
+      "content_update_action": "none",
+      "content_reload_command": [
+        "systemctl",
+        "kill",
+        "--kill-whom=main",
+        "--signal=HUP",
+        "quant-web.service"
+      ],
+      "frontend_restart_command": [
+        "systemctl",
+        "restart",
+        "quant-next-web.service"
+      ],
+      "proxy_validate_command": [
+        "/usr/sbin/nginx",
+        "-t"
+      ],
+      "proxy_reload_command": [
+        "systemctl",
+        "reload",
+        "nginx.service"
+      ],
+      "frontend_deployment": {
+        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
+        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "policy": "candidate_build_smoke_atomic_switch",
+        "build_in_running_directory": false,
+        "retain_previous_static_chunks": true,
+        "steps": [
+          "build_and_typecheck_in_separate_candidate_directory",
+          "smoke_test_candidate",
+          "retain_previous_static_chunks",
+          "stop_frontend",
+          "atomically_install_candidate_next_artifacts",
+          "verify_service_user_file_permissions",
+          "start_frontend",
+          "verify_local_and_https_pages"
+        ],
+        "runtime_content_requires_frontend_build": false,
+        "shared_credentials": "controlled_environment_only_not_task_json_or_logs",
+        "candidate_build": {
+          "working_dir": "<separate_candidate_repo_root>",
+          "command": [
+            "make",
+            "test-frontend",
+            "build-frontend"
+          ]
+        },
+        "candidate_smoke": {
+          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "command": [
+            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "web/frontend/scripts/smoke.py",
+            "--frontend-dir",
+            "<candidate_frontend_dir>"
+          ]
+        }
+      },
+      "health": {
+        "host": "growthyoung.com",
+        "content_port": 8000,
+        "frontend_port": 3000,
+        "https_port": 443,
+        "content_path": "/healthz",
+        "frontend_path": "/",
+        "frontend_body_marker": "data-market-pulse=\"v1\"",
+        "timeout_seconds": 10
+      },
+      "command_timeout_seconds": 30,
+      "readiness_wait_seconds": 30
+    },
+    "network_policy": {
+      "external_source_requests": 0,
+      "model_calls": 0,
+      "local_health_requests": 3,
+      "automatic_repair": false,
+      "do_not_reset_circuits_or_resume_paused_tasks": true
+    }
+  }
+}

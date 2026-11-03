@@ -117,6 +117,8 @@ class WebsiteMaintenanceTests(unittest.TestCase):
             for path in (root / "config" / directory).glob("*.json"):
                 with self.subTest(path=path.name):
                     config = json.loads(path.read_text())
+                    if 'website_runtime' not in config.get('workflow', {}):
+                        continue  # Readiness/market-data tasks do not operate web services.
                     runtime = website.settings(config)
                     self.assertEqual(runtime["frontend_service"], "quant-next-web.service")
                     self.assertNotIn("application_reload_command", runtime)

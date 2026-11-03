@@ -4,7 +4,7 @@
   "description": "仅周五、周日20:15至22:15每小时巡检当期；等待在途任务，补启动漏跑任务，有界修复保存稿并独立复核。非发布日不催稿、不补发。每期最多两次恢复，保留限流与熔断。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
-  "enabled": true,
+  "enabled": false,
   "schedule": "15 20-22 * * 0,5",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
@@ -12,7 +12,13 @@
     "daily-research-blog"
   ],
   "options": {
-    "start_jitter_seconds": 0
+    "start_jitter_seconds": 0,
+    "publication_pause": {
+      "since": "2026-11-03",
+      "reason": "User requested a market-pulse-focused website; article automation paused.",
+      "resume": "explicit_user_request_only",
+      "retain_published_content": true
+    }
   },
   "execution": {
     "command": [

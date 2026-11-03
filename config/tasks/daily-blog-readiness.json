@@ -4,7 +4,7 @@
   "description": "周五、周日19:20与21:20核对当期材料，非发布日直接跳过；本地检查完整正文、覆盖日期、未使用来源及上游结果，不调用模型。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
-  "enabled": true,
+  "enabled": false,
   "schedule": "20 19,21 * * 0,5",
   "schedule_format": "cron",
   "timezone": "Asia/Shanghai",
@@ -12,7 +12,13 @@
     "daily-research-blog"
   ],
   "options": {
-    "start_jitter_seconds": 0
+    "start_jitter_seconds": 0,
+    "publication_pause": {
+      "since": "2026-11-03",
+      "reason": "User requested a market-pulse-focused website; article automation paused.",
+      "resume": "explicit_user_request_only",
+      "retain_published_content": true
+    }
   },
   "execution": {
     "command": [

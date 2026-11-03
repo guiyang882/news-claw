@@ -4,7 +4,7 @@
   "description": "北京时间周五、周日19:30写作，21:30仅补启动尚未进入模型的当期；周五聚焦本周大事件，周日聚焦周末有价值的新内容。保留双语、证据审核与8–12分钟短文选项，每期最多一篇。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
-  "enabled": true,
+  "enabled": false,
   "schedule": "30 19,21 * * 0,5",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
@@ -18,7 +18,13 @@
   ],
   "options": {
     "start_jitter_seconds": 420,
-    "model_permissions": "full_no_interactive_approval"
+    "model_permissions": "full_no_interactive_approval",
+    "publication_pause": {
+      "since": "2026-11-03",
+      "reason": "User requested a market-pulse-focused website; article automation paused.",
+      "resume": "explicit_user_request_only",
+      "retain_published_content": true
+    }
   },
   "execution": {
     "command": [

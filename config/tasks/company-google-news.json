@@ -135,8 +135,8 @@
         "frontend_port": 3000,
         "https_port": 443,
         "content_path": "/healthz",
-        "frontend_path": "/blog",
-        "frontend_body_marker": "RESEARCH LIBRARY",
+        "frontend_path": "/",
+        "frontend_body_marker": "data-market-pulse=\"v1\"",
         "timeout_seconds": 10
       },
       "command_timeout_seconds": 30,
