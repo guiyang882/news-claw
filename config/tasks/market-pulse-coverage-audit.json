@@ -101,7 +101,7 @@
         "https_port": 443,
         "content_path": "/healthz",
         "frontend_path": "/",
-        "frontend_body_marker": "data-market-pulse=\"v1\"",
+        "frontend_body_marker": "data-site-hub=\"v1\"",
         "timeout_seconds": 10
       },
       "command_timeout_seconds": 30,
