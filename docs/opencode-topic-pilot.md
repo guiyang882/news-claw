@@ -78,7 +78,7 @@
 
 ```sh
 bin/news-claw tasks
-/mnt/quant/strategies/stocks-quant/web/.venv/bin/python \
+/mnt/projects/growthyoung/web/.venv/bin/python \
   -m workflows.topic_summary --check --task ai-products-opencode-pilot
 ```
 

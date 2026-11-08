@@ -1,6 +1,6 @@
 GO ?= go
 PYTHON ?= .venv/bin/python
-WEB_PYTHON ?= /mnt/quant/strategies/stocks-quant/web/.venv/bin/python
+WEB_PYTHON ?= /mnt/projects/growthyoung/web/.venv/bin/python
 
 .PHONY: build init check test test-blog
 build:
@@ -11,9 +11,9 @@ init:
 
 check: build
 	bin/news-claw check
-	$(PYTHON) -m collectors.news --check --task us-china-export-controls-daily
-	$(PYTHON) -m collectors.news --check --task ai-products-attention-daily
-	$(PYTHON) -m collectors.news --check --task robotics-physical-ai-space-daily
+	$(PYTHON) -m collectors.news --check --task company-google-news
+	$(PYTHON) -m collectors.news --check --task company-amazon-news
+	$(PYTHON) -m collectors.news --check --task company-nvidia-news
 
 test: build
 	$(GO) test -race ./...

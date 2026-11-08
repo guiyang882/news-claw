@@ -31,7 +31,7 @@ def main():
     collection = json.loads(result_path.read_text())
     # Keep the network audit even when a later local publication fails.
     (result_path.parent / 'collection-result.json').write_text(json.dumps(collection, indent=2))
-    published = subprocess.run(['/mnt/quant/strategies/stocks-quant/web/.venv/bin/python',
+    published = subprocess.run(['/mnt/projects/growthyoung/web/.venv/bin/python',
         '-m', 'workflows.company_watch', '--publish-only', '--execute'], check=False)
     result = json.loads(result_path.read_text())
     result['collection'] = collection

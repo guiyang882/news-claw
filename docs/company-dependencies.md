@@ -26,6 +26,6 @@ Tesla 的两条 AI5 双源制造记录来自站内既有经营资料复核，标
 ## 验证与维护
 
 网站：`web/.venv/bin/python -m unittest discover -s tests -p test_web_company_dependencies.py`。
-工作流：`/mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m unittest discover -s tests -p test_dependencies.py`（news-claw 目录）。
+工作流：`/mnt/projects/growthyoung/web/.venv/bin/python -m unittest discover -s tests -p test_dependencies.py`（news-claw 目录）。
 浏览器：`web/frontend/scripts/browser-dependencies.py <本机候选地址> <输出目录>`，覆盖八家公司、中英文、手机、无 JS、关系详情、四个真 Tab 与历史导航。
 发布按候选目录构建、smoke、保留旧静态文件、原子切换流程执行；使用 rsync 传输，数据库、抓取正文、缓存、运行日志不进入 Git。

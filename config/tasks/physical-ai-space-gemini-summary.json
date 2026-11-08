@@ -4,7 +4,7 @@
   "description": "读取本地缓存，整理主题摘要、时间线、推理与关系；Codex校验通过才进入knowledge供博客选题使用。相同输入不重复调用，失败不自动重试。",
   "scheduler_engine": "news-claw",
   "task_type": "workflow",
-  "enabled": true,
+  "enabled": false,
   "schedule": "17 15,23 * * *",
   "timezone": "Asia/Shanghai",
   "schedule_format": "cron",
@@ -19,7 +19,7 @@
   },
   "execution": {
     "command": [
-      "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+      "/mnt/projects/growthyoung/web/.venv/bin/python",
       "-m",
       "workflows.topic_summary"
     ],
@@ -95,7 +95,7 @@
       "data/runs/<run_id>/03-codex-correction/response.json",
       "data/runs/<run_id>/04-codex-re-review/response.json"
     ],
-    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_repo": "/mnt/projects/growthyoung",
     "website_runtime": {
       "stack": "nginx-nextjs-python",
       "proxy": "nginx",
@@ -125,8 +125,8 @@
         "nginx.service"
       ],
       "frontend_deployment": {
-        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
-        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "source_dir": "/mnt/projects/growthyoung/web/frontend",
+        "runbook": "/mnt/projects/growthyoung/deployment/NEXTJS.md",
         "policy": "candidate_build_smoke_atomic_switch",
         "build_in_running_directory": false,
         "retain_previous_static_chunks": true,
@@ -151,9 +151,9 @@
           ]
         },
         "candidate_smoke": {
-          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "working_dir": "/mnt/projects/growthyoung",
           "command": [
-            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "/mnt/projects/growthyoung/web/.venv/bin/python",
             "web/frontend/scripts/smoke.py",
             "--frontend-dir",
             "<candidate_frontend_dir>"

@@ -27,7 +27,7 @@
 Read-only preview (no model calls, enqueue, or state writes):
 
 ```sh
-/mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.blog_watchdog --check
+/mnt/projects/growthyoung/web/.venv/bin/python -m workflows.blog_watchdog --check
 ```
 
 Run through the normal scheduler:

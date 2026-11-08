@@ -1,8 +1,10 @@
 # Keep the task registry and curated knowledge in Git. Ignore generated fetch
 # payloads and per-run artifacts, which can grow quickly.
 /data/db/*.sqlite3
-!/data/db/news.sqlite3
 /data/db/*.sqlite3-*
+/data/news_claw.db
+/playground/
+/data/knowledge/**/summaries/
 /data/raw/
 /data/normalized/
 /data/runs/

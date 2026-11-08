@@ -25,7 +25,7 @@
 
 `/etc/quant-strategies.paused` 为持久化暂停标记。
 四个 service 的 `90-user-pause.conf` 均安装自
-`/mnt/quant/strategies/stocks-quant/deployment/quant-strategy-pause.conf`，使用反向 ConditionPathExists；
+`/mnt/projects/growthyoung/deployment/quant-strategy-pause.conf`，使用反向 ConditionPathExists；
 标记存在时 systemd 不执行服务，即使误启 timer 也不能恢复策略。
 验证配置加载成功、所有 timer disabled/inactive、启动条件不成立，
 news-claw 与两个网站服务继续 active。没有调用联网 probe、tick、调仓或通知测试。

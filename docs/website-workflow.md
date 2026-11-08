@@ -1,6 +1,6 @@
 # 网站供稿与任务协议
 
-最终目标：采集、核验和吸收信息，生成可追溯的主题材料，再同步发布到 `/mnt/quant/strategies/stocks-quant` 网站。这个目标同时写入 README 和任务的 workflow 配置。
+最终目标：采集、核验和吸收信息，生成可追溯的主题材料，再同步发布到 `/mnt/projects/growthyoung` 网站。这个目标同时写入 README 和任务的 workflow 配置。
 
 ## 当前供稿链路
 
@@ -130,6 +130,6 @@ python3 -m workflows.website_maintenance \
 
 HTTPS 连接固定使用回环地址并保留真实域名 SNI 和证书校验；检查不访问外部数据源，也不读取或打印桥接 token。重启后的就绪等待仅针对本机服务，最多按 `readiness_wait_seconds` 限定等待；失败记录结果并停止，不自动切换到 Caddy 或循环重启服务。当前服务已停止或健康失败时，应先按网站部署手册排查恢复。
 
-前端部署遵守 `website_runtime.frontend_deployment`：候选路径由操作者指定，示例 build / smoke 参数不是 Go 的变量替换或自动执行命令。禁止在运行中的 `web/frontend/.next` 直接构建，保留上一版静态资源并检查 quant-web 用户读取权限及缓存写权限。完整步骤见网站仓库 `/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md`。Python 已删除原生页面的旧 HTML 实现，回退须恢复匹配的完整代码版本；不能仅把 Nginx 上游改回 8000，否则会形成重定向循环。
+前端部署遵守 `website_runtime.frontend_deployment`：候选路径由操作者指定，示例 build / smoke 参数不是 Go 的变量替换或自动执行命令。禁止在运行中的 `web/frontend/.next` 直接构建，保留上一版静态资源并检查 quant-web 用户读取权限及缓存写权限。完整步骤见网站仓库 `/mnt/projects/growthyoung/deployment/NEXTJS.md`。Python 已删除原生页面的旧 HTML 实现，回退须恢复匹配的完整代码版本；不能仅把 Nginx 上游改回 8000，否则会形成重定向循环。
 
 维护命令从 Go 队列执行时读取本轮 `NEWS_CLAW_TASK_CONFIG_PATH` 并输出 `NEWS_CLAW_RESULT_PATH`，继续使用既有 task_runs。维护模板默认关闭，只检查；没有新增定时重启任务。Certbot 续期与证书更新后的 Nginx 重载继续由网站的既有 timer 和 deploy hook 管理。

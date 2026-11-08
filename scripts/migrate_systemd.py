@@ -62,7 +62,7 @@ def prepare_config(task, job, observed, zone):
         "crawl" if unit in {"quant-news-refresh", "quant-market-temperature"} else "codex")
     if unit == "quant-blog-compose":
         task.setdefault("workflow", {}).update({
-            "website_repo": "/mnt/quant/strategies/stocks-quant",
+            "website_repo": "/mnt/projects/growthyoung",
             "stage": "draft",
             "inputs": ["/mnt/quant-state/quant-web/blog/source-packets/YYYY-MM-DD.json"],
             "outputs": ["/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"],
@@ -71,7 +71,7 @@ def prepare_config(task, job, observed, zone):
         })
     elif unit == "quant-blog-daily":
         task.setdefault("workflow", {}).update({
-            "website_repo": "/mnt/quant/strategies/stocks-quant",
+            "website_repo": "/mnt/projects/growthyoung",
             "stage": "publish",
             "inputs": ["/mnt/quant-state/quant-web/blog/inbox/YYYY-MM-DD.json"],
             "outputs": ["/mnt/quant-state/quant-web/blog/articles"],
@@ -80,7 +80,7 @@ def prepare_config(task, job, observed, zone):
         })
     elif unit == "quant-news-analysis":
         task.setdefault("workflow", {}).update({
-            "website_repo": "/mnt/quant/strategies/stocks-quant",
+            "website_repo": "/mnt/projects/growthyoung",
             "stage": "analyze_and_update_dataset",
             "inputs": ["/mnt/quant-state/quant-web/news_timeline.json"],
             "outputs": ["/mnt/quant-state/quant-web/news_analysis.json"],
@@ -171,7 +171,7 @@ def main():
             task = json.loads(path.read_text())
             task["task_type"] = "crawl"
             task["workflow"] = {
-                "website_repo": "/mnt/quant/strategies/stocks-quant",
+                "website_repo": "/mnt/projects/growthyoung",
                 "stage": "news_discovery",
                 "outputs": ["data/raw", "data/normalized", "documents"],
                 "publication_status": "requires_topic_analysis_and_website_adapter",

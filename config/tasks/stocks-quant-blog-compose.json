@@ -12,7 +12,7 @@
   ],
   "collector": {
     "type": "local_content_generation",
-    "source_repo": "/mnt/quant/strategies/stocks-quant",
+    "source_repo": "/mnt/projects/growthyoung",
     "systemd_unit": "quant-blog-compose.timer",
     "execution_owner": "news-claw_via_legacy_service",
     "external_timer_active": false,
@@ -56,7 +56,7 @@
   },
   "task_type": "codex",
   "workflow": {
-    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_repo": "/mnt/projects/growthyoung",
     "stage": "draft",
     "inputs": [
       "/mnt/quant-state/quant-web/blog/source-packets/YYYY-MM-DD.json"
@@ -101,8 +101,8 @@
         "nginx.service"
       ],
       "frontend_deployment": {
-        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
-        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "source_dir": "/mnt/projects/growthyoung/web/frontend",
+        "runbook": "/mnt/projects/growthyoung/deployment/NEXTJS.md",
         "policy": "candidate_build_smoke_atomic_switch",
         "build_in_running_directory": false,
         "retain_previous_static_chunks": true,
@@ -127,9 +127,9 @@
           ]
         },
         "candidate_smoke": {
-          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "working_dir": "/mnt/projects/growthyoung",
           "command": [
-            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "/mnt/projects/growthyoung/web/.venv/bin/python",
             "web/frontend/scripts/smoke.py",
             "--frontend-dir",
             "<candidate_frontend_dir>"

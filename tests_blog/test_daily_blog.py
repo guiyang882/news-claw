@@ -16,7 +16,7 @@ from workflows import daily_blog as blog
 
 
 DAY = date(2026, 10, 10)
-SITE_REPO = "/mnt/quant/strategies/stocks-quant"
+SITE_REPO = "/mnt/projects/growthyoung"
 sys.path.insert(0, SITE_REPO)
 from web.blog_runtime import load_runtime_articles
 

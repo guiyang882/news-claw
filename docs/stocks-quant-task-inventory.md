@@ -1,6 +1,37 @@
-# stocks-quant 旧定时任务盘点
+# stocks-quant 旧定时任务盘点与 2026-11-08 研究工作台适配
 
-盘点与迁移日期：2026-10-10（北京时间）。检查了 `/mnt/quant/strategies/stocks-quant/AGENTS.md`、主机实际安装的 service/timer、运行说明与最近结果。随后将 8 个旧 timer 的调度交给 Go。旧运行数据保持原路径，没有手动发起线上抓取、Codex 或发布。
+盘点与迁移日期：2026-10-10；工作台适配与精简日期：2026-11-08（北京时间）。
+网站已全面升级为以 `https://research.growthyoung.com/` 为核心的 8 家标的公司研究工作台（Rocket Lab, SpaceX, Tesla, Google, Amazon, Coinbase, NVIDIA, TSMC）。
+可视化展示（View）与声明式数据（Data: `web/frontend/content/`）已彻底分离。
+
+## 2026-11-08 任务精简与分组
+
+为保护出口 IP、避免无谓空跑，调度引擎精简为 **19 个活跃任务**：
+
+1. **8 家公司一手官方新闻/公告采集（7 项）**：
+   - `stocks-quant-market-news-refresh` (Rocket Lab, SpaceX, Tesla)
+   - `company-google-news`, `company-amazon-news`, `company-coinbase-news`, `company-coinbase-cache-refresh`, `company-nvidia-news`, `company-tsmc-news`
+2. **AI 双语研报简报与多空争议初筛（6 项）**：
+   - `stocks-quant-market-news-analysis` (Rocket Lab, SpaceX, Tesla)
+   - `company-google-brief`, `company-amazon-brief`, `company-coinbase-brief`, `company-nvidia-brief`, `company-tsmc-brief`
+3. **经营指标与供应链复核（2 项）**：
+   - `stocks-quant-company-pulses-review` (周一、周四 10:10)
+   - `stocks-quant-optimus-supplier-review` (周一 09:20)
+4. **商业依赖与上下游图谱（2 项）**：
+   - `company-dependencies-evidence` (每天 07:20)
+   - `company-dependencies-review` (每天 07:45)
+5. **宏观压力与全域巡检（2 项）**：
+   - `stocks-quant-ofr-market-temperature` (每 24h)
+   - `market-pulse-coverage-audit` (每小时)
+
+### 彻底停用/归档的任务（19 项）
+- **博客流水线（7 项）**：`daily-blog-*` 与 `stocks-quant-blog-*`（博客自 11-03 起暂停发布）。
+- **副主题采集（7 项）**：`ai-products-*`、`us-china-*`、`robotics-*`（纯为博客喂料，无前台承载，已停用以保护出口 IP）。
+- **废弃/黑名单（5 项）**：`csi300-akshare-daily`（BaoStock黑名单）、`stocks-quant-tech-history-review` 等。
+
+---
+
+## 历史接管背景 (2026-10-10)
 
 | 旧任务 | systemd 频率 | 性质 | 数据库登记 |
 | --- | --- | --- | --- |

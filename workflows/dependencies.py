@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 from workflows import daily_blog as models
 
-REPO = Path('/mnt/quant/strategies/stocks-quant')
+REPO = Path('/mnt/projects/growthyoung')
 sys.path.insert(0, str(REPO))
 from web.company_dependencies import COMPANIES, MAX_RELATIONSHIPS_PER_COMPANY, validate
 

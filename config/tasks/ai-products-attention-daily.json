@@ -3,7 +3,7 @@
   "name": "海外 AI 产品关注度与用户反馈",
   "description": "追踪海外用户对 Muse、Gemini Agent、GPT/ChatGPT 等产品的关注变化、实际体验和反馈。",
   "scheduler_engine": "news-claw",
-  "enabled": true,
+  "enabled": false,
   "schedule": "45 10,18 * * *",
   "timezone": "Asia/Shanghai",
   "topic_ids": [
@@ -145,7 +145,7 @@
   },
   "task_type": "crawl",
   "workflow": {
-    "website_repo": "/mnt/quant/strategies/stocks-quant",
+    "website_repo": "/mnt/projects/growthyoung",
     "stage": "news_discovery",
     "outputs": [
       "data/raw",
@@ -182,8 +182,8 @@
         "nginx.service"
       ],
       "frontend_deployment": {
-        "source_dir": "/mnt/quant/strategies/stocks-quant/web/frontend",
-        "runbook": "/mnt/quant/strategies/stocks-quant/deployment/NEXTJS.md",
+        "source_dir": "/mnt/projects/growthyoung/web/frontend",
+        "runbook": "/mnt/projects/growthyoung/deployment/NEXTJS.md",
         "policy": "candidate_build_smoke_atomic_switch",
         "build_in_running_directory": false,
         "retain_previous_static_chunks": true,
@@ -208,9 +208,9 @@
           ]
         },
         "candidate_smoke": {
-          "working_dir": "/mnt/quant/strategies/stocks-quant",
+          "working_dir": "/mnt/projects/growthyoung",
           "command": [
-            "/mnt/quant/strategies/stocks-quant/web/.venv/bin/python",
+            "/mnt/projects/growthyoung/web/.venv/bin/python",
             "web/frontend/scripts/smoke.py",
             "--frontend-dir",
             "<candidate_frontend_dir>"

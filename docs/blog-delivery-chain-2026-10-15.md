@@ -54,7 +54,7 @@
 
 ```bash
 # 只读核查，不调用模型或网络
-web_python=/mnt/quant/strategies/stocks-quant/web/.venv/bin/python
+web_python=/mnt/projects/growthyoung/web/.venv/bin/python
 "$web_python" -m workflows.blog_delivery --task daily-blog-readiness --check
 "$web_python" -m workflows.blog_delivery --task daily-blog-delivery-audit --check
 

@@ -6,7 +6,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, '/mnt/quant/strategies/stocks-quant')
+sys.path.insert(0, '/mnt/projects/growthyoung')
 from collectors import blog_evidence
 
 
@@ -14,7 +14,7 @@ class EvidenceRefreshTests(unittest.TestCase):
     def setUp(self):
         self.task = {'timezone': 'Asia/Shanghai', 'workflow': {
             'skip_when_blog_published': True,
-            'website_repo': '/mnt/quant/strategies/stocks-quant', 'website_state': '/unused'}}
+            'website_repo': '/mnt/projects/growthyoung', 'website_state': '/unused'}}
         self.now = datetime(2026, 10, 21, 23, 0, tzinfo=timezone.utc)
 
     def test_only_current_beijing_day_skips_collection(self):

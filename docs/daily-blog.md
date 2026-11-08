@@ -15,7 +15,7 @@
 | Codex 推理与速度 | planner/reviewer 的 reasoning_effort=null，沿用模型默认；service_tier=fast |
 | 修订规则 | /root/.codex/skills/humanizer/SKILL.md；保留实质信息，合并重复结尾；保存完整副本与 SHA256 |
 | 输入 | 周五看本周大事件，周日优先周末内容、可选本周未展开的专题；完整正文保留来源日期，更早资料仅作背景对照 |
-| 发布位置 | /mnt/quant-state/quant-web/blog；网站代码在 /mnt/quant/strategies/stocks-quant |
+| 发布位置 | /mnt/quant-state/quant-web/blog；网站代码在 /mnt/projects/growthyoung |
 | 模型调用 | 通常 5 次；各允许一次事实纠错、篇幅修订和终稿纠错，最多 10 次；串行，相邻调用完成后至少间隔 10 秒 |
 | 超时与互斥 | 整轮 75 分钟；agy 1200 秒、Codex 写作修订各 900 秒、规划与复核各 300 秒；model-cli 与本地新闻分析互斥 |
 
@@ -137,7 +137,7 @@ Codex 复核结果必须绑定文章和资料包的 SHA256；humanizer 修订不
 ```bash
 make init
 make test-blog
-/mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.daily_blog --check
+/mnt/projects/growthyoung/web/.venv/bin/python -m workflows.daily_blog --check
 bin/news-claw runs --limit 10
 ```
 
@@ -150,8 +150,8 @@ bin/news-claw enqueue --task daily-blog-agy-codex
 修复供应方拒绝的原因后，可显式复位对应熔断状态；当天已尝试记录保持保留：
 
 ```bash
-/mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.daily_blog --reset-provider agy
-/mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m workflows.daily_blog --reset-provider codex
+/mnt/projects/growthyoung/web/.venv/bin/python -m workflows.daily_blog --reset-provider agy
+/mnt/projects/growthyoung/web/.venv/bin/python -m workflows.daily_blog --reset-provider codex
 ```
 
 频率、素材窗口、模型、planning、reading、阶段超时和输入路径都在 JSON 中调整。仅定向同步获准修改的任务行，常驻 engine 自动重读；不要全量 init 以免覆盖其他任务的暂停状态。博客仅在周五、周日北京时间 19:30 开始，21:30 仅在尚未进入模型阶段时补启动；保留最多七分钟随机延迟，整轮超时为 75 分钟。每日工作流模板见 [daily-blog.json](../config/templates/daily-blog.json)，默认关闭。
@@ -181,7 +181,7 @@ Mermaid 只接受限定长度的流程图，不允许交互链接和配置指令
 用户要求更新文章时，将双语稿和短主题名保存为 `{"model_draft": <daily-blog-draft>, "topic_slug": "topic-name"}`。沿用已有文章的资料包、选题和发布日期，加入经核验的图库。临时将任务执行命令设置为：
 
 ```json
-["/mnt/quant/strategies/stocks-quant/web/.venv/bin/python", "-m", "workflows.revise_blog", "--slug", "existing-slug", "--draft", "/absolute/staged-revision.json"]
+["/mnt/projects/growthyoung/web/.venv/bin/python", "-m", "workflows.revise_blog", "--slug", "existing-slug", "--draft", "/absolute/staged-revision.json"]
 ```
 
 `make init` 后通过 Go `enqueue` 显式入队，配置快照保存后恢复原执行命令并再次 `make init`。修订命令要求正在运行的 Go 手动任务记录；这次用户请求独立限定一次 Codex 最终复核，不重新调用 Gemini，不清除每日防重记录或供应方熔断。复核失败就停止。

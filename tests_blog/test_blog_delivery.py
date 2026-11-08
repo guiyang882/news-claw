@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
-sys.path.insert(0,'/mnt/quant/strategies/stocks-quant')
+sys.path.insert(0,'/mnt/projects/growthyoung')
 from workflows import blog_delivery as delivery, daily_blog as blog
 
 DAY=date(2026,10,16)
@@ -27,7 +27,7 @@ class ReadinessTests(unittest.TestCase):
         tmp=tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         self.root=Path(tmp.name);self.db=self.root/'news.sqlite3';self.site=self.root/'site';self.site.mkdir()
         self.config={'timezone':'Asia/Shanghai','workflow':{'readiness':SETTINGS,
-                    'website_state':str(self.site),'website_repo':'/mnt/quant/strategies/stocks-quant'}}
+                    'website_state':str(self.site),'website_repo':'/mnt/projects/growthyoung'}}
         with closing(sqlite3.connect(self.db)) as db,db:
             db.execute('CREATE TABLE tasks(id TEXT,enabled INTEGER)')
             db.execute('INSERT INTO tasks VALUES (?,1)',('evidence',))

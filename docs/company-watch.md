@@ -40,7 +40,7 @@ SEC 条目以 `sec_filing` 入库，页面标为“SEC filing · metadata only�
 
 2026-10-13 初次验证：Google 发布 20 条、Amazon 发布 17 条来源，各两次请求且遵守 robots；Coinbase 两次请求后在 RSS 的 403 上停止（运行 `1fe4050cdd7b3dd45961f57cfa5bcd46`）。agy 的首次本地参数检查拒绝了 `flash-high` 与 `effort=low` 的冲突组合，零模型轮次、零 token；更正为正式列出的 `flash-low` 后仅释放了这次本地预检预留，原记录保存在运行目录中，实际模型失败仍不得重试。
 
-离线回归：`.venv/bin/python -m unittest discover -s tests -q` 与网站环境执行 `PYTHONPATH=. /mnt/quant/strategies/stocks-quant/web/.venv/bin/python -m unittest discover -s tests_blog -q`。网站的 `tests/test_web_company_watch.py` 验证独立来源、证据哈希、失败隔离和简报时效。
+离线回归：`.venv/bin/python -m unittest discover -s tests -q` 与网站环境执行 `PYTHONPATH=. /mnt/projects/growthyoung/web/.venv/bin/python -m unittest discover -s tests_blog -q`。网站的 `tests/test_web_company_watch.py` 验证独立来源、证据哈希、失败隔离和简报时效。
 
 实际 Gemini 试跑 `d1242ddf3a97d96e4ad71d437f88ce19` 生成一次，记录 15,428 token。本地数字字段校验修正后，复用了已存草稿进行唯一一次 Codex 复核；复核指出产品预购范围和 AI 分类等证据外延问题，首次未发布简报。后续修订沿用原 Gemini 草稿及相同来源，由 Codex 修订并重新核对证据哈希，不新增 Gemini 调用。
 
